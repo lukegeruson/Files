@@ -157,7 +157,7 @@ function skyForHour(hour: number) {
   // Fade the body out as it dips beneath the diorama floor line, so it never
   // shows floating in the dark corner below the ground. Trajectory is unchanged
   // — only visibility near the horizon is cut.
-  const FLOOR = 62 // % height where the ground plane begins
+  const FLOOR = 57 // % height where the ground plane begins
   const bodyOpacity = Math.max(0, Math.min(1, 1 - (bodyY - FLOOR) / 6))
 
   const sunUp = h > 6.5 && h < 19.5
