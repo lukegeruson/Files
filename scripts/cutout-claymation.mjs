@@ -7,6 +7,7 @@ import path from "node:path"
 
 const SRC = path.resolve("public/solar-styles/claymation.png")
 const OUT = path.resolve("public/solar-styles/claymation-cutout.png")
+const AI_MASK = path.resolve("public/solar-styles/claymation-ai-mask.png")
 
 // How close a pixel must be to the sampled background color to be treated as
 // background (0-255 per-channel Euclidean-ish distance). Kept moderate so it
@@ -87,25 +88,41 @@ for (let p = 0; p < w * h; p++) {
   if (visited[p]) data[p * c + 3] = alpha[p]
 }
 
-// --- Extra pass 1: clear the sky trapped around the electrical grid structure.
-// The power wires + pole + transformer + roof seal these pockets off from the
-// image border, so the edge flood can't reach them. They sit in the top-right
-// of the scene, where the only model parts are the (dark brown) pole, the (dark)
-// wires and the (gray) transformer -- there are NO cream house walls, which stay
-// to the left of x~790. So within these zones we can safely clear every
-// near-background pixel while the darker structure is left fully opaque.
-function clearBox(x0, y0, x1, y1) {
-  for (let y = Math.max(0, y0); y <= Math.min(h - 1, y1); y++) {
-    for (let x = Math.max(0, x0); x <= Math.min(w - 1, x1); x++) {
-      const i = (y * w + x) * c
-      const d = dist(i)
-      if (d > SOFT) continue // model (pole/wire/transformer/roof) -> keep
-      const a = d <= HARD ? 0 : Math.round(((d - HARD) / (SOFT - HARD)) * 255)
-      data[i + 3] = Math.min(data[i + 3], a)
+// --- Extra pass 1: clear the sky trapped around the electrical grid structure
+// (the enclosed pocket between the house, the wires and the pole) using an AI
+// SEMANTIC MASK. Plain flood-fill can't reach this pocket, and a plain color
+// clear would eat the cream house wall (wall and sky share the same cream).
+//
+// The AI mask (RMBG-1.4) knows "sky" from "object" regardless of color. We use
+// a DUAL GATE so nothing real is ever clipped: a pixel is only cleared when the
+// AI mask says background (mask < threshold) AND its color is background-like.
+//   - AI gate protects the cream WALL (mask marks it foreground) from color.
+//   - Color gate protects thin WIRES/pole (dark) from any AI edge softness.
+const { data: mask, info: mInfo } = await sharp(AI_MASK)
+  .ensureAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true })
+const mc = mInfo.channels
+const maskAt = (x, y) => mask[(y * w + x) * mc] // grayscale: 0=bg, 255=fg
+
+const AI_FG = 130 // mask values below this are treated as background
+let aiCleared = 0
+for (let y = 0; y < h; y++) {
+  for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * c
+    if (data[i + 3] === 0) continue // already transparent
+    const isBgSemantic = maskAt(x, y) < AI_FG
+    if (!isBgSemantic) continue // AI says this is real object -> never touch
+    const d = dist(i)
+    if (d > SOFT) continue // color says it's saturated (wire/pole) -> keep
+    const a = d <= HARD ? 0 : Math.round(((d - HARD) / (SOFT - HARD)) * 255)
+    if (a < data[i + 3]) {
+      data[i + 3] = a
+      if (a === 0) aiCleared++
     }
   }
 }
-clearBox(690, 70, 1015, 300) // wire triangles + upper gap (pure sky, no walls)
+console.log(`[v0] AI-mask pass cleared ${aiCleared} enclosed background px`)
 
 // --- Extra pass 2: remove the painted clay sun. The top-left region contains
 // nothing but the sun (the house starts well to the right), so we clear a
