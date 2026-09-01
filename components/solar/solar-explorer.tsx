@@ -201,8 +201,9 @@ export function SolarExplorer() {
       </div>
 
       {/* Stage — frameless with a transparent-backed diorama, so the clay
-          model sits on the page with no surrounding box. */}
-      <div className="relative mx-auto aspect-square w-full max-w-2xl">
+          model sits on the page with no surrounding box. Aspect matches the
+          widened image so the full lawn shows without cropping. */}
+      <div className="relative mx-auto aspect-[1324/1024] w-full max-w-3xl">
         {/* Transparent diorama (real alpha). A soft drop shadow now follows the
             model silhouette rather than a rectangle. */}
         <Image
