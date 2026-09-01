@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import dynamic from "next/dynamic"
+import Image from "next/image"
 import {
   BatteryCharging,
   Home,
@@ -9,70 +9,132 @@ import {
   Pause,
   Play,
   RotateCcw,
-  Route,
   Sparkles,
   Sun,
   Sunrise,
   Sunset,
+  X,
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSolarScene } from "@/components/solar/solar-scene-context"
 import {
+  COMPONENT_INFO,
   frameIndexForHour,
   kw,
   money,
   type ComponentId,
 } from "@/lib/solar-scene"
-import {
-  SCENE_STYLES,
-  type CameraPreset,
-  type SceneStyle,
-} from "@/components/solar/solar-scene-3d"
 
-// The Canvas is client-only; load it lazily with a graceful skeleton.
-const SolarScene3D = dynamic(() => import("@/components/solar/solar-scene-3d"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-sky-200 via-sky-100 to-accent">
-      <div className="flex flex-col items-center gap-3 text-muted-foreground">
-        <span className="relative flex size-10 items-center justify-center">
-          <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
-          <Sun className="size-7 text-primary" aria-hidden="true" />
-        </span>
-        <p className="text-sm">Loading 3D explorer…</p>
-      </div>
-    </div>
-  ),
-})
+// ---------------------------------------------------------------------------
+// Styles: each is a pre-rendered hero that matches its reference look exactly.
+// ---------------------------------------------------------------------------
+type StyleId = "isometric" | "claymation" | "photoreal"
+
+const STYLES: Array<{
+  id: StyleId
+  label: string
+  src: string
+  hint: string
+}> = [
+  {
+    id: "isometric",
+    label: "Isometric",
+    src: "/solar-styles/isometric.png",
+    hint: "Clean isometric diorama",
+  },
+  {
+    id: "claymation",
+    label: "Claymation",
+    src: "/solar-styles/claymation.png",
+    hint: "Soft clay miniature",
+  },
+  {
+    id: "photoreal",
+    label: "Photoreal",
+    src: "/solar-styles/photoreal.png",
+    hint: "Photorealistic render",
+  },
+]
+
+// ---------------------------------------------------------------------------
+// Hotspots: percentage positions tuned to each hero image so a marker lands on
+// the real object. The stage is square and images are square, so x/y map 1:1.
+// ---------------------------------------------------------------------------
+type Hotspot = { id: ComponentId; x: number; y: number }
+
+const HOTSPOTS: Record<StyleId, Hotspot[]> = {
+  isometric: [
+    { id: "sun", x: 27, y: 18 },
+    { id: "panels", x: 47, y: 34 },
+    { id: "inverter", x: 25, y: 50 },
+    { id: "battery", x: 28, y: 57 },
+    { id: "home", x: 51, y: 55 },
+    { id: "grid", x: 85, y: 42 },
+  ],
+  claymation: [
+    { id: "sun", x: 17, y: 16 },
+    { id: "panels", x: 52, y: 40 },
+    { id: "inverter", x: 25, y: 52 },
+    { id: "battery", x: 33, y: 61 },
+    { id: "home", x: 62, y: 57 },
+    { id: "grid", x: 88, y: 24 },
+  ],
+  photoreal: [
+    { id: "sun", x: 27, y: 25 },
+    { id: "panels", x: 46, y: 43 },
+    { id: "inverter", x: 22, y: 54 },
+    { id: "battery", x: 27, y: 59 },
+    { id: "home", x: 56, y: 53 },
+    { id: "grid", x: 90, y: 28 },
+  ],
+}
+
+// Energy-flow segments drawn between hotspots. `key` selects the flow value on
+// the current frame; `always` flows depend only on solar generation.
+type Segment = {
+  from: ComponentId
+  to: ComponentId
+  color: string
+  key?: "solarToHome" | "solarToBattery" | "solarToGrid" | "gridToHome" | "batteryToHome"
+  solarDriven?: boolean
+}
+
+const SEGMENTS: Segment[] = [
+  { from: "sun", to: "panels", color: "#f5b445", solarDriven: true },
+  { from: "panels", to: "inverter", color: "#f5b445", solarDriven: true },
+  { from: "inverter", to: "home", color: "#f5b445", key: "solarToHome" },
+  { from: "inverter", to: "battery", color: "#9b83f0", key: "solarToBattery" },
+  { from: "battery", to: "home", color: "#9b83f0", key: "batteryToHome" },
+  { from: "inverter", to: "grid", color: "#3fae82", key: "solarToGrid" },
+  { from: "grid", to: "home", color: "#5b8def", key: "gridToHome" },
+]
+
+const LEGEND: Array<{ label: string; color: string }> = [
+  { label: "Solar to home", color: "#f5b445" },
+  { label: "Export to grid", color: "#3fae82" },
+  { label: "Grid to home", color: "#5b8def" },
+  { label: "Battery", color: "#9b83f0" },
+]
+
+const TICKS: Array<{ label: string; icon: typeof Sun }> = [
+  { label: "Morning", icon: Sunrise },
+  { label: "Midday", icon: Sun },
+  { label: "Evening", icon: Sunset },
+  { label: "Night", icon: Moon },
+]
 
 const DAY_SECONDS = 18 // one simulated day plays over ~18s
-
-const LEGEND: Array<{ key: string; label: string; color: string }> = [
-  { key: "solarToHome", label: "Solar to home", color: "#f5b445" },
-  { key: "solarToGrid", label: "Export to grid", color: "#3fae82" },
-  { key: "gridToHome", label: "Grid to home", color: "#5b8def" },
-  { key: "batteryToHome", label: "Battery to home", color: "#9b83f0" },
-]
-
-const TICKS: Array<{ hour: number; label: string; icon: typeof Sun }> = [
-  { hour: 6, label: "Morning", icon: Sunrise },
-  { hour: 12, label: "Midday", icon: Sun },
-  { hour: 18, label: "Evening", icon: Sunset },
-  { hour: 23.5, label: "Night", icon: Moon },
-]
 
 export function SolarExplorer() {
   const { snapshot, timeline, isLive } = useSolarScene()
 
+  const [styleId, setStyleId] = useState<StyleId>("isometric")
   const [hour, setHour] = useState(12)
   const [playing, setPlaying] = useState(false)
-  const [preset, setPreset] = useState<CameraPreset>("overview")
-  const [resetKey, setResetKey] = useState(0)
   const [selected, setSelected] = useState<ComponentId | null>(null)
   const [showSavings, setShowSavings] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
-  const [sceneStyle, setSceneStyle] = useState<SceneStyle>("photoreal")
 
   // Respect the user's reduced-motion preference.
   useEffect(() => {
@@ -86,7 +148,7 @@ export function SolarExplorer() {
     return () => mq.removeEventListener("change", apply)
   }, [])
 
-  // "Run Day" animation loop.
+  // "Run day" animation loop.
   const raf = useRef<number | null>(null)
   const last = useRef<number | null>(null)
   useEffect(() => {
@@ -114,37 +176,51 @@ export function SolarExplorer() {
     return timeline.frames[idx]
   }, [timeline, hour])
 
-  function handleReset() {
-    setPreset("overview")
-    setResetKey((k) => k + 1)
-    setSelected(null)
-    setPlaying(false)
-    setHour(12)
-  }
+  const hotspots = HOTSPOTS[styleId]
+  const posOf = useMemo(() => {
+    const map = {} as Record<ComponentId, Hotspot>
+    for (const h of hotspots) map[h.id] = h
+    return map
+  }, [hotspots])
 
   const gridExporting = frame.gridKw > 0.05
   const gridImporting = frame.gridKw < -0.05
   const dayPct = (hour / 24) * 100
 
+  function handleReset() {
+    setSelected(null)
+    setPlaying(false)
+    setHour(12)
+    setShowSavings(false)
+  }
+
+  // Which segments are currently carrying energy.
+  const activeSegments = SEGMENTS.map((seg) => {
+    const active = seg.solarDriven
+      ? frame.solarKw > 0.05
+      : seg.key
+        ? frame.flows[seg.key] > 0.05
+        : false
+    return { seg, active }
+  })
+
   return (
-    <section
-      aria-label="3D Solar Energy Explorer"
-      className="flex flex-col gap-4"
-    >
+    <section aria-label="Solar Energy Explorer" className="flex flex-col gap-4">
       {/* Heading */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-2">
           <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-primary">
             <Sparkles className="size-3" aria-hidden="true" />
-            Interactive 3D
+            Interactive diagram
           </span>
           <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
             Solar Energy Explorer
           </h2>
           <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
-            See how a home solar system works in 3D. Drag to rotate, scroll to
-            zoom, click any part to learn what it does, and run a day to watch
-            energy flow from the sun to your home, battery, and the grid.
+            See how a home solar system works. Pick a look, tap any part to learn
+            what it does, and run a day to watch energy flow from the sun to your
+            home, battery, and the grid. Complete a calculator below and the
+            numbers update to match your home.
           </p>
         </div>
         <span
@@ -170,185 +246,254 @@ export function SolarExplorer() {
         </span>
       </div>
 
-      {/* Stage */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-primary/25 via-border to-chart-3/20 p-px shadow-xl">
-        <div className="relative h-[62vh] min-h-[440px] w-full overflow-hidden rounded-2xl bg-gradient-to-b from-sky-200 via-sky-100 to-accent sm:h-[68vh] md:max-h-[700px]">
-          <SolarScene3D
-            frame={frame}
-            panelCount={snapshot.panelCount}
-            hasBattery={snapshot.hasBattery}
-            selected={selected}
-            onSelect={setSelected}
-            preset={preset}
-            resetKey={resetKey}
-            reducedMotion={reducedMotion}
-            sceneStyle={sceneStyle}
-          />
-
-          {/* Overlays (non-interactive container; children opt back in) */}
-          <div className="pointer-events-none absolute inset-0 p-3 sm:p-4">
-            {/* Style switcher — the three looks under review */}
-            <div
-              role="radiogroup"
-              aria-label="Render style"
-              className="pointer-events-auto absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/50 bg-card/80 p-1 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:top-4"
+      {/* Style switcher */}
+      <div
+        role="radiogroup"
+        aria-label="Diagram style"
+        className="flex flex-wrap items-center gap-1.5 rounded-full border border-border bg-card p-1 shadow-sm w-fit"
+      >
+        {STYLES.map((s) => {
+          const active = styleId === s.id
+          return (
+            <button
+              key={s.id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              title={s.hint}
+              onClick={() => setStyleId(s.id)}
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm font-semibold transition-all",
+                active
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
-              {SCENE_STYLES.map((s) => {
-                const active = sceneStyle === s.id
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    title={s.hint}
-                    onClick={() => setSceneStyle(s.id)}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
-                      active
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                )
-              })}
-            </div>
+              {s.label}
+            </button>
+          )
+        })}
+      </div>
 
-            {/* Live stats */}
-            <div className="pointer-events-auto absolute left-3 top-3 w-48 overflow-hidden rounded-xl border border-white/50 bg-card/80 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:left-4 sm:top-4 sm:w-56">
-              <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Right now
-                </p>
-                <span className="rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">
-                  {frame.label}
-                </span>
-              </div>
-              <dl className="flex flex-col gap-1.5 px-3 py-2.5 text-sm">
-                <StatRow
-                  icon={<Sun className="size-3.5 text-primary" aria-hidden="true" />}
-                  label="Solar"
-                  value={kw(frame.solarKw)}
-                />
-                <StatRow
-                  icon={<Home className="size-3.5 text-chart-3" aria-hidden="true" />}
-                  label="Home"
-                  value={kw(frame.consumptionKw)}
-                />
-                <StatRow
-                  icon={<Zap className="size-3.5 text-chart-2" aria-hidden="true" />}
-                  label={gridImporting ? "Grid in" : "Grid out"}
-                  value={kw(Math.abs(frame.gridKw))}
-                  valueClass={
-                    gridExporting
-                      ? "text-chart-2"
-                      : gridImporting
-                        ? "text-chart-3"
-                        : undefined
-                  }
-                />
-                {snapshot.hasBattery ? (
-                  <StatRow
-                    icon={
-                      <BatteryCharging
-                        className="size-3.5 text-[#9b83f0]"
-                        aria-hidden="true"
-                      />
-                    }
-                    label="Battery"
-                    value={`${Math.round(frame.batterySoc * 100)}%`}
-                  />
-                ) : null}
-              </dl>
-              <div className="border-t border-border/60 bg-gradient-to-r from-primary/8 to-transparent px-3 py-2">
-                <p className="text-[11px] text-muted-foreground">Saved today</p>
-                <p className="font-serif text-xl tabular-nums text-foreground">
-                  {money(frame.savingsSoFar, 2)}
-                </p>
-              </div>
-            </div>
+      {/* Stage */}
+      <div className="rounded-2xl bg-gradient-to-br from-primary/25 via-border to-chart-3/20 p-px shadow-xl">
+        <div className="relative mx-auto aspect-square w-full max-w-2xl rounded-2xl bg-card">
+          {/* Hero images live in their own clipped layer so the rounded corners
+              stay crisp while popups above are free to overflow the frame. */}
+          <div className="absolute inset-0 overflow-hidden rounded-2xl">
+            {STYLES.map((s) => (
+              <Image
+                key={s.id}
+                src={s.src || "/placeholder.svg"}
+                alt={`Home solar system, ${s.label} style`}
+                fill
+                priority={s.id === "isometric"}
+                sizes="(max-width: 768px) 100vw, 672px"
+                className={cn(
+                  "object-cover transition-opacity duration-500",
+                  styleId === s.id ? "opacity-100" : "opacity-0",
+                )}
+              />
+            ))}
+          </div>
 
-            {/* Savings breakdown (toggled) */}
-            {showSavings ? (
-              <div className="pointer-events-auto absolute right-3 top-3 w-56 overflow-hidden rounded-xl border border-white/50 bg-card/80 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:right-4 sm:top-4">
-                <p className="border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Yearly bill
-                </p>
-                <dl className="flex flex-col gap-2 px-3 py-2.5 text-sm">
-                  <div className="flex items-center justify-between">
-                    <dt className="text-muted-foreground">Without solar</dt>
-                    <dd className="tabular-nums">
-                      {snapshot.billWithoutSolar != null
-                        ? money(snapshot.billWithoutSolar)
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-muted-foreground">With solar</dt>
-                    <dd className="tabular-nums">
-                      {snapshot.billWithSolar == null
-                        ? "—"
-                        : snapshot.billWithSolar < -0.5
-                          ? // A >100% offset earns more in export credit than the
-                            // bill costs, so the net is money back.
-                            `${money(-snapshot.billWithSolar)} credit`
-                          : money(Math.max(0, snapshot.billWithSolar))}
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-border/60 pt-2">
-                    <dt className="font-medium text-foreground">You save</dt>
-                    <dd className="font-serif text-lg tabular-nums text-primary">
-                      {snapshot.annualSavings != null
-                        ? `${money(snapshot.annualSavings)}/yr`
-                        : "—"}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="border-t border-border/60 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                  Covers about {Math.round(snapshot.offsetPercent)}% of a{" "}
-                  {snapshot.panelCount}-panel, {snapshot.systemSizeKw.toFixed(1)}{" "}
-                  kW system.
-                </p>
-              </div>
-            ) : null}
+          {/* Energy-flow overlay */}
+          <svg
+            viewBox="0 0 100 100"
+            className="pointer-events-none absolute inset-0 size-full"
+            aria-hidden="true"
+          >
+            {activeSegments.map(({ seg, active }) => {
+              const a = posOf[seg.from]
+              const b = posOf[seg.to]
+              if (!a || !b) return null
+              return (
+                <line
+                  key={`${seg.from}-${seg.to}`}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke={seg.color}
+                  strokeWidth={active ? 0.9 : 0.5}
+                  strokeLinecap="round"
+                  strokeDasharray="2 2.5"
+                  className={cn(
+                    "transition-opacity duration-500",
+                    active ? "opacity-90 solar-flow" : "opacity-0",
+                  )}
+                  style={{
+                    filter: active ? `drop-shadow(0 0 1px ${seg.color})` : undefined,
+                  }}
+                />
+              )
+            })}
+          </svg>
 
-            {/* Legend */}
-            <div className="pointer-events-auto absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1.5 rounded-xl border border-white/50 bg-card/80 px-3 py-2 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:bottom-4 sm:left-4">
-              {LEGEND.map((item) => {
-                const active =
-                  frame.flows[item.key as keyof typeof frame.flows] > 0.05
-                return (
-                  <span
-                    key={item.key}
-                    className={cn(
-                      "flex items-center gap-1.5 text-[11px] font-medium transition-opacity duration-300",
-                      active ? "opacity-100" : "opacity-30",
-                    )}
-                  >
+          {/* Hotspots */}
+          {hotspots.map((h) => {
+            const info = COMPONENT_INFO[h.id]
+            const isSel = selected === h.id
+            return (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => setSelected(isSel ? null : h.id)}
+                aria-label={`Learn about ${info.title}`}
+                aria-pressed={isSel}
+                className="group absolute -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${h.x}%`, top: `${h.y}%` }}
+              >
+                <span className="relative flex size-5 items-center justify-center">
+                  {!reducedMotion ? (
                     <span
-                      className="size-2 rounded-full"
-                      style={{
-                        backgroundColor: item.color,
-                        boxShadow: active
-                          ? `0 0 6px ${item.color}`
-                          : "none",
-                      }}
+                      className={cn(
+                        "absolute inline-flex size-full rounded-full",
+                        isSel ? "bg-primary/40" : "bg-primary/30 animate-ping",
+                      )}
+                    />
+                  ) : null}
+                  <span
+                    className={cn(
+                      "relative inline-flex size-3.5 rounded-full border-2 border-white shadow-md transition-all group-hover:scale-125",
+                      isSel ? "bg-primary scale-125" : "bg-primary/90",
+                    )}
+                  />
+                </span>
+              </button>
+            )
+          })}
+
+          {/* Selected component popup */}
+          {selected ? (
+            <SelectedCard
+              id={selected}
+              pos={posOf[selected]}
+              onClose={() => setSelected(null)}
+            />
+          ) : null}
+
+          {/* Live stats (bottom-left, clear of the sun in the top-left) */}
+          <div className="absolute bottom-3 left-3 w-44 overflow-hidden rounded-xl border border-white/50 bg-card/85 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:w-52">
+            <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Right now
+              </p>
+              <span className="rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">
+                {frame.label}
+              </span>
+            </div>
+            <dl className="flex flex-col gap-1.5 px-3 py-2.5 text-sm">
+              <StatRow
+                icon={<Sun className="size-3.5 text-primary" aria-hidden="true" />}
+                label="Solar"
+                value={kw(frame.solarKw)}
+              />
+              <StatRow
+                icon={<Home className="size-3.5 text-chart-3" aria-hidden="true" />}
+                label="Home"
+                value={kw(frame.consumptionKw)}
+              />
+              <StatRow
+                icon={<Zap className="size-3.5 text-chart-2" aria-hidden="true" />}
+                label={gridImporting ? "Grid in" : "Grid out"}
+                value={kw(Math.abs(frame.gridKw))}
+                valueClass={
+                  gridExporting
+                    ? "text-chart-2"
+                    : gridImporting
+                      ? "text-chart-3"
+                      : undefined
+                }
+              />
+              {snapshot.hasBattery ? (
+                <StatRow
+                  icon={
+                    <BatteryCharging
+                      className="size-3.5 text-[#9b83f0]"
                       aria-hidden="true"
                     />
-                    {item.label}
-                  </span>
-                )
-              })}
-            </div>
-
-            {/* Hint */}
-            <div className="pointer-events-none absolute bottom-3 right-3 hidden rounded-lg border border-white/40 bg-card/70 px-2.5 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur-md sm:block">
-              Drag to rotate · scroll to zoom · click a part
+                  }
+                  label="Battery"
+                  value={`${Math.round(frame.batterySoc * 100)}%`}
+                />
+              ) : null}
+            </dl>
+            <div className="border-t border-border/60 bg-gradient-to-r from-primary/8 to-transparent px-3 py-2">
+              <p className="text-[11px] text-muted-foreground">Saved today</p>
+              <p className="font-serif text-xl tabular-nums text-foreground">
+                {money(frame.savingsSoFar, 2)}
+              </p>
             </div>
           </div>
+
+          {/* Savings breakdown (toggled) */}
+          {showSavings ? (
+            <div className="absolute right-3 top-3 w-52 overflow-hidden rounded-xl border border-white/50 bg-card/85 shadow-lg ring-1 ring-black/5 backdrop-blur-md">
+              <p className="border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Yearly bill
+              </p>
+              <dl className="flex flex-col gap-2 px-3 py-2.5 text-sm">
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Without solar</dt>
+                  <dd className="tabular-nums">
+                    {snapshot.billWithoutSolar != null
+                      ? money(snapshot.billWithoutSolar)
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">With solar</dt>
+                  <dd className="tabular-nums">
+                    {snapshot.billWithSolar == null
+                      ? "—"
+                      : snapshot.billWithSolar < -0.5
+                        ? `${money(-snapshot.billWithSolar)} credit`
+                        : money(Math.max(0, snapshot.billWithSolar))}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between border-t border-border/60 pt-2">
+                  <dt className="font-medium text-foreground">You save</dt>
+                  <dd className="font-serif text-lg tabular-nums text-primary">
+                    {snapshot.annualSavings != null
+                      ? `${money(snapshot.annualSavings)}/yr`
+                      : "—"}
+                  </dd>
+                </div>
+              </dl>
+              <p className="border-t border-border/60 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                Covers about {Math.round(snapshot.offsetPercent)}% of a{" "}
+                {snapshot.panelCount}-panel, {snapshot.systemSizeKw.toFixed(1)} kW
+                system.
+              </p>
+            </div>
+          ) : null}
+
+          {/* Hint */}
+          <div className="pointer-events-none absolute bottom-3 right-3 hidden rounded-lg border border-white/40 bg-card/75 px-2.5 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur-md sm:block">
+            Tap a marker to learn more
+          </div>
         </div>
+      </div>
+
+      {/* Legend + flow key beneath the stage */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-card px-4 py-2.5 shadow-sm">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Energy flow
+        </span>
+        {LEGEND.map((item) => (
+          <span
+            key={item.label}
+            className="flex items-center gap-1.5 text-xs font-medium text-foreground"
+          >
+            <span
+              className="h-1 w-4 rounded-full"
+              style={{ backgroundColor: item.color }}
+              aria-hidden="true"
+            />
+            {item.label}
+          </span>
+        ))}
       </div>
 
       {/* Controls */}
@@ -373,13 +518,6 @@ export function SolarExplorer() {
             {playing ? "Pause" : "Run day"}
           </ControlButton>
           <ControlButton
-            onClick={() => setPreset("flow")}
-            active={preset === "flow"}
-          >
-            <Route className="size-4" aria-hidden="true" />
-            Energy flow
-          </ControlButton>
-          <ControlButton
             onClick={() => setShowSavings((s) => !s)}
             active={showSavings}
           >
@@ -388,7 +526,7 @@ export function SolarExplorer() {
           </ControlButton>
           <ControlButton onClick={handleReset}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Reset view
+            Reset
           </ControlButton>
         </div>
 
@@ -424,7 +562,6 @@ export function SolarExplorer() {
               }}
               aria-label="Time of day"
             />
-            {/* Position marker under the thumb */}
             <span
               className="pointer-events-none absolute -bottom-1 h-1 w-1 -translate-x-1/2 rounded-full bg-primary"
               style={{ left: `${dayPct}%` }}
@@ -446,6 +583,14 @@ export function SolarExplorer() {
       </div>
 
       <style jsx>{`
+        .solar-flow {
+          animation: solar-flow-dash 0.8s linear infinite;
+        }
+        @keyframes solar-flow-dash {
+          to {
+            stroke-dashoffset: -4.5;
+          }
+        }
         .solar-timeline::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
@@ -456,7 +601,6 @@ export function SolarExplorer() {
           border: 3px solid var(--primary);
           box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
           cursor: pointer;
-          margin-top: 0;
         }
         .solar-timeline::-moz-range-thumb {
           height: 20px;
@@ -467,8 +611,58 @@ export function SolarExplorer() {
           box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
           cursor: pointer;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .solar-flow {
+            animation: none;
+          }
+        }
       `}</style>
     </section>
+  )
+}
+
+function SelectedCard({
+  id,
+  pos,
+  onClose,
+}: {
+  id: ComponentId
+  pos: Hotspot | undefined
+  onClose: () => void
+}) {
+  const info = COMPONENT_INFO[id]
+  // Anchor the card to the hotspot, flipping side/vertical to stay in frame.
+  const left = pos ? Math.min(Math.max(pos.x, 28), 72) : 50
+  const above = pos ? pos.y > 55 : false
+  const top = pos ? (above ? pos.y - 6 : pos.y + 6) : 50
+  return (
+    <div
+      className="absolute z-10 w-52 -translate-x-1/2 rounded-xl border border-white/60 bg-card/95 shadow-xl ring-1 ring-black/5 backdrop-blur-md"
+      style={{
+        left: `${left}%`,
+        top: `${top}%`,
+        transform: `translate(-50%, ${above ? "-100%" : "0"})`,
+      }}
+      role="dialog"
+      aria-label={info.title}
+    >
+      <div className="flex items-start justify-between gap-2 border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
+        <p className="font-serif text-sm font-semibold text-foreground">
+          {info.title}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <X className="size-3.5" aria-hidden="true" />
+        </button>
+      </div>
+      <p className="px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+        {info.blurb}
+      </p>
+    </div>
   )
 }
 
@@ -522,7 +716,7 @@ function ControlButton({
           ? "border-primary bg-primary text-primary-foreground shadow-sm hover:brightness-105"
           : active
             ? "border-primary bg-primary/15 text-foreground shadow-inner"
-            : "border-input bg-background text-muted-foreground hover:border-ring hover:text-foreground hover:shadow-sm",
+            : "border-input bg-background text-foreground hover:bg-muted",
       )}
     >
       {children}
