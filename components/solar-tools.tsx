@@ -74,7 +74,7 @@ export function SolarTools() {
         <div
           role="tablist"
           aria-label="Solar calculators"
-          className="flex flex-wrap gap-2"
+          className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap"
         >
           {TOOLS.map((tool) => {
             const isActive = tool.id === active
@@ -88,7 +88,7 @@ export function SolarTools() {
                 id={`solar-tab-${tool.id}`}
                 onClick={() => setActive(tool.id)}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors",
+                  "inline-flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-center text-xs transition-colors sm:px-4 sm:text-sm",
                   isActive
                     ? "border-primary bg-primary/15 font-medium text-foreground"
                     : "border-input bg-background text-muted-foreground hover:border-ring hover:text-foreground",
