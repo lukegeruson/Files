@@ -1,11 +1,19 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import {
   CameraControls,
   ContactShadows,
   Environment,
+  Grid,
   Html,
   Lightformer,
   Line,
@@ -16,8 +24,12 @@ import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing"
 import {
   CanvasTexture,
   CatmullRomCurve3,
+  DoubleSide,
   type Group,
   type Mesh,
+  RepeatWrapping,
+  SRGBColorSpace,
+  type Texture,
   Vector3,
 } from "three"
 import { X } from "lucide-react"
@@ -31,6 +43,15 @@ import {
 
 export type CameraPreset = "overview" | "flow"
 
+// The three art directions the user is comparing.
+export type SceneStyle = "clay" | "photoreal" | "holo"
+
+export const SCENE_STYLES: { id: SceneStyle; label: string; hint: string }[] = [
+  { id: "clay", label: "Claymation", hint: "Soft matte miniature model" },
+  { id: "photoreal", label: "Photoreal", hint: "Lifelike materials & sun" },
+  { id: "holo", label: "Hologram", hint: "Glowing digital twin" },
+]
+
 type SceneProps = {
   frame: Frame
   panelCount: number
@@ -41,6 +62,103 @@ type SceneProps = {
   /** Bumped by the parent to force a camera reset to the preset. */
   resetKey: number
   reducedMotion: boolean
+  sceneStyle: SceneStyle
+}
+
+// ---------------------------------------------------------------------------
+// Style plumbing: one context so every surface can theme itself without the
+// geometry components needing to know which look is active.
+// ---------------------------------------------------------------------------
+
+const StyleContext = createContext<SceneStyle>("photoreal")
+const useStyle = () => useContext(StyleContext)
+
+const TextureContext = createContext<{
+  wall: Texture | null
+  roof: Texture | null
+  ground: Texture | null
+}>({ wall: null, roof: null, ground: null })
+const useTextures = () => useContext(TextureContext)
+
+// Themed surface material. Geometry stays identical across styles; only the
+// finish changes here:
+//  - photoreal: PBR with the real map + environment reflections
+//  - clay:      flat matte, no metal, gentle env light (toy model)
+//  - holo:      translucent neon shell that blooms (digital twin)
+function M({
+  color,
+  emissive,
+  emissiveIntensity,
+  roughness = 0.8,
+  metalness = 0,
+  map,
+  neon,
+  holoOpacity = 0.32,
+  flatShading = false,
+  toneMapped = true,
+}: {
+  color: string
+  emissive?: string
+  emissiveIntensity?: number
+  roughness?: number
+  metalness?: number
+  /** Which photoreal texture to apply, if any. */
+  map?: "wall" | "roof" | "ground"
+  /** Neon emissive hue used only in the hologram style. */
+  neon?: string
+  holoOpacity?: number
+  flatShading?: boolean
+  toneMapped?: boolean
+}) {
+  const style = useStyle()
+  const tex = useTextures()
+  const resolvedMap = map ? tex[map] : null
+
+  if (style === "clay") {
+    return (
+      <meshStandardMaterial
+        color={color}
+        emissive={emissive}
+        emissiveIntensity={emissive ? (emissiveIntensity ?? 0.2) * 0.7 : 0}
+        roughness={0.98}
+        metalness={0}
+        envMapIntensity={0.55}
+        flatShading={flatShading}
+        toneMapped={toneMapped}
+      />
+    )
+  }
+
+  if (style === "holo") {
+    return (
+      <meshStandardMaterial
+        color="#08131f"
+        emissive={neon ?? emissive ?? color}
+        emissiveIntensity={0.85}
+        roughness={0.25}
+        metalness={0.1}
+        transparent
+        opacity={holoOpacity}
+        side={DoubleSide}
+        toneMapped={toneMapped}
+      />
+    )
+  }
+
+  // photoreal
+  return (
+    <meshStandardMaterial
+      color={color}
+      map={resolvedMap ?? undefined}
+      emissive={emissive}
+      emissiveIntensity={emissiveIntensity}
+      roughness={roughness}
+      metalness={metalness}
+      envMapIntensity={1.15}
+      flatShading={flatShading}
+      toneMapped={toneMapped}
+    />
+  )
 }
 
 // --- Fixed anchor points for flow routing & popups -------------------------
@@ -95,7 +213,6 @@ function Rig({ preset, resetKey }: { preset: CameraPreset; resetKey: number }) {
       makeDefault
       minDistance={5}
       maxDistance={20}
-      // Keep the camera above the ground.
       maxPolarAngle={Math.PI / 2.05}
     />
   )
@@ -106,19 +223,35 @@ function Rig({ preset, resetKey }: { preset: CameraPreset; resetKey: number }) {
 // without loading any external HDRI. Baked once (frames={1}).
 // ---------------------------------------------------------------------------
 
-function StudioEnvironment({ daylight }: { daylight: number }) {
+function StudioEnvironment({
+  daylight,
+  style,
+}: {
+  daylight: number
+  style: SceneStyle
+}) {
+  // The hologram lives in a dark room lit mostly by its own glow, so it gets a
+  // dim cool environment; the other two get a warm daylight rig.
+  if (style === "holo") {
+    return (
+      <Environment resolution={256} frames={1} background={false}>
+        <Lightformer form="rect" intensity={0.5} color="#2b6cff" position={[5, 5, 2]} scale={[10, 10, 1]} />
+        <Lightformer form="rect" intensity={0.4} color="#22d3ee" position={[-6, 3, -4]} scale={[8, 6, 1]} />
+      </Environment>
+    )
+  }
+
+  const warm = style === "clay" ? 1.4 : 2.2
   return (
     <Environment resolution={256} frames={1} background={false}>
-      {/* Warm key from the sun side. */}
       <Lightformer
         form="rect"
-        intensity={2.2 + daylight * 1.4}
+        intensity={warm + daylight * 1.4}
         color="#fff0d0"
         position={[5, 6, -2]}
         scale={[8, 6, 1]}
         target={[0, 1, 0]}
       />
-      {/* Cool sky fill from above. */}
       <Lightformer
         form="rect"
         intensity={1.1 + daylight * 0.6}
@@ -127,7 +260,6 @@ function StudioEnvironment({ daylight }: { daylight: number }) {
         rotation={[Math.PI / 2, 0, 0]}
         scale={[12, 12, 1]}
       />
-      {/* Soft rim from the rear to separate the house from the sky. */}
       <Lightformer
         form="rect"
         intensity={1.4}
@@ -141,12 +273,18 @@ function StudioEnvironment({ daylight }: { daylight: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// Lighting that tracks the time of day
+// Lighting that tracks the time of day (and the active style)
 // ---------------------------------------------------------------------------
 
-function DayLighting({ hour, daylight }: { hour: number; daylight: number }) {
-  // Continuous sun direction for the sky shader (dips below the horizon at
-  // night so the sky darkens on its own).
+function DayLighting({
+  hour,
+  daylight,
+  style,
+}: {
+  hour: number
+  daylight: number
+  style: SceneStyle
+}) {
   const a = (Math.PI * (hour - 6)) / 12
   const skySun: [number, number, number] = [
     -Math.cos(a) * 100,
@@ -155,29 +293,43 @@ function DayLighting({ hour, daylight }: { hour: number; daylight: number }) {
   ]
   const sunPos = sunPosition(hour) ?? [4, 6, -3]
 
+  if (style === "holo") {
+    // No sky; the scene reads against a dark backdrop with cool fill only.
+    return (
+      <>
+        <color attach="background" args={["#050b16"]} />
+        <ambientLight intensity={0.35} color="#7fb8ff" />
+        <directionalLight position={sunPos} intensity={0.35} color="#8fd3ff" />
+        <pointLight position={[0, 3, 4]} intensity={0.6} color="#22d3ee" distance={14} />
+      </>
+    )
+  }
+
+  const clay = style === "clay"
   return (
     <>
-      <Sky
-        sunPosition={skySun}
-        turbidity={6}
-        rayleigh={daylight > 0 ? 1.4 : 0.3}
-        mieCoefficient={0.006}
-        mieDirectionalG={0.85}
-      />
+      {clay ? (
+        <color attach="background" args={["#efe7d6"]} />
+      ) : (
+        <Sky
+          sunPosition={skySun}
+          turbidity={6}
+          rayleigh={daylight > 0 ? 1.4 : 0.3}
+          mieCoefficient={0.006}
+          mieDirectionalG={0.85}
+        />
+      )}
       <hemisphereLight
-        intensity={0.3 + 0.3 * daylight}
+        intensity={(clay ? 0.55 : 0.3) + 0.3 * daylight}
         color="#fff6e6"
-        groundColor="#8f8467"
+        groundColor={clay ? "#cfc3a0" : "#8f8467"}
       />
-      <ambientLight intensity={0.15 + 0.25 * daylight} />
-      {/* Key light for crisp highlights; grounding shadow comes from
-          ContactShadows so this one stays cheap (no shadow map). */}
+      <ambientLight intensity={(clay ? 0.4 : 0.15) + 0.25 * daylight} />
       <directionalLight
         position={sunPos}
-        intensity={0.2 + 1.6 * daylight}
+        intensity={(clay ? 0.5 : 0.2) + (clay ? 1.0 : 1.6) * daylight}
         color="#fff1d0"
       />
-      {/* Warm interior glow that grows as the sun sets, so the house reads at night. */}
       <pointLight
         position={[-0.4, 1, 0.4]}
         intensity={0.6 * (1 - daylight)}
@@ -226,7 +378,6 @@ function Sun({
           toneMapped={false}
         />
       </mesh>
-      {/* Layered halos — soft on the outside, brighter toward the core. */}
       <mesh scale={1.35}>
         <sphereGeometry args={[0.72, 24, 24]} />
         <meshBasicMaterial color="#ffd27a" transparent opacity={0.35} toneMapped={false} />
@@ -284,7 +435,6 @@ const ROOF_HALF_DEPTH = 1.5
 const ROOF_ANGLE = Math.atan2(ROOF_RISE, ROOF_HALF_DEPTH)
 
 function PanelArray({ count }: { count: number }) {
-  // Lay out up to 24 panels in a tidy grid sized to the roof.
   const shown = Math.max(3, Math.min(24, count))
   const cols = Math.min(6, Math.max(3, Math.ceil(Math.sqrt(shown * 1.6))))
   const rows = Math.min(4, Math.ceil(shown / cols))
@@ -303,23 +453,22 @@ function PanelArray({ count }: { count: number }) {
       const z = -totalH / 2 + ph / 2 + r * (ph + gap)
       panels.push(
         <group key={`${r}-${c}`} position={[x, 0.06, z]}>
-          {/* Silver frame */}
           <mesh castShadow>
             <boxGeometry args={[pw, 0.05, ph]} />
-            <meshStandardMaterial color="#c9d2dc" metalness={0.85} roughness={0.35} />
+            <M color="#c9d2dc" metalness={0.85} roughness={0.35} neon="#37b6ff" />
           </mesh>
-          {/* Reflective glass cell face, inset slightly above the frame */}
           <mesh position={[0, 0.03, 0]}>
             <boxGeometry args={[pw - 0.05, 0.02, ph - 0.05]} />
-            <meshStandardMaterial
+            <M
               color="#123456"
               emissive="#2f6fae"
               emissiveIntensity={0.28}
               metalness={0.95}
               roughness={0.12}
+              neon="#37b6ff"
+              holoOpacity={0.5}
             />
           </mesh>
-          {/* Cell grid lines */}
           <mesh position={[0, 0.041, 0]}>
             <boxGeometry args={[pw - 0.05, 0.001, 0.012]} />
             <meshBasicMaterial color="#0c2540" />
@@ -335,13 +484,10 @@ function PanelArray({ count }: { count: number }) {
   }
 
   return (
-    // Front-facing slope: sit at the slope centre and tilt so the +z (eave)
-    // edge drops away from the ridge.
     <group position={[0, 2.15, 0.75]} rotation={[ROOF_ANGLE, 0, 0]}>
-      {/* Mounting deck the panels rest on. */}
       <mesh receiveShadow>
         <boxGeometry args={[totalW + 0.24, 0.06, totalH + 0.24]} />
-        <meshStandardMaterial color="#3a4250" metalness={0.5} roughness={0.6} />
+        <M color="#3a4250" metalness={0.5} roughness={0.6} neon="#2b6cff" />
       </mesh>
       {panels}
     </group>
@@ -351,42 +497,39 @@ function PanelArray({ count }: { count: number }) {
 function Window({ x, y = 0.95, z = 1.52 }: { x: number; y?: number; z?: number }) {
   return (
     <group position={[x, y, z]}>
-      {/* Outer casing */}
       <mesh position={[0, 0, -0.02]}>
         <boxGeometry args={[0.74, 0.74, 0.06]} />
-        <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+        <M color="#efe7d5" roughness={0.7} neon="#38e6ff" />
       </mesh>
-      {/* Glass */}
       <mesh>
         <boxGeometry args={[0.58, 0.58, 0.04]} />
-        <meshStandardMaterial
+        <M
           color="#bcdcea"
           emissive="#ffdda0"
           emissiveIntensity={0.3}
           metalness={0.5}
           roughness={0.08}
+          neon="#ffd27a"
+          holoOpacity={0.55}
         />
       </mesh>
-      {/* Muntins (cross bars) */}
       <mesh position={[0, 0, 0.03]}>
         <boxGeometry args={[0.6, 0.03, 0.02]} />
-        <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+        <M color="#efe7d5" roughness={0.7} neon="#38e6ff" />
       </mesh>
       <mesh position={[0, 0, 0.03]}>
         <boxGeometry args={[0.03, 0.6, 0.02]} />
-        <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+        <M color="#efe7d5" roughness={0.7} neon="#38e6ff" />
       </mesh>
-      {/* Shutters */}
       {[-0.42, 0.42].map((sx) => (
         <mesh key={sx} position={[sx, 0, 0]}>
           <boxGeometry args={[0.14, 0.72, 0.04]} />
-          <meshStandardMaterial color="#3f5d52" roughness={0.7} />
+          <M color="#3f5d52" roughness={0.7} neon="#38e6ff" />
         </mesh>
       ))}
-      {/* Sill */}
       <mesh position={[0, -0.42, 0.06]}>
         <boxGeometry args={[0.82, 0.06, 0.1]} />
-        <meshStandardMaterial color="#e0d6c0" roughness={0.7} />
+        <M color="#e0d6c0" roughness={0.7} neon="#38e6ff" />
       </mesh>
     </group>
   )
@@ -405,16 +548,16 @@ function House({ onSelect }: { onSelect: (id: ComponentId | null) => void }) {
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial color="#f4eada" roughness={0.75} metalness={0.02} />
+          <M color="#f4eada" roughness={0.75} metalness={0.02} map="wall" neon="#38e6ff" holoOpacity={0.22} />
         </RoundedBox>
 
         {/* Stone foundation course */}
         <mesh position={[0, 0.12, 0]} receiveShadow>
           <boxGeometry args={[4.08, 0.26, 3.08]} />
-          <meshStandardMaterial color="#9c9384" roughness={0.95} />
+          <M color="#9c9384" roughness={0.95} neon="#2b6cff" />
         </mesh>
 
-        {/* Corner quoins for architectural detail */}
+        {/* Corner quoins */}
         {[
           [-1.99, 1.99],
           [1.99, 1.99],
@@ -423,108 +566,85 @@ function House({ onSelect }: { onSelect: (id: ComponentId | null) => void }) {
         ].map(([x, z], i) => (
           <mesh key={i} position={[x, 0.85, z]}>
             <boxGeometry args={[0.14, 1.6, 0.14]} />
-            <meshStandardMaterial color="#e6dcc7" roughness={0.8} />
+            <M color="#e6dcc7" roughness={0.8} neon="#38e6ff" />
           </mesh>
         ))}
 
-        {/* Covered entry: recessed door, porch roof, and steps */}
+        {/* Covered entry */}
         <group position={[0, 0, 1.5]}>
-          {/* Door */}
           <mesh position={[0, 0.6, 0.02]}>
             <boxGeometry args={[0.66, 1.2, 0.06]} />
-            <meshStandardMaterial color="#5e3d24" roughness={0.55} />
+            <M color="#5e3d24" roughness={0.55} neon="#ffb454" />
           </mesh>
-          {/* Door panels inset */}
           <mesh position={[0, 0.6, 0.06]}>
             <boxGeometry args={[0.5, 1.02, 0.02]} />
-            <meshStandardMaterial color="#6f4a2c" roughness={0.5} />
+            <M color="#6f4a2c" roughness={0.5} neon="#ffb454" />
           </mesh>
-          {/* Handle */}
           <mesh position={[0.2, 0.58, 0.08]}>
             <sphereGeometry args={[0.035, 12, 12]} />
-            <meshStandardMaterial color="#e0b452" metalness={0.9} roughness={0.25} />
+            <M color="#e0b452" metalness={0.9} roughness={0.25} neon="#ffe08a" />
           </mesh>
-          {/* Transom light above door */}
           <mesh position={[0, 1.28, 0.05]}>
             <boxGeometry args={[0.66, 0.18, 0.03]} />
-            <meshStandardMaterial color="#bcdcea" emissive="#ffdda0" emissiveIntensity={0.35} roughness={0.1} metalness={0.4} />
+            <M color="#bcdcea" emissive="#ffdda0" emissiveIntensity={0.35} roughness={0.1} metalness={0.4} neon="#ffd27a" holoOpacity={0.55} />
           </mesh>
-          {/* Small porch roof */}
           <mesh position={[0, 1.5, 0.28]} castShadow>
             <boxGeometry args={[1.1, 0.08, 0.6]} />
-            <meshStandardMaterial color="#5f3d2e" roughness={0.8} />
+            <M color="#5f3d2e" roughness={0.8} neon="#38e6ff" />
           </mesh>
           {[-0.42, 0.42].map((px) => (
             <mesh key={px} position={[px, 0.7, 0.5]} castShadow>
               <cylinderGeometry args={[0.05, 0.05, 1.4, 12]} />
-              <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+              <M color="#efe7d5" roughness={0.7} neon="#38e6ff" />
             </mesh>
           ))}
-          {/* Steps */}
           <mesh position={[0, 0.03, 0.5]} receiveShadow>
             <boxGeometry args={[1.0, 0.08, 0.5]} />
-            <meshStandardMaterial color="#b7ad98" roughness={0.9} />
+            <M color="#b7ad98" roughness={0.9} neon="#2b6cff" />
           </mesh>
           <mesh position={[0, 0.1, 0.32]} receiveShadow>
             <boxGeometry args={[0.8, 0.08, 0.3]} />
-            <meshStandardMaterial color="#c2b8a2" roughness={0.9} />
+            <M color="#c2b8a2" roughness={0.9} neon="#2b6cff" />
           </mesh>
         </group>
 
-        {/* Windows flanking the entry */}
         <Window x={-1.2} />
         <Window x={1.2} />
 
         {/* Chimney */}
         <mesh position={[1.3, 2.75, -0.5]} castShadow>
           <boxGeometry args={[0.36, 0.75, 0.36]} />
-          <meshStandardMaterial color="#a8907a" roughness={0.9} />
+          <M color="#a8907a" roughness={0.9} neon="#38e6ff" />
         </mesh>
         <mesh position={[1.3, 3.15, -0.5]}>
           <boxGeometry args={[0.44, 0.1, 0.44]} />
-          <meshStandardMaterial color="#8a7461" roughness={0.9} />
+          <M color="#8a7461" roughness={0.9} neon="#38e6ff" />
         </mesh>
       </Clickable>
 
-      {/* --- Roof: shingled slopes with an overhanging eave + fascia --- */}
-      {/* Front (south) slope beneath the panels. */}
-      <mesh
-        position={[0, 2.15, 0.78]}
-        rotation={[ROOF_ANGLE, 0, 0]}
-        castShadow
-        receiveShadow
-      >
+      {/* --- Roof --- */}
+      <mesh position={[0, 2.15, 0.78]} rotation={[ROOF_ANGLE, 0, 0]} castShadow receiveShadow>
         <boxGeometry args={[4.4, 0.12, 2.05]} />
-        <meshStandardMaterial color="#6d4436" roughness={0.9} />
+        <M color="#6d4436" roughness={0.9} map="roof" neon="#1f8fff" />
       </mesh>
-      {/* Back (north) slope. */}
-      <mesh
-        position={[0, 2.15, -0.78]}
-        rotation={[-ROOF_ANGLE, 0, 0]}
-        castShadow
-        receiveShadow
-      >
+      <mesh position={[0, 2.15, -0.78]} rotation={[-ROOF_ANGLE, 0, 0]} castShadow receiveShadow>
         <boxGeometry args={[4.4, 0.12, 2.05]} />
-        <meshStandardMaterial color="#6d4436" roughness={0.9} />
+        <M color="#6d4436" roughness={0.9} map="roof" neon="#1f8fff" />
       </mesh>
-      {/* Fascia board along the front eave. */}
       <mesh position={[0, 1.83, 1.72]}>
         <boxGeometry args={[4.4, 0.14, 0.06]} />
-        <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+        <M color="#efe7d5" roughness={0.7} neon="#38e6ff" />
       </mesh>
-      {/* Gable end fills (triangles approximated by thin tapered prisms). */}
       {[-2.02, 2.02].map((x) => (
         <mesh key={x} position={[x, 2.15, 0]}>
           <boxGeometry args={[0.06, 0.9, 2.6]} />
-          <meshStandardMaterial color="#e9dfca" roughness={0.8} />
+          <M color="#e9dfca" roughness={0.8} neon="#38e6ff" />
         </mesh>
       ))}
-      {/* Ridge cap along the top of the two slopes. */}
       <mesh position={[0, 2.64, 0]} castShadow>
         <boxGeometry args={[4.45, 0.14, 0.2]} />
-        <meshStandardMaterial color="#4f3125" roughness={0.85} />
+        <M color="#4f3125" roughness={0.85} neon="#1f8fff" />
       </mesh>
-      {/* Panels are rendered by HouseWithPanels so the count stays live. */}
     </group>
   )
 }
@@ -542,16 +662,9 @@ function Equipment({
 }) {
   return (
     <group>
-      {/* Inverter */}
       <Clickable id="inverter" onSelect={onSelect}>
-        <RoundedBox
-          args={[0.24, 0.6, 0.4]}
-          radius={0.04}
-          smoothness={4}
-          position={ANCHORS.inverter}
-          castShadow
-        >
-          <meshStandardMaterial color="#eef1f4" roughness={0.35} metalness={0.35} />
+        <RoundedBox args={[0.24, 0.6, 0.4]} radius={0.04} smoothness={4} position={ANCHORS.inverter} castShadow>
+          <M color="#eef1f4" roughness={0.35} metalness={0.35} neon="#38e6ff" />
         </RoundedBox>
         <mesh position={[ANCHORS.inverter[0] + 0.13, ANCHORS.inverter[1], ANCHORS.inverter[2]]}>
           <boxGeometry args={[0.02, 0.3, 0.22]} />
@@ -559,37 +672,20 @@ function Equipment({
         </mesh>
       </Clickable>
 
-      {/* Meter */}
       <Clickable id="meter" onSelect={onSelect}>
-        <RoundedBox
-          args={[0.22, 0.4, 0.34]}
-          radius={0.04}
-          smoothness={4}
-          position={ANCHORS.meter}
-          castShadow
-        >
-          <meshStandardMaterial color="#dfdccf" roughness={0.5} metalness={0.2} />
+        <RoundedBox args={[0.22, 0.4, 0.34]} radius={0.04} smoothness={4} position={ANCHORS.meter} castShadow>
+          <M color="#dfdccf" roughness={0.5} metalness={0.2} neon="#38e6ff" />
         </RoundedBox>
-        <mesh
-          position={[ANCHORS.meter[0] + 0.12, ANCHORS.meter[1] + 0.05, ANCHORS.meter[2]]}
-          rotation={[0, 0, Math.PI / 2]}
-        >
+        <mesh position={[ANCHORS.meter[0] + 0.12, ANCHORS.meter[1] + 0.05, ANCHORS.meter[2]]} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.09, 0.09, 0.03, 24]} />
           <meshStandardMaterial color="#2a323b" emissive="#5b8def" emissiveIntensity={0.6} toneMapped={false} />
         </mesh>
       </Clickable>
 
-      {/* Battery (only when the system includes one) */}
       {hasBattery ? (
         <Clickable id="battery" onSelect={onSelect}>
-          <RoundedBox
-            args={[0.28, 0.7, 0.5]}
-            radius={0.05}
-            smoothness={4}
-            position={ANCHORS.battery}
-            castShadow
-          >
-            <meshStandardMaterial color="#f0ece2" roughness={0.35} metalness={0.25} />
+          <RoundedBox args={[0.28, 0.7, 0.5]} radius={0.05} smoothness={4} position={ANCHORS.battery} castShadow>
+            <M color="#f0ece2" roughness={0.35} metalness={0.25} neon="#9b83f0" />
           </RoundedBox>
           <mesh position={[ANCHORS.battery[0] + 0.15, ANCHORS.battery[1], ANCHORS.battery[2]]}>
             <boxGeometry args={[0.02, 0.42, 0.08]} />
@@ -609,27 +705,23 @@ function GridPole({ onSelect }: { onSelect: (id: ComponentId | null) => void }) 
   const [gx, , gz] = ANCHORS.grid
   return (
     <Clickable id="grid" onSelect={onSelect}>
-      {/* Pole */}
       <mesh position={[gx, 1.6, gz]} castShadow>
         <cylinderGeometry args={[0.1, 0.12, 3.2, 12]} />
-        <meshStandardMaterial color="#7a6549" roughness={0.85} />
+        <M color="#7a6549" roughness={0.85} neon="#38e6ff" />
       </mesh>
-      {/* Crossarm */}
       <mesh position={[gx, 2.9, gz]} castShadow>
         <boxGeometry args={[0.12, 0.12, 1.4]} />
-        <meshStandardMaterial color="#5f4d3b" roughness={0.85} />
+        <M color="#5f4d3b" roughness={0.85} neon="#38e6ff" />
       </mesh>
-      {/* Insulators */}
       {[-0.5, 0.5].map((dz) => (
         <mesh key={dz} position={[gx, 3.0, gz + dz]}>
           <cylinderGeometry args={[0.05, 0.05, 0.12, 12]} />
-          <meshStandardMaterial color="#3a4048" roughness={0.4} metalness={0.3} />
+          <M color="#3a4048" roughness={0.4} metalness={0.3} neon="#5b8def" />
         </mesh>
       ))}
-      {/* Transformer */}
       <mesh position={[gx, 2.2, gz + 0.25]} castShadow>
         <cylinderGeometry args={[0.16, 0.16, 0.5, 16]} />
-        <meshStandardMaterial color="#9a958a" metalness={0.6} roughness={0.4} />
+        <M color="#9a958a" metalness={0.6} roughness={0.4} neon="#5b8def" />
       </mesh>
     </Clickable>
   )
@@ -643,18 +735,10 @@ function ConduitLines() {
   return (
     <>
       {FLOW_KEYS.map((key) => {
-        // Draw import/discharge conduits once (they overlap export paths).
         if (key === "solarToBattery" || key === "solarToGrid" || key === "batteryToHome")
           return null
         return (
-          <Line
-            key={key}
-            points={FLOW_PATHS[key]}
-            color="#6f6857"
-            lineWidth={1.2}
-            transparent
-            opacity={0.28}
-          />
+          <Line key={key} points={FLOW_PATHS[key]} color="#6f6857" lineWidth={1.2} transparent opacity={0.28} />
         )
       })}
       <Line points={FLOW_PATHS.solarToBattery} color="#6f6857" lineWidth={1.2} transparent opacity={0.28} />
@@ -701,7 +785,6 @@ function FlowParticles({
   return (
     <group>
       {Array.from({ length: count }).map((_, i) => {
-        // Static, evenly spaced when motion is reduced.
         const at = reducedMotion ? i / count : 0
         const p = curve.getPointAt(at)
         return (
@@ -712,17 +795,10 @@ function FlowParticles({
             }}
             position={[p.x, p.y, p.z]}
           >
-            {/* Bright core */}
             <mesh>
               <sphereGeometry args={[0.07, 12, 12]} />
-              <meshStandardMaterial
-                color={color}
-                emissive={color}
-                emissiveIntensity={2.6}
-                toneMapped={false}
-              />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2.6} toneMapped={false} />
             </mesh>
-            {/* Soft glow shell that blooms */}
             <mesh scale={2.1}>
               <sphereGeometry args={[0.07, 12, 12]} />
               <meshBasicMaterial color={color} transparent opacity={0.22} toneMapped={false} />
@@ -755,12 +831,7 @@ function SelectionRing({
   return (
     <mesh ref={ref} position={anchor} rotation={[Math.PI / 2, 0, 0]}>
       <torusGeometry args={[0.62, 0.028, 12, 48]} />
-      <meshStandardMaterial
-        color="#f5b445"
-        emissive="#f5b445"
-        emissiveIntensity={2.2}
-        toneMapped={false}
-      />
+      <meshStandardMaterial color="#f5b445" emissive="#f5b445" emissiveIntensity={2.2} toneMapped={false} />
     </mesh>
   )
 }
@@ -775,20 +846,13 @@ function InfoPopup({
   onSelect: (id: ComponentId | null) => void
 }) {
   const info = COMPONENT_INFO[id]
-  const anchor =
-    id === "sun" ? sunPosition(hour) ?? [4, 6, -3] : ANCHORS[id]
-  const cardAnchor: [number, number, number] = [
-    anchor[0],
-    anchor[1] + 0.95,
-    anchor[2],
-  ]
+  const anchor = id === "sun" ? sunPosition(hour) ?? [4, 6, -3] : ANCHORS[id]
+  const cardAnchor: [number, number, number] = [anchor[0], anchor[1] + 0.95, anchor[2]]
   return (
     <Html position={cardAnchor} center distanceFactor={9} zIndexRange={[40, 0]}>
       <div className="w-60 overflow-hidden rounded-xl border border-primary/25 bg-card/95 text-left shadow-xl ring-1 ring-black/5 backdrop-blur-md">
         <div className="flex items-start justify-between gap-2 border-b border-border/70 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
-          <h4 className="font-serif text-sm font-semibold text-card-foreground">
-            {info.title}
-          </h4>
+          <h4 className="font-serif text-sm font-semibold text-card-foreground">{info.title}</h4>
           <button
             type="button"
             aria-label="Close"
@@ -801,95 +865,137 @@ function InfoPopup({
             <X className="size-3.5" aria-hidden="true" />
           </button>
         </div>
-        <p className="px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-          {info.blurb}
-        </p>
+        <p className="px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">{info.blurb}</p>
       </div>
     </Html>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Ground: radial-gradient plot that fades into the sky at the edges
+// Procedural textures (photoreal only)
 // ---------------------------------------------------------------------------
+
+function makeWallTexture() {
+  const size = 512
+  const canvas = document.createElement("canvas")
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext("2d")!
+  ctx.fillStyle = "#f4eada"
+  ctx.fillRect(0, 0, size, size)
+  // Broad mottling for stucco.
+  for (let i = 0; i < 40; i++) {
+    ctx.globalAlpha = 0.04
+    ctx.fillStyle = Math.random() > 0.5 ? "#ffffff" : "#c9bda0"
+    const r = 20 + Math.random() * 90
+    ctx.beginPath()
+    ctx.arc(Math.random() * size, Math.random() * size, r, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Fine grain.
+  ctx.globalAlpha = 0.05
+  for (let i = 0; i < 9000; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? "#ffffff" : "#8f8467"
+    ctx.fillRect(Math.random() * size, Math.random() * size, 1.4, 1.4)
+  }
+  ctx.globalAlpha = 1
+  const tex = new CanvasTexture(canvas)
+  tex.colorSpace = SRGBColorSpace
+  tex.wrapS = tex.wrapT = RepeatWrapping
+  tex.repeat.set(2, 1)
+  return tex
+}
+
+function makeRoofTexture() {
+  const size = 512
+  const canvas = document.createElement("canvas")
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext("2d")!
+  ctx.fillStyle = "#6d4436"
+  ctx.fillRect(0, 0, size, size)
+  const courseH = 34
+  const tabW = 46
+  for (let y = 0, row = 0; y < size; y += courseH, row++) {
+    const offset = (row % 2) * (tabW / 2)
+    for (let x = -tabW; x < size; x += tabW) {
+      const shade = 0.85 + Math.random() * 0.3
+      ctx.fillStyle = `rgb(${Math.round(0x6d * shade)}, ${Math.round(0x44 * shade)}, ${Math.round(0x36 * shade)})`
+      ctx.fillRect(x + offset + 1, y + 1, tabW - 2, courseH - 3)
+    }
+    // Shadow line under each course.
+    ctx.fillStyle = "rgba(0,0,0,0.25)"
+    ctx.fillRect(0, y + courseH - 3, size, 3)
+  }
+  const tex = new CanvasTexture(canvas)
+  tex.colorSpace = SRGBColorSpace
+  tex.wrapS = tex.wrapT = RepeatWrapping
+  tex.repeat.set(3, 2)
+  return tex
+}
 
 // A painted top-down site plan: mown lawn with subtle mowing stripes, a warm
 // flagstone path leading to the front door, and a soft vignette that fades the
 // plot into the horizon so there's no hard disc edge.
-function useGroundTexture() {
-  return useMemo(() => {
-    const size = 1024
-    const canvas = document.createElement("canvas")
-    canvas.width = size
-    canvas.height = size
-    const ctx = canvas.getContext("2d")!
+function makeGroundTexture() {
+  const size = 1024
+  const canvas = document.createElement("canvas")
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext("2d")!
 
-    // Base lawn gradient (richer green in the middle, drying toward the edge).
-    const g = ctx.createRadialGradient(
-      size / 2, size * 0.46, size * 0.08,
-      size / 2, size / 2, size * 0.52,
-    )
-    g.addColorStop(0, "#6f8f46")
-    g.addColorStop(0.5, "#5f8340")
-    g.addColorStop(0.8, "#8a9a5e")
-    g.addColorStop(1, "#b9bd94")
-    ctx.fillStyle = g
-    ctx.fillRect(0, 0, size, size)
+  const g = ctx.createRadialGradient(size / 2, size * 0.46, size * 0.08, size / 2, size / 2, size * 0.52)
+  g.addColorStop(0, "#6f8f46")
+  g.addColorStop(0.5, "#5f8340")
+  g.addColorStop(0.8, "#8a9a5e")
+  g.addColorStop(1, "#b9bd94")
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, size, size)
 
-    // Diagonal mowing stripes for a manicured lawn.
-    ctx.save()
-    ctx.translate(size / 2, size / 2)
-    ctx.rotate(-0.5)
-    ctx.globalAlpha = 0.06
-    const stripe = size / 16
-    for (let i = -20; i < 20; i++) {
-      ctx.fillStyle = i % 2 === 0 ? "#ffffff" : "#0b2a0b"
-      ctx.fillRect(i * stripe, -size, stripe, size * 2)
-    }
-    ctx.restore()
+  ctx.save()
+  ctx.translate(size / 2, size / 2)
+  ctx.rotate(-0.5)
+  ctx.globalAlpha = 0.06
+  const stripe = size / 16
+  for (let i = -20; i < 20; i++) {
+    ctx.fillStyle = i % 2 === 0 ? "#ffffff" : "#0b2a0b"
+    ctx.fillRect(i * stripe, -size, stripe, size * 2)
+  }
+  ctx.restore()
 
-    // Speckle for grass texture.
-    ctx.globalAlpha = 0.05
-    for (let i = 0; i < 2600; i++) {
-      const x = Math.random() * size
-      const y = Math.random() * size
-      ctx.fillStyle = Math.random() > 0.5 ? "#dfeecb" : "#243d16"
-      ctx.fillRect(x, y, 1.5, 1.5)
-    }
+  ctx.globalAlpha = 0.05
+  for (let i = 0; i < 2600; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? "#dfeecb" : "#243d16"
+    ctx.fillRect(Math.random() * size, Math.random() * size, 1.5, 1.5)
+  }
+  ctx.globalAlpha = 1
+
+  const cx = size / 2
+  ctx.strokeStyle = "#c9bda0"
+  ctx.fillStyle = "#d8ccae"
+  for (let i = 0; i < 9; i++) {
+    const y = size * 0.62 + i * 44
+    const w = 120 - i * 3
+    ctx.beginPath()
+    ctx.roundRect(cx - w / 2, y, w, 34, 10)
+    ctx.fill()
+    ctx.globalAlpha = 0.5
+    ctx.stroke()
     ctx.globalAlpha = 1
+  }
 
-    // Flagstone path from the front door (bottom center) toward the camera.
-    const cx = size / 2
-    ctx.strokeStyle = "#c9bda0"
-    ctx.fillStyle = "#d8ccae"
-    for (let i = 0; i < 9; i++) {
-      const y = size * 0.62 + i * 44
-      const w = 120 - i * 3
-      ctx.beginPath()
-      ctx.roundRect(cx - w / 2, y, w, 34, 10)
-      ctx.fill()
-      ctx.globalAlpha = 0.5
-      ctx.stroke()
-      ctx.globalAlpha = 1
-    }
+  const v = ctx.createRadialGradient(size / 2, size / 2, size * 0.34, size / 2, size / 2, size * 0.5)
+  v.addColorStop(0, "rgba(0,0,0,0)")
+  v.addColorStop(1, "rgba(196,201,168,0.85)")
+  ctx.fillStyle = v
+  ctx.fillRect(0, 0, size, size)
 
-    // Edge vignette so the circle dissolves into the distance.
-    const v = ctx.createRadialGradient(
-      size / 2, size / 2, size * 0.34,
-      size / 2, size / 2, size * 0.5,
-    )
-    v.addColorStop(0, "rgba(0,0,0,0)")
-    v.addColorStop(1, "rgba(196,201,168,0.85)")
-    ctx.fillStyle = v
-    ctx.fillRect(0, 0, size, size)
-
-    const tex = new CanvasTexture(canvas)
-    return tex
-  }, [])
+  const tex = new CanvasTexture(canvas)
+  tex.colorSpace = SRGBColorSpace
+  return tex
 }
 
-// One stylized tree: a tapered trunk with two clustered foliage blobs. Cheap,
-// but reads clearly as a tree and casts a soft contact shadow via the scene.
+// ---------------------------------------------------------------------------
+// Landscaping
+// ---------------------------------------------------------------------------
+
 function Tree({
   position,
   scale = 1,
@@ -903,25 +1009,24 @@ function Tree({
     <group position={position} scale={scale}>
       <mesh position={[0, 0.5, 0]} castShadow>
         <cylinderGeometry args={[0.07, 0.11, 1, 8]} />
-        <meshStandardMaterial color="#6b4a2f" roughness={0.9} />
+        <M color="#6b4a2f" roughness={0.9} neon="#2fbf6f" />
       </mesh>
       <mesh position={[0, 1.25, 0]} castShadow>
         <icosahedronGeometry args={[0.62, 1]} />
-        <meshStandardMaterial color={tint} roughness={0.85} flatShading />
+        <M color={tint} roughness={0.85} flatShading neon="#2fbf6f" />
       </mesh>
       <mesh position={[0.28, 1.65, 0.1]} castShadow>
         <icosahedronGeometry args={[0.42, 1]} />
-        <meshStandardMaterial color="#5c8a44" roughness={0.85} flatShading />
+        <M color="#5c8a44" roughness={0.85} flatShading neon="#2fbf6f" />
       </mesh>
       <mesh position={[-0.26, 1.5, -0.12]} castShadow>
         <icosahedronGeometry args={[0.38, 1]} />
-        <meshStandardMaterial color="#456d34" roughness={0.85} flatShading />
+        <M color="#456d34" roughness={0.85} flatShading neon="#2fbf6f" />
       </mesh>
     </group>
   )
 }
 
-// Low foundation hedge run made of overlapping rounded boxes.
 function Hedge({
   position,
   length = 2,
@@ -934,41 +1039,71 @@ function Hedge({
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       <RoundedBox args={[length, 0.32, 0.34]} radius={0.14} smoothness={3} position={[0, 0.16, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color="#3f6a30" roughness={0.9} flatShading />
+        <M color="#3f6a30" roughness={0.9} flatShading neon="#2fbf6f" />
       </RoundedBox>
     </group>
   )
 }
 
+// Neon grid floor for the hologram style.
+function GridFloor() {
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.3, -0.01, 0]}>
+        <circleGeometry args={[12, 64]} />
+        <meshBasicMaterial color="#040a12" />
+      </mesh>
+      <Grid
+        position={[-0.3, 0.001, 0]}
+        args={[24, 24]}
+        cellSize={0.6}
+        cellThickness={0.6}
+        cellColor="#1f6f8f"
+        sectionSize={3}
+        sectionThickness={1.1}
+        sectionColor="#38e6ff"
+        fadeDistance={22}
+        fadeStrength={1.2}
+        infiniteGrid
+      />
+    </group>
+  )
+}
+
 function Ground() {
-  const tex = useGroundTexture()
+  const style = useStyle()
+  const { ground } = useTextures()
+
+  if (style === "holo") return <GridFloor />
+
   return (
     <group>
       {/* Manicured plot the house sits on. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.3, 0, 0]} receiveShadow>
         <circleGeometry args={[9, 96]} />
-        <meshStandardMaterial map={tex} roughness={1} />
+        {style === "clay" ? (
+          <meshStandardMaterial color="#a7c078" roughness={1} metalness={0} />
+        ) : (
+          <meshStandardMaterial map={ground ?? undefined} roughness={1} />
+        )}
       </mesh>
-      {/* Raised soil bed under the foundation planting along the front wall. */}
+      {/* Raised soil bed under the foundation planting. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 1.75]} receiveShadow>
         <planeGeometry args={[4.4, 0.9]} />
-        <meshStandardMaterial color="#4a3524" roughness={1} />
+        <M color="#4a3524" roughness={1} neon="#2fbf6f" />
       </mesh>
 
-      {/* Foundation hedges flanking the door. */}
       <Hedge position={[-1.35, 0, 1.72]} length={1.4} />
       <Hedge position={[1.35, 0, 1.72]} length={1.4} />
 
-      {/* Trees framing the plot, kept clear of equipment (left) and flows. */}
       <Tree position={[3.6, 0, 2.1]} scale={1.15} />
       <Tree position={[4.3, 0, -1.6]} scale={0.9} tint="#557f3f" />
       <Tree position={[-3.9, 0, 2.6]} scale={0.8} tint="#4b7538" />
       <Tree position={[2.2, 0, 3.4]} scale={0.7} tint="#5c8a44" />
 
-      {/* A couple of shrubs by the utility pole for scale. */}
       <mesh position={[-4.6, 0.18, 0.6]} castShadow>
         <icosahedronGeometry args={[0.3, 1]} />
-        <meshStandardMaterial color="#4f7a3a" roughness={0.9} flatShading />
+        <M color="#4f7a3a" roughness={0.9} flatShading neon="#2fbf6f" />
       </mesh>
     </group>
   )
@@ -987,76 +1122,85 @@ function SceneContents({
   preset,
   resetKey,
   reducedMotion,
+  sceneStyle,
 }: SceneProps) {
+  // Photoreal textures are the only heavy assets; build them once and share.
+  const textures = useMemo(
+    () => ({
+      wall: makeWallTexture(),
+      roof: makeRoofTexture(),
+      ground: makeGroundTexture(),
+    }),
+    [],
+  )
+
+  const bloom =
+    sceneStyle === "holo"
+      ? { intensity: 1.5, threshold: 0.6 }
+      : sceneStyle === "clay"
+        ? { intensity: 0.45, threshold: 1 }
+        : { intensity: 0.85, threshold: 1 }
+  const vignette = sceneStyle === "holo" ? 0.62 : sceneStyle === "clay" ? 0.28 : 0.42
+
   return (
-    <>
-      <Rig preset={preset} resetKey={resetKey} />
-      <StudioEnvironment daylight={frame.daylight} />
-      <DayLighting hour={frame.hour} daylight={frame.daylight} />
-      <Ground />
-      {/* Soft grounding shadow under everything. */}
-      <ContactShadows
-        position={[-0.3, 0.03, 0]}
-        scale={18}
-        far={6}
-        blur={2.8}
-        opacity={0.32 + frame.daylight * 0.22}
-        resolution={1024}
-        color="#243d16"
-      />
+    <StyleContext.Provider value={sceneStyle}>
+      <TextureContext.Provider value={textures}>
+        <Rig preset={preset} resetKey={resetKey} />
+        <StudioEnvironment daylight={frame.daylight} style={sceneStyle} />
+        <DayLighting hour={frame.hour} daylight={frame.daylight} style={sceneStyle} />
+        <Ground />
 
-      <group>
-        {/* House with the panel array wired to the live count. */}
-        <HouseWithPanels panelCount={panelCount} onSelect={onSelect} />
-        <Equipment hasBattery={hasBattery} onSelect={onSelect} />
-        <GridPole onSelect={onSelect} />
-      </group>
+        {sceneStyle !== "holo" ? (
+          <ContactShadows
+            position={[-0.3, 0.03, 0]}
+            scale={18}
+            far={6}
+            blur={2.8}
+            opacity={0.32 + frame.daylight * 0.22}
+            resolution={1024}
+            color="#243d16"
+          />
+        ) : null}
 
-      <Sun hour={frame.hour} selected={selected === "sun"} onSelect={onSelect} />
+        <group>
+          <HouseWithPanels panelCount={panelCount} onSelect={onSelect} />
+          <Equipment hasBattery={hasBattery} onSelect={onSelect} />
+          <GridPole onSelect={onSelect} />
+        </group>
 
-      <ConduitLines />
-      {FLOW_KEYS.map((key) => (
-        <FlowParticles
-          key={key}
-          points={FLOW_PATHS[key]}
-          color={FLOW_COLORS[key]}
-          active={frame.flows[key] > 0.05}
-          kw={frame.flows[key]}
-          reducedMotion={reducedMotion}
-        />
-      ))}
+        <Sun hour={frame.hour} selected={selected === "sun"} onSelect={onSelect} />
 
-      {selected ? (
-        <>
-          <SelectionRing
-            anchor={
-              selected === "sun"
-                ? (sunPosition(frame.hour) ?? [4, 6, -3])
-                : ANCHORS[selected]
-            }
+        <ConduitLines />
+        {FLOW_KEYS.map((key) => (
+          <FlowParticles
+            key={key}
+            points={FLOW_PATHS[key]}
+            color={FLOW_COLORS[key]}
+            active={frame.flows[key] > 0.05}
+            kw={frame.flows[key]}
             reducedMotion={reducedMotion}
           />
-          <InfoPopup id={selected} hour={frame.hour} onSelect={onSelect} />
-        </>
-      ) : null}
+        ))}
 
-      {/* Bloom makes the sun, glowing indicators, and energy particles read as
-          light. Threshold > 1 so only the toneMapped=false emissives bloom,
-          leaving the house and ground crisp. */}
-      <EffectComposer enableNormalPass={false}>
-        <Bloom
-          intensity={0.85}
-          luminanceThreshold={1}
-          luminanceSmoothing={0.3}
-          mipmapBlur
-        />
-        <Vignette eskil={false} offset={0.32} darkness={0.42} />
-      </EffectComposer>
-    </>
+        {selected ? (
+          <>
+            <SelectionRing
+              anchor={selected === "sun" ? (sunPosition(frame.hour) ?? [4, 6, -3]) : ANCHORS[selected]}
+              reducedMotion={reducedMotion}
+            />
+            <InfoPopup id={selected} hour={frame.hour} onSelect={onSelect} />
+          </>
+        ) : null}
+
+        <EffectComposer enableNormalPass={false}>
+          <Bloom intensity={bloom.intensity} luminanceThreshold={bloom.threshold} luminanceSmoothing={0.3} mipmapBlur />
+          <Vignette eskil={false} offset={0.32} darkness={vignette} />
+        </EffectComposer>
+      </TextureContext.Provider>
+    </StyleContext.Provider>
   )
 }
 
-// House needs the panel count; kept as a thin wrapper so House stays tidy.
 function HouseWithPanels({
   panelCount,
   onSelect,
@@ -1067,7 +1211,6 @@ function HouseWithPanels({
   return (
     <group>
       <House onSelect={onSelect} />
-      {/* Overlay the real panel array (House renders a placeholder group). */}
       <Clickable id="panels" onSelect={onSelect}>
         <PanelArray count={panelCount} />
       </Clickable>

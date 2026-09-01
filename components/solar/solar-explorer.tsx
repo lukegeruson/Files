@@ -24,7 +24,11 @@ import {
   money,
   type ComponentId,
 } from "@/lib/solar-scene"
-import type { CameraPreset } from "@/components/solar/solar-scene-3d"
+import {
+  SCENE_STYLES,
+  type CameraPreset,
+  type SceneStyle,
+} from "@/components/solar/solar-scene-3d"
 
 // The Canvas is client-only; load it lazily with a graceful skeleton.
 const SolarScene3D = dynamic(() => import("@/components/solar/solar-scene-3d"), {
@@ -68,6 +72,7 @@ export function SolarExplorer() {
   const [selected, setSelected] = useState<ComponentId | null>(null)
   const [showSavings, setShowSavings] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
+  const [sceneStyle, setSceneStyle] = useState<SceneStyle>("photoreal")
 
   // Respect the user's reduced-motion preference.
   useEffect(() => {
@@ -177,10 +182,40 @@ export function SolarExplorer() {
             preset={preset}
             resetKey={resetKey}
             reducedMotion={reducedMotion}
+            sceneStyle={sceneStyle}
           />
 
           {/* Overlays (non-interactive container; children opt back in) */}
           <div className="pointer-events-none absolute inset-0 p-3 sm:p-4">
+            {/* Style switcher — the three looks under review */}
+            <div
+              role="radiogroup"
+              aria-label="Render style"
+              className="pointer-events-auto absolute left-1/2 top-3 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/50 bg-card/80 p-1 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:top-4"
+            >
+              {SCENE_STYLES.map((s) => {
+                const active = sceneStyle === s.id
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    title={s.hint}
+                    onClick={() => setSceneStyle(s.id)}
+                    className={cn(
+                      "rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
+                      active
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                )
+              })}
+            </div>
+
             {/* Live stats */}
             <div className="pointer-events-auto absolute left-3 top-3 w-48 overflow-hidden rounded-xl border border-white/50 bg-card/80 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:left-4 sm:top-4 sm:w-56">
               <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
