@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils"
 import { SolarSavingsTool } from "@/components/solar-savings-tool"
 import { SolarPanelCalculator } from "@/components/solar-panel-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
+import { SolarSceneProvider } from "@/components/solar/solar-scene-context"
+import { SolarExplorer } from "@/components/solar/solar-explorer"
 
 type ToolId = "savings" | "panels"
 
@@ -56,11 +58,16 @@ export function SolarTools() {
   }, [])
 
   return (
+    <SolarSceneProvider>
     <div
       ref={containerRef}
       id="solar-calculators"
       className="flex scroll-mt-24 flex-col gap-6"
     >
+      {/* Interactive 3D diagram sits above the calculators and reflects their
+          results once completed. */}
+      <SolarExplorer />
+
       {/* Tool switcher */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -109,5 +116,6 @@ export function SolarTools() {
         {active === "savings" ? <SolarSavingsTool /> : <SolarPanelCalculator />}
       </div>
     </div>
+    </SolarSceneProvider>
   )
 }

@@ -13,6 +13,9 @@
 // annual figure, and every kW of flow is conserved (production = home + battery
 // + grid at every instant).
 
+import type { SolarResult } from "@/lib/solar"
+import type { PanelResult } from "@/lib/solar-panels"
+
 // ---------------------------------------------------------------------------
 // Snapshot: the single contract between calculators and the scene
 // ---------------------------------------------------------------------------
@@ -372,4 +375,59 @@ export function money(value: number, digits = 0): string {
     maximumFractionDigits: digits,
     minimumFractionDigits: digits,
   }).format(value)
+}
+
+// ---------------------------------------------------------------------------
+// Adapters: calculator result -> normalized snapshot
+// ---------------------------------------------------------------------------
+//
+// These live here (not in the calculators) so the mapping to the scene's
+// contract is defined in one place, right next to the type it targets. Type-only
+// imports keep this module dependency-free at runtime and free of cycles.
+
+/** Map the Solar Savings Calculator result to a scene snapshot. */
+export function snapshotFromSavings(
+  r: SolarResult,
+  wantsBattery: boolean,
+): SolarSnapshot {
+  const billWithoutSolar = r.annualKwh * r.rate
+  // Keep the three savings numbers reconcilable: without - with === savings,
+  // always. When year-1 savings exceed the bill (a >100% offset earns
+  // net-metering export credit), "with solar" is allowed to go negative and the
+  // overlay renders it as a credit — rather than clamping to $0 and leaving
+  // "you save" looking like it doesn't add up.
+  return {
+    source: "savings",
+    stateName: r.location.isFallback ? "national average" : r.location.stateName,
+    systemSizeKw: r.systemSizeKw,
+    panelCount: r.panelCount,
+    annualProductionKwh: r.annualProduction,
+    annualConsumptionKwh: r.annualKwh,
+    offsetPercent: r.offsetPercent,
+    hasBattery: wantsBattery,
+    annualSavings: r.year1Savings,
+    billWithoutSolar,
+    billWithSolar: billWithoutSolar - r.year1Savings,
+  }
+}
+
+/** Map the Solar Panel Calculator result to a scene snapshot. */
+export function snapshotFromPanels(r: PanelResult): SolarSnapshot {
+  const billWithoutSolar = r.annualKwh * r.rate
+  return {
+    source: "panels",
+    stateName: r.location.isFallback ? "national average" : r.location.stateName,
+    systemSizeKw: r.systemKw,
+    panelCount: r.panelCount,
+    annualProductionKwh: r.annualProduction,
+    annualConsumptionKwh: r.annualKwh,
+    offsetPercent: r.offsetAchieved * 100,
+    // The panel sizing tool has no battery concept; the scene shows a grid-tied
+    // home. Savings aren't this tool's job, so leave them null (the scene falls
+    // back to an offset-based estimate for context only).
+    hasBattery: false,
+    annualSavings: null,
+    billWithoutSolar,
+    billWithSolar: null,
+  }
 }

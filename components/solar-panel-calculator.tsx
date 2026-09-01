@@ -1,10 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { CircleAlert, Grid2x2, Info, LayoutGrid, Ruler, Zap } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
+import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
+import { snapshotFromPanels } from "@/lib/solar-scene"
 import {
   ORIENTATION_LABELS,
   SHADE_LABELS,
@@ -113,6 +115,13 @@ export function SolarPanelCalculator() {
       advanced, orientation, shade, pitch, derate, roofWidthFt,
     ],
   )
+
+  // Feed the 3D explorer above the tabs. Publish only once the tool has enough
+  // input to size a real array; otherwise the scene keeps its mock home.
+  const publishScene = usePublishSolarScene()
+  useEffect(() => {
+    publishScene(result.ready ? snapshotFromPanels(result) : null)
+  }, [result, publishScene])
 
   function applyScenario(id: string) {
     const scenario = PANEL_SCENARIOS.find((s) => s.id === id)

@@ -241,9 +241,13 @@ export function SolarExplorer() {
                 <div className="flex items-center justify-between">
                   <dt className="text-muted-foreground">With solar</dt>
                   <dd className="tabular-nums">
-                    {snapshot.billWithSolar != null
-                      ? money(snapshot.billWithSolar)
-                      : "—"}
+                    {snapshot.billWithSolar == null
+                      ? "—"
+                      : snapshot.billWithSolar < -0.5
+                        ? // A >100% offset earns more in export credit than the
+                          // bill costs, so the net is money back.
+                          `${money(-snapshot.billWithSolar)} credit`
+                        : money(Math.max(0, snapshot.billWithSolar))}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between border-t border-border pt-2">
