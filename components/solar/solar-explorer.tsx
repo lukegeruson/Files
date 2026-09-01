@@ -37,12 +37,12 @@ const DIORAMA_SRC = "/solar-styles/claymation-cutout.png"
 type Hotspot = { id: ComponentId; x: number; y: number }
 
 const HOTSPOTS: Hotspot[] = [
-  { id: "sun", x: 17, y: 16 },
-  { id: "panels", x: 52, y: 40 },
-  { id: "inverter", x: 25, y: 52 },
-  { id: "battery", x: 33, y: 61 },
-  { id: "home", x: 62, y: 57 },
-  { id: "grid", x: 88, y: 24 },
+  { id: "sun", x: 29, y: 22 },
+  { id: "panels", x: 50, y: 39 },
+  { id: "home", x: 52, y: 51 },
+  { id: "inverter", x: 30, y: 52 },
+  { id: "battery", x: 36, y: 57 },
+  { id: "grid", x: 78, y: 34 },
 ]
 
 // Energy-flow segments drawn between hotspots. `key` selects the flow value on
