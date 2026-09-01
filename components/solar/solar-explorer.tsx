@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import {
   BatteryCharging,
+  ChevronDown,
   Home,
   Moon,
   Pause,
@@ -204,6 +205,8 @@ export function SolarExplorer() {
   const [selected, setSelected] = useState<ComponentId | null>(null)
   const [showSavings, setShowSavings] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
+  // Mobile-only: whether the middle stat rows of the "Right now" card are shown.
+  const [statsExpanded, setStatsExpanded] = useState(false)
 
   // Respect the user's reduced-motion preference.
   useEffect(() => {
@@ -305,61 +308,89 @@ export function SolarExplorer() {
   })
 
   // Shared inner content for the "Right now" live-stats card. Rendered above the
-  // simulator on mobile and as a corner overlay on larger screens.
-  const liveStatsInner = (
-    <>
-      <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Right now
-        </p>
-        <span className="rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">
-          {frame.label}
-        </span>
-      </div>
-      <dl className="flex flex-col gap-1.5 px-3 py-2.5 text-sm">
-        <StatRow
-          icon={<Sun className="size-3.5 text-primary" aria-hidden="true" />}
-          label="Solar"
-          value={kw(frame.solarKw)}
-        />
-        <StatRow
-          icon={<Home className="size-3.5 text-chart-3" aria-hidden="true" />}
-          label="Home"
-          value={kw(frame.consumptionKw)}
-        />
-        <StatRow
-          icon={<Zap className="size-3.5 text-chart-2" aria-hidden="true" />}
-          label={gridImporting ? "Grid in" : "Grid out"}
-          value={kw(Math.abs(frame.gridKw))}
-          valueClass={
-            gridExporting
-              ? "text-chart-2"
-              : gridImporting
-                ? "text-chart-3"
-                : undefined
-          }
-        />
-        {snapshot.hasBattery ? (
-          <StatRow
-            icon={
-              <BatteryCharging
-                className="size-3.5 text-[#9b83f0]"
-                aria-hidden="true"
+  // simulator on mobile and as a corner overlay on larger screens. When
+  // `collapsible` is set (mobile), the middle stat rows can be toggled via a
+  // button in the header, leaving only the "Right now" and "Saved today" rows.
+  const renderLiveStats = (collapsible: boolean) => {
+    const rowsVisible = collapsible ? statsExpanded : true
+    return (
+      <>
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Right now
+            </p>
+            {collapsible ? (
+              <button
+                type="button"
+                onClick={() => setStatsExpanded((v) => !v)}
+                aria-expanded={statsExpanded}
+                aria-label={
+                  statsExpanded ? "Hide energy details" : "Show energy details"
+                }
+                className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
+              >
+                <ChevronDown
+                  className={cn(
+                    "size-4 transition-transform duration-200",
+                    statsExpanded && "rotate-180",
+                  )}
+                  aria-hidden="true"
+                />
+              </button>
+            ) : null}
+          </div>
+          <span className="rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">
+            {frame.label}
+          </span>
+        </div>
+        {rowsVisible ? (
+          <dl className="flex flex-col gap-1.5 px-3 py-2.5 text-sm">
+            <StatRow
+              icon={<Sun className="size-3.5 text-primary" aria-hidden="true" />}
+              label="Solar"
+              value={kw(frame.solarKw)}
+            />
+            <StatRow
+              icon={<Home className="size-3.5 text-chart-3" aria-hidden="true" />}
+              label="Home"
+              value={kw(frame.consumptionKw)}
+            />
+            <StatRow
+              icon={<Zap className="size-3.5 text-chart-2" aria-hidden="true" />}
+              label={gridImporting ? "Grid in" : "Grid out"}
+              value={kw(Math.abs(frame.gridKw))}
+              valueClass={
+                gridExporting
+                  ? "text-chart-2"
+                  : gridImporting
+                    ? "text-chart-3"
+                    : undefined
+              }
+            />
+            {snapshot.hasBattery ? (
+              <StatRow
+                icon={
+                  <BatteryCharging
+                    className="size-3.5 text-[#9b83f0]"
+                    aria-hidden="true"
+                  />
+                }
+                label="Battery"
+                value={`${Math.round(frame.batterySoc * 100)}%`}
               />
-            }
-            label="Battery"
-            value={`${Math.round(frame.batterySoc * 100)}%`}
-          />
+            ) : null}
+          </dl>
         ) : null}
-      </dl>
-      <div className="border-t border-border/60 bg-gradient-to-r from-primary/8 to-transparent px-3 py-2">
-        <p className="text-[11px] text-muted-foreground">Saved today</p>
-        <p className="font-serif text-xl tabular-nums text-foreground">
-          {money(frame.savingsSoFar, 2)}
-        </p>
-      </div>
-    </>
-  )
+        <div className="border-t border-border/60 bg-gradient-to-r from-primary/8 to-transparent px-3 py-2">
+          <p className="text-[11px] text-muted-foreground">Saved today</p>
+          <p className="font-serif text-xl tabular-nums text-foreground">
+            {money(frame.savingsSoFar, 2)}
+          </p>
+        </div>
+      </>
+    )
+  }
 
   return (
     <section aria-label="Solar Energy Explorer" className="flex flex-col gap-4">
@@ -380,7 +411,7 @@ export function SolarExplorer() {
       {/* Live stats — on mobile this sits above the simulator (instead of
           overlaying it). The corner-overlay version below is desktop-only. */}
       <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5 sm:hidden">
-        {liveStatsInner}
+        {renderLiveStats(true)}
       </div>
 
       {/* Stage — an animated sky sits behind the transparent-backed diorama,
@@ -530,7 +561,7 @@ export function SolarExplorer() {
           {/* Live stats (desktop only — bottom-left corner, over empty margin).
               On mobile the same card is shown above the simulator. */}
           <div className="absolute -bottom-1 left-0 hidden w-40 overflow-hidden rounded-xl border border-white/50 bg-card/90 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:block sm:w-48">
-            {liveStatsInner}
+            {renderLiveStats(false)}
           </div>
 
           {/* Savings breakdown (toggled) */}
