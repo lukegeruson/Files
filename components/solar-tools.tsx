@@ -69,8 +69,7 @@ export function SolarTools() {
       <SolarExplorer />
 
       {/* Tool switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div
           role="tablist"
           aria-label="Solar calculators"
@@ -100,11 +99,15 @@ export function SolarTools() {
             )
           })}
         </div>
+        {/* Blog link sits beside the "All figures are estimates" note, with
+            space between them on mobile; both stay grouped to the right on
+            larger screens. */}
+        <div className="flex w-full items-center justify-between gap-4 sm:w-auto sm:justify-end">
           <JumpToPostsLink />
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            All figures are estimates
+          </span>
         </div>
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          All figures are estimates
-        </span>
       </div>
 
       {/* Active tool. Each stays mounted-on-demand so switching is instant. */}
