@@ -32,17 +32,17 @@ import {
 // ---------------------------------------------------------------------------
 const DIORAMA_SRC = "/solar-styles/claymation-cutout.png"
 
-// Hotspots: percentage positions tuned to the diorama so a marker lands on the
-// real object. The stage is square and the image is square, so x/y map 1:1.
+// Hotspots: percentage positions tuned to the widened diorama (1324x1024) so a
+// marker lands on the real object. x/y are percentages of the stage box.
 type Hotspot = { id: ComponentId; x: number; y: number }
 
 const HOTSPOTS: Hotspot[] = [
-  { id: "sun", x: 17, y: 16 },
-  { id: "panels", x: 52, y: 40 },
-  { id: "inverter", x: 25, y: 52 },
-  { id: "battery", x: 33, y: 61 },
-  { id: "home", x: 62, y: 57 },
-  { id: "grid", x: 88, y: 24 },
+  { id: "sun", x: 32, y: 20 },
+  { id: "panels", x: 56, y: 37 },
+  { id: "home", x: 58, y: 52 },
+  { id: "inverter", x: 41, y: 52 },
+  { id: "battery", x: 44, y: 58 },
+  { id: "grid", x: 79, y: 27 },
 ]
 
 // Energy-flow segments drawn between hotspots. `key` selects the flow value on
@@ -290,8 +290,8 @@ export function SolarExplorer() {
             />
           ) : null}
 
-          {/* Live stats (bottom-left, clear of the sun in the top-left) */}
-          <div className="absolute bottom-3 left-3 w-44 overflow-hidden rounded-xl border border-white/50 bg-card/85 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:w-52">
+          {/* Live stats (bottom-left corner, over empty margin) */}
+          <div className="absolute -bottom-1 left-0 w-40 overflow-hidden rounded-xl border border-white/50 bg-card/90 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:w-48">
             <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Right now

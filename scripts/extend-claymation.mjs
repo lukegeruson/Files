@@ -1,31 +1,53 @@
 import sharp from "sharp"
 
-// Extend the original claymation diorama horizontally so the clay base is no
-// longer cut off at the edges. We do NOT regenerate the art — we grow the
-// canvas and let sharp continue the existing edge pixels outward via "mirror",
-// which plausibly extends the flat sky at top and the grass/soil band below
-// without inventing a new house.
+// Extend the ORIGINAL claymation diorama horizontally so the clay lawn is no
+// longer clipped at the sides — without regenerating the art.
+//
+//  - LEFT: mirror the edge so the grass/lawn continues naturally (the base is
+//    clipped on this side). Mirroring also duplicates the sun, so we paint the
+//    top-left sky back to clean cream to remove the second sun. The mirrored
+//    trees below stay, reading as a slightly fuller treeline.
+//  - RIGHT: pad with flat cream only (no mirror) so the utility pole and wires
+//    are never duplicated.
 const SRC = "public/solar-styles/claymation.png"
 const OUT = "public/solar-styles/claymation-wide.png"
 
-const LEFT = 190 // more on the left, where the base is actually clipped
-const RIGHT = 90 // a touch on the right for balance
+const LEFT = 205
+const RIGHT = 95
+const CREAM = { r: 229, g: 221, b: 213 }
 
-const img = sharp(SRC)
-const meta = await img.metadata()
+// Region of the new left strip that contains the mirrored sun (sky only, above
+// the grass line ~y540). Covering it with cream leaves the lawn untouched.
+const COVER_W = LEFT
+const COVER_H = 475
 
-const extended = await img
-  .extend({
-    left: LEFT,
-    right: RIGHT,
-    extendWith: "mirror",
-  })
+const base = sharp(SRC)
+const meta = await base.metadata()
+
+// 1) mirror-extend the left, 2) cream-pad the right.
+const extended = await base
+  .extend({ left: LEFT, extendWith: "mirror" })
+  .extend({ right: RIGHT, background: CREAM })
+  .png()
+  .toBuffer()
+
+// 3) paint clean cream over the duplicated sun in the top-left.
+const cover = await sharp({
+  create: {
+    width: COVER_W,
+    height: COVER_H,
+    channels: 3,
+    background: CREAM,
+  },
+})
+  .png()
+  .toBuffer()
+
+await sharp(extended)
+  .composite([{ input: cover, left: 0, top: 0 }])
   .png()
   .toFile(OUT)
 
 console.log(
-  `[v0] ${meta.width}x${meta.height} -> ${meta.width + LEFT + RIGHT}x${
-    meta.height
-  } (mirror-extended L${LEFT}/R${RIGHT})`,
+  `[v0] ${meta.width}x${meta.height} -> ${meta.width + LEFT + RIGHT}x${meta.height}`,
 )
-console.log("[v0]", JSON.stringify(extended))
