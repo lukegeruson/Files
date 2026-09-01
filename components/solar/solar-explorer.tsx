@@ -154,6 +154,12 @@ function skyForHour(hour: number) {
   const arc = 1 - Math.pow((p - 0.5) * 2, 2) // 0 at ends, 1 at middle
   const bodyY = lerp(78, 14, arc)
 
+  // Fade the body out as it dips beneath the diorama floor line, so it never
+  // shows floating in the dark corner below the ground. Trajectory is unchanged
+  // — only visibility near the horizon is cut.
+  const FLOOR = 62 // % height where the ground plane begins
+  const bodyOpacity = Math.max(0, Math.min(1, 1 - (bodyY - FLOOR) / 6))
+
   const sunUp = h > 6.5 && h < 19.5
   const goldenLow = (h >= 6.5 && h < 8.5) || (h > 16.5 && h < 19.5)
 
@@ -182,6 +188,7 @@ function skyForHour(hour: number) {
     starOpacity,
     bodyX,
     bodyY,
+    bodyOpacity,
     bodyColor,
     bodyGlow,
     dioramaFilter,
@@ -438,14 +445,17 @@ export function SolarExplorer() {
           ))}
         </div>
 
-        {/* Celestial body — sun by day, moon by night — arcs across the sky */}
+        {/* Celestial body — sun by day, moon by night — arcs across the sky.
+            Fades out as it dips below the floor line so it never floats in the
+            dark corner beneath the ground. */}
         <div
-          className="absolute transition-colors duration-700"
+          className="absolute transition-[opacity,color] duration-700"
           style={{
             left: `${sky.bodyX}%`,
             top: `${sky.bodyY}%`,
             width: "18%",
             height: "18%",
+            opacity: sky.bodyOpacity,
             transform: "translate(-50%, -50%)",
           }}
           aria-hidden="true"
