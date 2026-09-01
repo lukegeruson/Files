@@ -27,68 +27,23 @@ import {
 } from "@/lib/solar-scene"
 
 // ---------------------------------------------------------------------------
-// Styles: each is a pre-rendered hero that matches its reference look exactly.
+// A single pre-rendered claymation diorama on a transparent background, so the
+// whole scene reads as a clay model floating in space with no surrounding box.
 // ---------------------------------------------------------------------------
-type StyleId = "isometric" | "claymation" | "photoreal"
+const DIORAMA_SRC = "/solar-styles/claymation-float.png"
 
-const STYLES: Array<{
-  id: StyleId
-  label: string
-  src: string
-  hint: string
-}> = [
-  {
-    id: "isometric",
-    label: "Isometric",
-    src: "/solar-styles/isometric.png",
-    hint: "Clean isometric diorama",
-  },
-  {
-    id: "claymation",
-    label: "Claymation",
-    src: "/solar-styles/claymation.png",
-    hint: "Soft clay miniature",
-  },
-  {
-    id: "photoreal",
-    label: "Photoreal",
-    src: "/solar-styles/photoreal.png",
-    hint: "Photorealistic render",
-  },
-]
-
-// ---------------------------------------------------------------------------
-// Hotspots: percentage positions tuned to each hero image so a marker lands on
-// the real object. The stage is square and images are square, so x/y map 1:1.
-// ---------------------------------------------------------------------------
+// Hotspots: percentage positions tuned to the floating diorama so a marker
+// lands on the real object. The stage is square and the image is square.
 type Hotspot = { id: ComponentId; x: number; y: number }
 
-const HOTSPOTS: Record<StyleId, Hotspot[]> = {
-  isometric: [
-    { id: "sun", x: 27, y: 18 },
-    { id: "panels", x: 47, y: 34 },
-    { id: "inverter", x: 25, y: 50 },
-    { id: "battery", x: 28, y: 57 },
-    { id: "home", x: 51, y: 55 },
-    { id: "grid", x: 85, y: 42 },
-  ],
-  claymation: [
-    { id: "sun", x: 17, y: 16 },
-    { id: "panels", x: 52, y: 40 },
-    { id: "inverter", x: 25, y: 52 },
-    { id: "battery", x: 33, y: 61 },
-    { id: "home", x: 62, y: 57 },
-    { id: "grid", x: 88, y: 24 },
-  ],
-  photoreal: [
-    { id: "sun", x: 27, y: 25 },
-    { id: "panels", x: 46, y: 43 },
-    { id: "inverter", x: 22, y: 54 },
-    { id: "battery", x: 27, y: 59 },
-    { id: "home", x: 56, y: 53 },
-    { id: "grid", x: 90, y: 28 },
-  ],
-}
+const HOTSPOTS: Hotspot[] = [
+  { id: "sun", x: 22, y: 19 },
+  { id: "panels", x: 50, y: 34 },
+  { id: "inverter", x: 30, y: 46 },
+  { id: "battery", x: 38, y: 51 },
+  { id: "home", x: 54, y: 47 },
+  { id: "grid", x: 77, y: 28 },
+]
 
 // Energy-flow segments drawn between hotspots. `key` selects the flow value on
 // the current frame; `always` flows depend only on solar generation.
@@ -129,7 +84,6 @@ const DAY_SECONDS = 18 // one simulated day plays over ~18s
 export function SolarExplorer() {
   const { snapshot, timeline, isLive } = useSolarScene()
 
-  const [styleId, setStyleId] = useState<StyleId>("isometric")
   const [hour, setHour] = useState(12)
   const [playing, setPlaying] = useState(false)
   const [selected, setSelected] = useState<ComponentId | null>(null)
@@ -176,7 +130,7 @@ export function SolarExplorer() {
     return timeline.frames[idx]
   }, [timeline, hour])
 
-  const hotspots = HOTSPOTS[styleId]
+  const hotspots = HOTSPOTS
   const posOf = useMemo(() => {
     const map = {} as Record<ComponentId, Hotspot>
     for (const h of hotspots) map[h.id] = h
@@ -246,56 +200,19 @@ export function SolarExplorer() {
         </span>
       </div>
 
-      {/* Style switcher */}
-      <div
-        role="radiogroup"
-        aria-label="Diagram style"
-        className="flex flex-wrap items-center gap-1.5 rounded-full border border-border bg-card p-1 shadow-sm w-fit"
-      >
-        {STYLES.map((s) => {
-          const active = styleId === s.id
-          return (
-            <button
-              key={s.id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              title={s.hint}
-              onClick={() => setStyleId(s.id)}
-              className={cn(
-                "rounded-full px-4 py-1.5 text-sm font-semibold transition-all",
-                active
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {s.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Stage */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary/25 via-border to-chart-3/20 p-px shadow-xl">
-        <div className="relative mx-auto aspect-square w-full max-w-2xl rounded-2xl bg-card">
-          {/* Hero images live in their own clipped layer so the rounded corners
-              stay crisp while popups above are free to overflow the frame. */}
-          <div className="absolute inset-0 overflow-hidden rounded-2xl">
-            {STYLES.map((s) => (
-              <Image
-                key={s.id}
-                src={s.src || "/placeholder.svg"}
-                alt={`Home solar system, ${s.label} style`}
-                fill
-                priority={s.id === "isometric"}
-                sizes="(max-width: 768px) 100vw, 672px"
-                className={cn(
-                  "object-cover transition-opacity duration-500",
-                  styleId === s.id ? "opacity-100" : "opacity-0",
-                )}
-              />
-            ))}
-          </div>
+      {/* Stage — no frame or background so the clay model floats in space. */}
+      <div className="relative mx-auto aspect-square w-full max-w-2xl">
+        {/* The floating diorama. Its ivory backdrop matches the page, and the
+            island carries its own soft contact shadow, so it reads as a clay
+            model hovering in space with no surrounding box. */}
+        <Image
+          src={DIORAMA_SRC || "/placeholder.svg"}
+          alt="Claymation model of a home solar system floating in space"
+          fill
+          priority
+          sizes="(max-width: 768px) 100vw, 672px"
+          className="object-contain"
+        />
 
           {/* Energy-flow overlay */}
           <svg
@@ -474,7 +391,6 @@ export function SolarExplorer() {
             Tap a marker to learn more
           </div>
         </div>
-      </div>
 
       {/* Legend + flow key beneath the stage */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-card px-4 py-2.5 shadow-sm">
