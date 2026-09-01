@@ -345,10 +345,7 @@ export function SolarExplorer() {
             Solar Energy Explorer
           </h2>
           <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
-            See how a home solar system works. Tap any part to learn what it
-            does, and run a day to watch energy flow from the sun to your home,
-            battery, and the grid. Complete a calculator below and the numbers
-            update to match your home.
+            Tap any part and run a day to see how home solar works.
           </p>
         </div>
         <span
