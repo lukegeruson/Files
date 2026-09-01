@@ -4,12 +4,22 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import {
   CameraControls,
+  ContactShadows,
+  Environment,
   Html,
+  Lightformer,
   Line,
   RoundedBox,
   Sky,
 } from "@react-three/drei"
-import { CatmullRomCurve3, type Group, type Mesh, Vector3 } from "three"
+import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing"
+import {
+  CanvasTexture,
+  CatmullRomCurve3,
+  type Group,
+  type Mesh,
+  Vector3,
+} from "three"
 import { X } from "lucide-react"
 import {
   COMPONENT_INFO,
@@ -73,9 +83,9 @@ function Rig({ preset, resetKey }: { preset: CameraPreset; resetKey: number }) {
     const c = ref.current
     if (!c) return
     if (preset === "flow") {
-      c.setLookAt(-1.5, 3.1, 8.6, -1.3, 1.0, -0.2, true)
+      c.setLookAt(-1.6, 3.0, 8.8, -1.3, 1.0, -0.2, true)
     } else {
-      c.setLookAt(7.2, 5, 8, 0, 1.15, 0, true)
+      c.setLookAt(7.6, 4.7, 8.4, -0.2, 1.1, 0, true)
     }
   }, [preset, resetKey])
 
@@ -92,7 +102,46 @@ function Rig({ preset, resetKey }: { preset: CameraPreset; resetKey: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// Lighting + sky that track the time of day
+// Procedural studio environment: gives glass and metal real reflections
+// without loading any external HDRI. Baked once (frames={1}).
+// ---------------------------------------------------------------------------
+
+function StudioEnvironment({ daylight }: { daylight: number }) {
+  return (
+    <Environment resolution={256} frames={1} background={false}>
+      {/* Warm key from the sun side. */}
+      <Lightformer
+        form="rect"
+        intensity={2.2 + daylight * 1.4}
+        color="#fff0d0"
+        position={[5, 6, -2]}
+        scale={[8, 6, 1]}
+        target={[0, 1, 0]}
+      />
+      {/* Cool sky fill from above. */}
+      <Lightformer
+        form="rect"
+        intensity={1.1 + daylight * 0.6}
+        color="#cfe2f2"
+        position={[0, 8, 3]}
+        rotation={[Math.PI / 2, 0, 0]}
+        scale={[12, 12, 1]}
+      />
+      {/* Soft rim from the rear to separate the house from the sky. */}
+      <Lightformer
+        form="rect"
+        intensity={1.4}
+        color="#ffd9a0"
+        position={[-6, 3, -6]}
+        scale={[6, 5, 1]}
+        target={[0, 1, 0]}
+      />
+    </Environment>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Lighting that tracks the time of day
 // ---------------------------------------------------------------------------
 
 function DayLighting({ hour, daylight }: { hour: number; daylight: number }) {
@@ -108,29 +157,30 @@ function DayLighting({ hour, daylight }: { hour: number; daylight: number }) {
 
   return (
     <>
-      <Sky sunPosition={skySun} turbidity={8} rayleigh={daylight > 0 ? 2 : 0.4} />
-      <hemisphereLight
-        intensity={0.35 + 0.35 * daylight}
-        color="#fff6e6"
-        groundColor="#b7a98c"
+      <Sky
+        sunPosition={skySun}
+        turbidity={6}
+        rayleigh={daylight > 0 ? 1.4 : 0.3}
+        mieCoefficient={0.006}
+        mieDirectionalG={0.85}
       />
-      <ambientLight intensity={0.2 + 0.35 * daylight} />
+      <hemisphereLight
+        intensity={0.3 + 0.3 * daylight}
+        color="#fff6e6"
+        groundColor="#8f8467"
+      />
+      <ambientLight intensity={0.15 + 0.25 * daylight} />
+      {/* Key light for crisp highlights; grounding shadow comes from
+          ContactShadows so this one stays cheap (no shadow map). */}
       <directionalLight
         position={sunPos}
-        intensity={0.15 + 1.35 * daylight}
+        intensity={0.2 + 1.6 * daylight}
         color="#fff1d0"
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-8}
-        shadow-camera-right={8}
-        shadow-camera-top={8}
-        shadow-camera-bottom={-8}
-        shadow-bias={-0.0005}
       />
       {/* Warm interior glow that grows as the sun sets, so the house reads at night. */}
       <pointLight
         position={[-0.4, 1, 0.4]}
-        intensity={0.5 * (1 - daylight)}
+        intensity={0.6 * (1 - daylight)}
         color="#ffcf87"
         distance={6}
       />
@@ -139,7 +189,7 @@ function DayLighting({ hour, daylight }: { hour: number; daylight: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// The sun
+// The sun: core sphere plus layered halos that bloom into a warm glow
 // ---------------------------------------------------------------------------
 
 function Sun({
@@ -168,25 +218,33 @@ function Sun({
           document.body.style.cursor = "auto"
         }}
       >
-        <sphereGeometry args={[0.7, 32, 32]} />
+        <sphereGeometry args={[0.72, 32, 32]} />
         <meshStandardMaterial
-          color="#ffd66b"
+          color="#fff2c2"
           emissive="#ffb638"
-          emissiveIntensity={selected ? 3 : 2}
+          emissiveIntensity={selected ? 4 : 2.6}
           toneMapped={false}
         />
       </mesh>
-      {/* Soft halo */}
-      <mesh scale={1.6}>
-        <sphereGeometry args={[0.7, 24, 24]} />
-        <meshBasicMaterial color="#ffcf6b" transparent opacity={0.14} toneMapped={false} />
+      {/* Layered halos — soft on the outside, brighter toward the core. */}
+      <mesh scale={1.35}>
+        <sphereGeometry args={[0.72, 24, 24]} />
+        <meshBasicMaterial color="#ffd27a" transparent opacity={0.35} toneMapped={false} />
+      </mesh>
+      <mesh scale={2.1}>
+        <sphereGeometry args={[0.72, 24, 24]} />
+        <meshBasicMaterial color="#ffcf6b" transparent opacity={0.12} toneMapped={false} />
+      </mesh>
+      <mesh scale={3.0}>
+        <sphereGeometry args={[0.72, 24, 24]} />
+        <meshBasicMaterial color="#ffc768" transparent opacity={0.05} toneMapped={false} />
       </mesh>
     </group>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Clickable helper: wires up selection, hover cursor, and a subtle hover lift
+// Clickable helper: wires up selection + hover cursor
 // ---------------------------------------------------------------------------
 
 function Clickable({
@@ -244,16 +302,33 @@ function PanelArray({ count }: { count: number }) {
       const x = -totalW / 2 + pw / 2 + c * (pw + gap)
       const z = -totalH / 2 + ph / 2 + r * (ph + gap)
       panels.push(
-        <mesh key={`${r}-${c}`} position={[x, 0.05, z]} castShadow>
-          <boxGeometry args={[pw, 0.04, ph]} />
-          <meshStandardMaterial
-            color="#1c3d63"
-            emissive="#2f5c8a"
-            emissiveIntensity={0.25}
-            metalness={0.5}
-            roughness={0.35}
-          />
-        </mesh>,
+        <group key={`${r}-${c}`} position={[x, 0.06, z]}>
+          {/* Silver frame */}
+          <mesh castShadow>
+            <boxGeometry args={[pw, 0.05, ph]} />
+            <meshStandardMaterial color="#c9d2dc" metalness={0.85} roughness={0.35} />
+          </mesh>
+          {/* Reflective glass cell face, inset slightly above the frame */}
+          <mesh position={[0, 0.03, 0]}>
+            <boxGeometry args={[pw - 0.05, 0.02, ph - 0.05]} />
+            <meshStandardMaterial
+              color="#123456"
+              emissive="#2f6fae"
+              emissiveIntensity={0.28}
+              metalness={0.95}
+              roughness={0.12}
+            />
+          </mesh>
+          {/* Cell grid lines */}
+          <mesh position={[0, 0.041, 0]}>
+            <boxGeometry args={[pw - 0.05, 0.001, 0.012]} />
+            <meshBasicMaterial color="#0c2540" />
+          </mesh>
+          <mesh position={[0, 0.041, 0]}>
+            <boxGeometry args={[0.012, 0.001, ph - 0.05]} />
+            <meshBasicMaterial color="#0c2540" />
+          </mesh>
+        </group>,
       )
       placed++
     }
@@ -265,8 +340,8 @@ function PanelArray({ count }: { count: number }) {
     <group position={[0, 2.15, 0.75]} rotation={[ROOF_ANGLE, 0, 0]}>
       {/* Mounting deck the panels rest on. */}
       <mesh receiveShadow>
-        <boxGeometry args={[4.1, 0.08, 1.85]} />
-        <meshStandardMaterial color="#6d5b45" roughness={0.9} />
+        <boxGeometry args={[totalW + 0.24, 0.06, totalH + 0.24]} />
+        <meshStandardMaterial color="#3a4250" metalness={0.5} roughness={0.6} />
       </mesh>
       {panels}
     </group>
@@ -286,42 +361,74 @@ function House({ onSelect }: { onSelect: (id: ComponentId | null) => void }) {
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial color="#efe7d8" roughness={0.85} />
+          <meshStandardMaterial color="#f2ecdf" roughness={0.7} metalness={0.02} />
         </RoundedBox>
+        {/* Base trim */}
+        <mesh position={[0, 0.08, 0]}>
+          <boxGeometry args={[4.06, 0.18, 3.06]} />
+          <meshStandardMaterial color="#d8cdb8" roughness={0.8} />
+        </mesh>
         {/* Door */}
         <mesh position={[0, 0.55, 1.51]}>
-          <boxGeometry args={[0.6, 1.1, 0.04]} />
-          <meshStandardMaterial color="#7c5a3a" roughness={0.7} />
+          <boxGeometry args={[0.6, 1.1, 0.05]} />
+          <meshStandardMaterial color="#6f4a2c" roughness={0.6} />
         </mesh>
-        {/* Windows */}
+        <mesh position={[0.18, 0.55, 1.55]}>
+          <sphereGeometry args={[0.035, 12, 12]} />
+          <meshStandardMaterial color="#e0b452" metalness={0.9} roughness={0.3} />
+        </mesh>
+        {/* Windows with warm night glow */}
         {[-1.2, 1.2].map((x) => (
-          <mesh key={x} position={[x, 0.95, 1.51]}>
-            <boxGeometry args={[0.6, 0.6, 0.04]} />
-            <meshStandardMaterial
-              color="#9fc4d8"
-              emissive="#cfe6f0"
-              emissiveIntensity={0.2}
-              metalness={0.3}
-              roughness={0.2}
-            />
-          </mesh>
+          <group key={x}>
+            {/* Frame */}
+            <mesh position={[x, 0.95, 1.5]}>
+              <boxGeometry args={[0.68, 0.68, 0.06]} />
+              <meshStandardMaterial color="#e6dcc8" roughness={0.7} />
+            </mesh>
+            {/* Glass */}
+            <mesh position={[x, 0.95, 1.53]}>
+              <boxGeometry args={[0.56, 0.56, 0.04]} />
+              <meshStandardMaterial
+                color="#a9cede"
+                emissive="#ffdda0"
+                emissiveIntensity={0.28}
+                metalness={0.4}
+                roughness={0.12}
+              />
+            </mesh>
+          </group>
         ))}
+        {/* Chimney */}
+        <mesh position={[1.3, 2.75, -0.5]} castShadow>
+          <boxGeometry args={[0.34, 0.7, 0.34]} />
+          <meshStandardMaterial color="#c7b9a0" roughness={0.85} />
+        </mesh>
       </Clickable>
 
-      {/* Back (north) roof slope — not clickable, just geometry. */}
+      {/* Front (south) roof slope beneath the panels. */}
+      <mesh
+        position={[0, 2.15, 0.75]}
+        rotation={[ROOF_ANGLE, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[4.15, 0.1, 1.9]} />
+        <meshStandardMaterial color="#7c4f3c" roughness={0.8} />
+      </mesh>
+      {/* Back (north) roof slope. */}
       <mesh
         position={[0, 2.15, -0.75]}
         rotation={[-ROOF_ANGLE, 0, 0]}
         castShadow
         receiveShadow
       >
-        <boxGeometry args={[4.1, 0.1, 1.85]} />
-        <meshStandardMaterial color="#8a5a44" roughness={0.85} />
+        <boxGeometry args={[4.15, 0.1, 1.9]} />
+        <meshStandardMaterial color="#7c4f3c" roughness={0.8} />
       </mesh>
       {/* Ridge cap along the top of the two slopes. */}
-      <mesh position={[0, 2.6, 0]} castShadow>
-        <boxGeometry args={[4.15, 0.1, 0.14]} />
-        <meshStandardMaterial color="#5f4d3b" roughness={0.85} />
+      <mesh position={[0, 2.62, 0]} castShadow>
+        <boxGeometry args={[4.2, 0.12, 0.16]} />
+        <meshStandardMaterial color="#5f3d2e" roughness={0.8} />
       </mesh>
       {/* Panels are rendered by HouseWithPanels so the count stays live. */}
     </group>
@@ -350,11 +457,11 @@ function Equipment({
           position={ANCHORS.inverter}
           castShadow
         >
-          <meshStandardMaterial color="#d8d3c8" roughness={0.6} metalness={0.2} />
+          <meshStandardMaterial color="#eef1f4" roughness={0.35} metalness={0.35} />
         </RoundedBox>
         <mesh position={[ANCHORS.inverter[0] + 0.13, ANCHORS.inverter[1], ANCHORS.inverter[2]]}>
           <boxGeometry args={[0.02, 0.3, 0.22]} />
-          <meshStandardMaterial color="#2f5c8a" emissive="#2f5c8a" emissiveIntensity={0.4} />
+          <meshStandardMaterial color="#2f6fae" emissive="#3f8fd0" emissiveIntensity={0.9} toneMapped={false} />
         </mesh>
       </Clickable>
 
@@ -367,14 +474,14 @@ function Equipment({
           position={ANCHORS.meter}
           castShadow
         >
-          <meshStandardMaterial color="#c9c3b6" roughness={0.6} />
+          <meshStandardMaterial color="#dfdccf" roughness={0.5} metalness={0.2} />
         </RoundedBox>
         <mesh
           position={[ANCHORS.meter[0] + 0.12, ANCHORS.meter[1] + 0.05, ANCHORS.meter[2]]}
           rotation={[0, 0, Math.PI / 2]}
         >
           <cylinderGeometry args={[0.09, 0.09, 0.03, 24]} />
-          <meshStandardMaterial color="#39434d" emissive="#5b8def" emissiveIntensity={0.3} />
+          <meshStandardMaterial color="#2a323b" emissive="#5b8def" emissiveIntensity={0.6} toneMapped={false} />
         </mesh>
       </Clickable>
 
@@ -388,11 +495,11 @@ function Equipment({
             position={ANCHORS.battery}
             castShadow
           >
-            <meshStandardMaterial color="#e7e2d7" roughness={0.5} metalness={0.15} />
+            <meshStandardMaterial color="#f0ece2" roughness={0.35} metalness={0.25} />
           </RoundedBox>
           <mesh position={[ANCHORS.battery[0] + 0.15, ANCHORS.battery[1], ANCHORS.battery[2]]}>
-            <boxGeometry args={[0.02, 0.4, 0.06]} />
-            <meshStandardMaterial color="#9b83f0" emissive="#9b83f0" emissiveIntensity={0.6} />
+            <boxGeometry args={[0.02, 0.42, 0.08]} />
+            <meshStandardMaterial color="#9b83f0" emissive="#9b83f0" emissiveIntensity={1.4} toneMapped={false} />
           </mesh>
         </Clickable>
       ) : null}
@@ -411,17 +518,24 @@ function GridPole({ onSelect }: { onSelect: (id: ComponentId | null) => void }) 
       {/* Pole */}
       <mesh position={[gx, 1.6, gz]} castShadow>
         <cylinderGeometry args={[0.1, 0.12, 3.2, 12]} />
-        <meshStandardMaterial color="#6f5b46" roughness={0.9} />
+        <meshStandardMaterial color="#7a6549" roughness={0.85} />
       </mesh>
       {/* Crossarm */}
       <mesh position={[gx, 2.9, gz]} castShadow>
         <boxGeometry args={[0.12, 0.12, 1.4]} />
-        <meshStandardMaterial color="#5f4d3b" roughness={0.9} />
+        <meshStandardMaterial color="#5f4d3b" roughness={0.85} />
       </mesh>
+      {/* Insulators */}
+      {[-0.5, 0.5].map((dz) => (
+        <mesh key={dz} position={[gx, 3.0, gz + dz]}>
+          <cylinderGeometry args={[0.05, 0.05, 0.12, 12]} />
+          <meshStandardMaterial color="#3a4048" roughness={0.4} metalness={0.3} />
+        </mesh>
+      ))}
       {/* Transformer */}
       <mesh position={[gx, 2.2, gz + 0.25]} castShadow>
         <cylinderGeometry args={[0.16, 0.16, 0.5, 16]} />
-        <meshStandardMaterial color="#8a8578" metalness={0.4} roughness={0.5} />
+        <meshStandardMaterial color="#9a958a" metalness={0.6} roughness={0.4} />
       </mesh>
     </Clickable>
   )
@@ -442,14 +556,14 @@ function ConduitLines() {
           <Line
             key={key}
             points={FLOW_PATHS[key]}
-            color="#7d7768"
-            lineWidth={1.4}
+            color="#6f6857"
+            lineWidth={1.2}
             transparent
-            opacity={0.35}
+            opacity={0.28}
           />
         )
       })}
-      <Line points={FLOW_PATHS.solarToBattery} color="#7d7768" lineWidth={1.4} transparent opacity={0.35} />
+      <Line points={FLOW_PATHS.solarToBattery} color="#6f6857" lineWidth={1.2} transparent opacity={0.28} />
     </>
   )
 }
@@ -472,7 +586,7 @@ function FlowParticles({
     [points],
   )
   const count = active ? Math.min(7, Math.max(3, Math.round(kw) + 3)) : 0
-  const meshes = useRef<(Mesh | null)[]>([])
+  const meshes = useRef<(Group | null)[]>([])
   const t = useRef(0)
   const speed = 0.1 + Math.min(0.35, kw * 0.03)
 
@@ -497,21 +611,29 @@ function FlowParticles({
         const at = reducedMotion ? i / count : 0
         const p = curve.getPointAt(at)
         return (
-          <mesh
+          <group
             key={i}
             ref={(el) => {
               meshes.current[i] = el
             }}
             position={[p.x, p.y, p.z]}
           >
-            <sphereGeometry args={[0.075, 12, 12]} />
-            <meshStandardMaterial
-              color={color}
-              emissive={color}
-              emissiveIntensity={2.2}
-              toneMapped={false}
-            />
-          </mesh>
+            {/* Bright core */}
+            <mesh>
+              <sphereGeometry args={[0.07, 12, 12]} />
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={2.6}
+                toneMapped={false}
+              />
+            </mesh>
+            {/* Soft glow shell that blooms */}
+            <mesh scale={2.1}>
+              <sphereGeometry args={[0.07, 12, 12]} />
+              <meshBasicMaterial color={color} transparent opacity={0.22} toneMapped={false} />
+            </mesh>
+          </group>
         )
       })}
     </group>
@@ -534,14 +656,15 @@ function SelectionRing({
     if (reducedMotion || !ref.current) return
     const s = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.08
     ref.current.scale.set(s, s, s)
+    ref.current.rotation.z = state.clock.elapsedTime * 0.6
   })
   return (
     <mesh ref={ref} position={anchor} rotation={[Math.PI / 2, 0, 0]}>
-      <torusGeometry args={[0.6, 0.03, 12, 40]} />
+      <torusGeometry args={[0.62, 0.028, 12, 48]} />
       <meshStandardMaterial
         color="#f5b445"
         emissive="#f5b445"
-        emissiveIntensity={1.6}
+        emissiveIntensity={2.2}
         toneMapped={false}
       />
     </mesh>
@@ -562,13 +685,13 @@ function InfoPopup({
     id === "sun" ? sunPosition(hour) ?? [4, 6, -3] : ANCHORS[id]
   const cardAnchor: [number, number, number] = [
     anchor[0],
-    anchor[1] + 0.9,
+    anchor[1] + 0.95,
     anchor[2],
   ]
   return (
     <Html position={cardAnchor} center distanceFactor={9} zIndexRange={[40, 0]}>
-      <div className="w-56 rounded-lg border border-border bg-card/95 p-3 text-left shadow-lg backdrop-blur">
-        <div className="flex items-start justify-between gap-2">
+      <div className="w-60 overflow-hidden rounded-xl border border-primary/25 bg-card/95 text-left shadow-xl ring-1 ring-black/5 backdrop-blur-md">
+        <div className="flex items-start justify-between gap-2 border-b border-border/70 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
           <h4 className="font-serif text-sm font-semibold text-card-foreground">
             {info.title}
           </h4>
@@ -579,12 +702,12 @@ function InfoPopup({
               e.stopPropagation()
               onSelect(null)
             }}
-            className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+            className="-mr-0.5 rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <X className="size-3.5" aria-hidden="true" />
           </button>
         </div>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        <p className="px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
           {info.blurb}
         </p>
       </div>
@@ -593,22 +716,43 @@ function InfoPopup({
 }
 
 // ---------------------------------------------------------------------------
-// Ground
+// Ground: radial-gradient plot that fades into the sky at the edges
 // ---------------------------------------------------------------------------
 
+function useGroundTexture() {
+  return useMemo(() => {
+    const size = 512
+    const canvas = document.createElement("canvas")
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext("2d")!
+    const g = ctx.createRadialGradient(
+      size / 2,
+      size / 2,
+      size * 0.12,
+      size / 2,
+      size / 2,
+      size * 0.5,
+    )
+    g.addColorStop(0, "#9fb071")
+    g.addColorStop(0.55, "#93a768")
+    g.addColorStop(0.82, "#c3bfa6")
+    g.addColorStop(1, "#d9dcc9")
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, size, size)
+    // A faint driveway from the door toward the camera-left/front.
+    const tex = new CanvasTexture(canvas)
+    return tex
+  }, [])
+}
+
 function Ground() {
+  const tex = useGroundTexture()
   return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-        <circleGeometry args={[9, 48]} />
-        <meshStandardMaterial color="#c7bfa8" roughness={1} />
-      </mesh>
-      {/* Grass yard inset */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <circleGeometry args={[6.2, 48]} />
-        <meshStandardMaterial color="#a7b481" roughness={1} />
-      </mesh>
-    </group>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      <circleGeometry args={[9, 64]} />
+      <meshStandardMaterial map={tex} roughness={1} />
+    </mesh>
   )
 }
 
@@ -629,8 +773,19 @@ function SceneContents({
   return (
     <>
       <Rig preset={preset} resetKey={resetKey} />
+      <StudioEnvironment daylight={frame.daylight} />
       <DayLighting hour={frame.hour} daylight={frame.daylight} />
       <Ground />
+      {/* Soft grounding shadow under everything. */}
+      <ContactShadows
+        position={[-0.4, 0.02, 0]}
+        scale={16}
+        far={6}
+        blur={2.6}
+        opacity={0.42 + frame.daylight * 0.2}
+        resolution={512}
+        color="#3a3324"
+      />
 
       <group>
         {/* House with the panel array wired to the live count. */}
@@ -666,6 +821,19 @@ function SceneContents({
           <InfoPopup id={selected} hour={frame.hour} onSelect={onSelect} />
         </>
       ) : null}
+
+      {/* Bloom makes the sun, glowing indicators, and energy particles read as
+          light. Threshold > 1 so only the toneMapped=false emissives bloom,
+          leaving the house and ground crisp. */}
+      <EffectComposer enableNormalPass={false}>
+        <Bloom
+          intensity={0.85}
+          luminanceThreshold={1}
+          luminanceSmoothing={0.3}
+          mipmapBlur
+        />
+        <Vignette eskil={false} offset={0.28} darkness={0.55} />
+      </EffectComposer>
     </>
   )
 }
@@ -696,8 +864,8 @@ export default function SolarScene3D(props: SceneProps) {
   return (
     <Canvas
       shadows
-      dpr={[1, 1.75]}
-      camera={{ position: [7.2, 5, 8], fov: 45 }}
+      dpr={[1, 2]}
+      camera={{ position: [7.6, 4.7, 8.4], fov: 45 }}
       onPointerMissed={() => props.onSelect(null)}
       gl={{ antialias: true }}
     >
