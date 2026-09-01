@@ -65,13 +65,6 @@ const SEGMENTS: Segment[] = [
   { from: "grid", to: "home", color: "#5b8def", key: "gridToHome" },
 ]
 
-const LEGEND: Array<{ label: string; color: string }> = [
-  { label: "Solar to home", color: "#f5b445" },
-  { label: "Export to grid", color: "#3fae82" },
-  { label: "Grid to home", color: "#5b8def" },
-  { label: "Battery", color: "#9b83f0" },
-]
-
 // Fixed star field for the night sky (deterministic so it doesn't reshuffle).
 const STARS = Array.from({ length: 40 }, (_, i) => {
   const r = (n: number) => {
@@ -584,26 +577,6 @@ export function SolarExplorer() {
             Tap a marker to learn more
           </div>
         </div>
-
-      {/* Legend + flow key beneath the stage */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-card px-4 py-2.5 shadow-sm">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Energy flow
-        </span>
-        {LEGEND.map((item) => (
-          <span
-            key={item.label}
-            className="flex items-center gap-1.5 text-xs font-medium text-foreground"
-          >
-            <span
-              className="h-1 w-4 rounded-full"
-              style={{ backgroundColor: item.color }}
-              aria-hidden="true"
-            />
-            {item.label}
-          </span>
-        ))}
-      </div>
 
       {/* Controls */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
