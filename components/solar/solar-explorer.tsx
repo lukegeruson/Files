@@ -27,22 +27,22 @@ import {
 } from "@/lib/solar-scene"
 
 // ---------------------------------------------------------------------------
-// A single claymation diorama, chroma-keyed to a genuinely transparent PNG so
-// the clay model floats on the page background with no surrounding box.
+// The original claymation landscape diorama with its flat backdrop flood-filled
+// to genuine transparency, so it sits on the page with no surrounding box.
 // ---------------------------------------------------------------------------
-const DIORAMA_SRC = "/solar-styles/claymation-transparent.png"
+const DIORAMA_SRC = "/solar-styles/claymation-cutout.png"
 
 // Hotspots: percentage positions tuned to the diorama so a marker lands on the
 // real object. The stage is square and the image is square, so x/y map 1:1.
 type Hotspot = { id: ComponentId; x: number; y: number }
 
 const HOTSPOTS: Hotspot[] = [
-  { id: "sun", x: 19, y: 16 },
-  { id: "panels", x: 53, y: 31 },
-  { id: "home", x: 53, y: 43 },
-  { id: "inverter", x: 31, y: 43 },
-  { id: "battery", x: 38, y: 48 },
-  { id: "grid", x: 77, y: 29 },
+  { id: "sun", x: 17, y: 16 },
+  { id: "panels", x: 52, y: 40 },
+  { id: "inverter", x: 25, y: 52 },
+  { id: "battery", x: 33, y: 61 },
+  { id: "home", x: 62, y: 57 },
+  { id: "grid", x: 88, y: 24 },
 ]
 
 // Energy-flow segments drawn between hotspots. `key` selects the flow value on
@@ -200,18 +200,18 @@ export function SolarExplorer() {
         </span>
       </div>
 
-      {/* Stage — frameless and transparent so the clay model floats on the
-          page background with no surrounding box. */}
+      {/* Stage — frameless with a transparent-backed diorama, so the clay
+          model sits on the page with no surrounding box. */}
       <div className="relative mx-auto aspect-square w-full max-w-2xl">
-        {/* Transparent diorama (real alpha, chroma-keyed). A soft drop shadow
-            beneath the island sells the "floating in space" effect. */}
+        {/* Transparent diorama (real alpha). A soft drop shadow now follows the
+            model silhouette rather than a rectangle. */}
         <Image
           src={DIORAMA_SRC || "/placeholder.svg"}
-          alt="Claymation model of a home solar system floating in space"
+          alt="Claymation model of a home solar system"
           fill
           priority
           sizes="(max-width: 768px) 100vw, 672px"
-          className="object-contain [filter:drop-shadow(0_22px_26px_rgba(24,20,10,0.22))]"
+          className="object-contain [filter:drop-shadow(0_16px_20px_rgba(24,20,10,0.18))]"
         />
 
           {/* Energy-flow overlay */}
