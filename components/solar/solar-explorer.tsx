@@ -220,13 +220,12 @@ export function SolarExplorer() {
     return () => mq.removeEventListener("change", apply)
   }, [])
 
-  // "Run day" animation loop. The day pauses briefly each time it reaches high
-  // noon and midnight, then resumes on its own.
-  const PAUSE_MS = 1100 // how long to hold at noon / midnight
+  // "Run day" animation loop. The day plays forward and STOPS completely each
+  // time it reaches high noon or midnight — it will not resume until the user
+  // presses the button again (which advances toward the next stopping point).
   const raf = useRef<number | null>(null)
   const last = useRef<number | null>(null)
   const hourRef = useRef(hour)
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Keep the ref in sync when the hour changes from outside the loop (slider).
   useEffect(() => {
     hourRef.current = hour
@@ -246,8 +245,7 @@ export function SolarExplorer() {
           hourRef.current = landed
           setHour(landed)
           last.current = null
-          setPlaying(false)
-          holdTimer.current = setTimeout(() => setPlaying(true), PAUSE_MS)
+          setPlaying(false) // full stop — no auto-resume
           return
         }
         if (next >= 24) next -= 24
@@ -263,13 +261,6 @@ export function SolarExplorer() {
       last.current = null
     }
   }, [playing, reducedMotion])
-
-  // Clear any pending resume timer on unmount.
-  useEffect(() => {
-    return () => {
-      if (holdTimer.current) clearTimeout(holdTimer.current)
-    }
-  }, [])
 
   const frame = useMemo(() => {
     const idx = frameIndexForHour(timeline, hour)
@@ -290,7 +281,6 @@ export function SolarExplorer() {
   const dayPct = (hour / 24) * 100
 
   function handleReset() {
-    if (holdTimer.current) clearTimeout(holdTimer.current)
     setSelected(null)
     setPlaying(false)
     setHour(12)
