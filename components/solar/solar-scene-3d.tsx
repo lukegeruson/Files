@@ -348,87 +348,181 @@ function PanelArray({ count }: { count: number }) {
   )
 }
 
+function Window({ x, y = 0.95, z = 1.52 }: { x: number; y?: number; z?: number }) {
+  return (
+    <group position={[x, y, z]}>
+      {/* Outer casing */}
+      <mesh position={[0, 0, -0.02]}>
+        <boxGeometry args={[0.74, 0.74, 0.06]} />
+        <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+      </mesh>
+      {/* Glass */}
+      <mesh>
+        <boxGeometry args={[0.58, 0.58, 0.04]} />
+        <meshStandardMaterial
+          color="#bcdcea"
+          emissive="#ffdda0"
+          emissiveIntensity={0.3}
+          metalness={0.5}
+          roughness={0.08}
+        />
+      </mesh>
+      {/* Muntins (cross bars) */}
+      <mesh position={[0, 0, 0.03]}>
+        <boxGeometry args={[0.6, 0.03, 0.02]} />
+        <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0, 0.03]}>
+        <boxGeometry args={[0.03, 0.6, 0.02]} />
+        <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+      </mesh>
+      {/* Shutters */}
+      {[-0.42, 0.42].map((sx) => (
+        <mesh key={sx} position={[sx, 0, 0]}>
+          <boxGeometry args={[0.14, 0.72, 0.04]} />
+          <meshStandardMaterial color="#3f5d52" roughness={0.7} />
+        </mesh>
+      ))}
+      {/* Sill */}
+      <mesh position={[0, -0.42, 0.06]}>
+        <boxGeometry args={[0.82, 0.06, 0.1]} />
+        <meshStandardMaterial color="#e0d6c0" roughness={0.7} />
+      </mesh>
+    </group>
+  )
+}
+
 function House({ onSelect }: { onSelect: (id: ComponentId | null) => void }) {
   return (
     <group>
       <Clickable id="home" onSelect={onSelect}>
-        {/* Body */}
+        {/* Main body */}
         <RoundedBox
           args={[4, 1.7, 3]}
-          radius={0.06}
+          radius={0.04}
           smoothness={4}
           position={[0, 0.85, 0]}
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial color="#f2ecdf" roughness={0.7} metalness={0.02} />
+          <meshStandardMaterial color="#f4eada" roughness={0.75} metalness={0.02} />
         </RoundedBox>
-        {/* Base trim */}
-        <mesh position={[0, 0.08, 0]}>
-          <boxGeometry args={[4.06, 0.18, 3.06]} />
-          <meshStandardMaterial color="#d8cdb8" roughness={0.8} />
+
+        {/* Stone foundation course */}
+        <mesh position={[0, 0.12, 0]} receiveShadow>
+          <boxGeometry args={[4.08, 0.26, 3.08]} />
+          <meshStandardMaterial color="#9c9384" roughness={0.95} />
         </mesh>
-        {/* Door */}
-        <mesh position={[0, 0.55, 1.51]}>
-          <boxGeometry args={[0.6, 1.1, 0.05]} />
-          <meshStandardMaterial color="#6f4a2c" roughness={0.6} />
-        </mesh>
-        <mesh position={[0.18, 0.55, 1.55]}>
-          <sphereGeometry args={[0.035, 12, 12]} />
-          <meshStandardMaterial color="#e0b452" metalness={0.9} roughness={0.3} />
-        </mesh>
-        {/* Windows with warm night glow */}
-        {[-1.2, 1.2].map((x) => (
-          <group key={x}>
-            {/* Frame */}
-            <mesh position={[x, 0.95, 1.5]}>
-              <boxGeometry args={[0.68, 0.68, 0.06]} />
-              <meshStandardMaterial color="#e6dcc8" roughness={0.7} />
-            </mesh>
-            {/* Glass */}
-            <mesh position={[x, 0.95, 1.53]}>
-              <boxGeometry args={[0.56, 0.56, 0.04]} />
-              <meshStandardMaterial
-                color="#a9cede"
-                emissive="#ffdda0"
-                emissiveIntensity={0.28}
-                metalness={0.4}
-                roughness={0.12}
-              />
-            </mesh>
-          </group>
+
+        {/* Corner quoins for architectural detail */}
+        {[
+          [-1.99, 1.99],
+          [1.99, 1.99],
+          [-1.99, -1.99],
+          [1.99, -1.99],
+        ].map(([x, z], i) => (
+          <mesh key={i} position={[x, 0.85, z]}>
+            <boxGeometry args={[0.14, 1.6, 0.14]} />
+            <meshStandardMaterial color="#e6dcc7" roughness={0.8} />
+          </mesh>
         ))}
+
+        {/* Covered entry: recessed door, porch roof, and steps */}
+        <group position={[0, 0, 1.5]}>
+          {/* Door */}
+          <mesh position={[0, 0.6, 0.02]}>
+            <boxGeometry args={[0.66, 1.2, 0.06]} />
+            <meshStandardMaterial color="#5e3d24" roughness={0.55} />
+          </mesh>
+          {/* Door panels inset */}
+          <mesh position={[0, 0.6, 0.06]}>
+            <boxGeometry args={[0.5, 1.02, 0.02]} />
+            <meshStandardMaterial color="#6f4a2c" roughness={0.5} />
+          </mesh>
+          {/* Handle */}
+          <mesh position={[0.2, 0.58, 0.08]}>
+            <sphereGeometry args={[0.035, 12, 12]} />
+            <meshStandardMaterial color="#e0b452" metalness={0.9} roughness={0.25} />
+          </mesh>
+          {/* Transom light above door */}
+          <mesh position={[0, 1.28, 0.05]}>
+            <boxGeometry args={[0.66, 0.18, 0.03]} />
+            <meshStandardMaterial color="#bcdcea" emissive="#ffdda0" emissiveIntensity={0.35} roughness={0.1} metalness={0.4} />
+          </mesh>
+          {/* Small porch roof */}
+          <mesh position={[0, 1.5, 0.28]} castShadow>
+            <boxGeometry args={[1.1, 0.08, 0.6]} />
+            <meshStandardMaterial color="#5f3d2e" roughness={0.8} />
+          </mesh>
+          {[-0.42, 0.42].map((px) => (
+            <mesh key={px} position={[px, 0.7, 0.5]} castShadow>
+              <cylinderGeometry args={[0.05, 0.05, 1.4, 12]} />
+              <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+            </mesh>
+          ))}
+          {/* Steps */}
+          <mesh position={[0, 0.03, 0.5]} receiveShadow>
+            <boxGeometry args={[1.0, 0.08, 0.5]} />
+            <meshStandardMaterial color="#b7ad98" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.1, 0.32]} receiveShadow>
+            <boxGeometry args={[0.8, 0.08, 0.3]} />
+            <meshStandardMaterial color="#c2b8a2" roughness={0.9} />
+          </mesh>
+        </group>
+
+        {/* Windows flanking the entry */}
+        <Window x={-1.2} />
+        <Window x={1.2} />
+
         {/* Chimney */}
         <mesh position={[1.3, 2.75, -0.5]} castShadow>
-          <boxGeometry args={[0.34, 0.7, 0.34]} />
-          <meshStandardMaterial color="#c7b9a0" roughness={0.85} />
+          <boxGeometry args={[0.36, 0.75, 0.36]} />
+          <meshStandardMaterial color="#a8907a" roughness={0.9} />
+        </mesh>
+        <mesh position={[1.3, 3.15, -0.5]}>
+          <boxGeometry args={[0.44, 0.1, 0.44]} />
+          <meshStandardMaterial color="#8a7461" roughness={0.9} />
         </mesh>
       </Clickable>
 
-      {/* Front (south) roof slope beneath the panels. */}
+      {/* --- Roof: shingled slopes with an overhanging eave + fascia --- */}
+      {/* Front (south) slope beneath the panels. */}
       <mesh
-        position={[0, 2.15, 0.75]}
+        position={[0, 2.15, 0.78]}
         rotation={[ROOF_ANGLE, 0, 0]}
         castShadow
         receiveShadow
       >
-        <boxGeometry args={[4.15, 0.1, 1.9]} />
-        <meshStandardMaterial color="#7c4f3c" roughness={0.8} />
+        <boxGeometry args={[4.4, 0.12, 2.05]} />
+        <meshStandardMaterial color="#6d4436" roughness={0.9} />
       </mesh>
-      {/* Back (north) roof slope. */}
+      {/* Back (north) slope. */}
       <mesh
-        position={[0, 2.15, -0.75]}
+        position={[0, 2.15, -0.78]}
         rotation={[-ROOF_ANGLE, 0, 0]}
         castShadow
         receiveShadow
       >
-        <boxGeometry args={[4.15, 0.1, 1.9]} />
-        <meshStandardMaterial color="#7c4f3c" roughness={0.8} />
+        <boxGeometry args={[4.4, 0.12, 2.05]} />
+        <meshStandardMaterial color="#6d4436" roughness={0.9} />
       </mesh>
+      {/* Fascia board along the front eave. */}
+      <mesh position={[0, 1.83, 1.72]}>
+        <boxGeometry args={[4.4, 0.14, 0.06]} />
+        <meshStandardMaterial color="#efe7d5" roughness={0.7} />
+      </mesh>
+      {/* Gable end fills (triangles approximated by thin tapered prisms). */}
+      {[-2.02, 2.02].map((x) => (
+        <mesh key={x} position={[x, 2.15, 0]}>
+          <boxGeometry args={[0.06, 0.9, 2.6]} />
+          <meshStandardMaterial color="#e9dfca" roughness={0.8} />
+        </mesh>
+      ))}
       {/* Ridge cap along the top of the two slopes. */}
-      <mesh position={[0, 2.62, 0]} castShadow>
-        <boxGeometry args={[4.2, 0.12, 0.16]} />
-        <meshStandardMaterial color="#5f3d2e" roughness={0.8} />
+      <mesh position={[0, 2.64, 0]} castShadow>
+        <boxGeometry args={[4.45, 0.14, 0.2]} />
+        <meshStandardMaterial color="#4f3125" roughness={0.85} />
       </mesh>
       {/* Panels are rendered by HouseWithPanels so the count stays live. */}
     </group>
@@ -719,40 +813,164 @@ function InfoPopup({
 // Ground: radial-gradient plot that fades into the sky at the edges
 // ---------------------------------------------------------------------------
 
+// A painted top-down site plan: mown lawn with subtle mowing stripes, a warm
+// flagstone path leading to the front door, and a soft vignette that fades the
+// plot into the horizon so there's no hard disc edge.
 function useGroundTexture() {
   return useMemo(() => {
-    const size = 512
+    const size = 1024
     const canvas = document.createElement("canvas")
     canvas.width = size
     canvas.height = size
     const ctx = canvas.getContext("2d")!
+
+    // Base lawn gradient (richer green in the middle, drying toward the edge).
     const g = ctx.createRadialGradient(
-      size / 2,
-      size / 2,
-      size * 0.12,
-      size / 2,
-      size / 2,
-      size * 0.5,
+      size / 2, size * 0.46, size * 0.08,
+      size / 2, size / 2, size * 0.52,
     )
-    g.addColorStop(0, "#9fb071")
-    g.addColorStop(0.55, "#93a768")
-    g.addColorStop(0.82, "#c3bfa6")
-    g.addColorStop(1, "#d9dcc9")
+    g.addColorStop(0, "#6f8f46")
+    g.addColorStop(0.5, "#5f8340")
+    g.addColorStop(0.8, "#8a9a5e")
+    g.addColorStop(1, "#b9bd94")
     ctx.fillStyle = g
     ctx.fillRect(0, 0, size, size)
-    // A faint driveway from the door toward the camera-left/front.
+
+    // Diagonal mowing stripes for a manicured lawn.
+    ctx.save()
+    ctx.translate(size / 2, size / 2)
+    ctx.rotate(-0.5)
+    ctx.globalAlpha = 0.06
+    const stripe = size / 16
+    for (let i = -20; i < 20; i++) {
+      ctx.fillStyle = i % 2 === 0 ? "#ffffff" : "#0b2a0b"
+      ctx.fillRect(i * stripe, -size, stripe, size * 2)
+    }
+    ctx.restore()
+
+    // Speckle for grass texture.
+    ctx.globalAlpha = 0.05
+    for (let i = 0; i < 2600; i++) {
+      const x = Math.random() * size
+      const y = Math.random() * size
+      ctx.fillStyle = Math.random() > 0.5 ? "#dfeecb" : "#243d16"
+      ctx.fillRect(x, y, 1.5, 1.5)
+    }
+    ctx.globalAlpha = 1
+
+    // Flagstone path from the front door (bottom center) toward the camera.
+    const cx = size / 2
+    ctx.strokeStyle = "#c9bda0"
+    ctx.fillStyle = "#d8ccae"
+    for (let i = 0; i < 9; i++) {
+      const y = size * 0.62 + i * 44
+      const w = 120 - i * 3
+      ctx.beginPath()
+      ctx.roundRect(cx - w / 2, y, w, 34, 10)
+      ctx.fill()
+      ctx.globalAlpha = 0.5
+      ctx.stroke()
+      ctx.globalAlpha = 1
+    }
+
+    // Edge vignette so the circle dissolves into the distance.
+    const v = ctx.createRadialGradient(
+      size / 2, size / 2, size * 0.34,
+      size / 2, size / 2, size * 0.5,
+    )
+    v.addColorStop(0, "rgba(0,0,0,0)")
+    v.addColorStop(1, "rgba(196,201,168,0.85)")
+    ctx.fillStyle = v
+    ctx.fillRect(0, 0, size, size)
+
     const tex = new CanvasTexture(canvas)
     return tex
   }, [])
 }
 
+// One stylized tree: a tapered trunk with two clustered foliage blobs. Cheap,
+// but reads clearly as a tree and casts a soft contact shadow via the scene.
+function Tree({
+  position,
+  scale = 1,
+  tint = "#4f7a3a",
+}: {
+  position: [number, number, number]
+  scale?: number
+  tint?: string
+}) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 0.5, 0]} castShadow>
+        <cylinderGeometry args={[0.07, 0.11, 1, 8]} />
+        <meshStandardMaterial color="#6b4a2f" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 1.25, 0]} castShadow>
+        <icosahedronGeometry args={[0.62, 1]} />
+        <meshStandardMaterial color={tint} roughness={0.85} flatShading />
+      </mesh>
+      <mesh position={[0.28, 1.65, 0.1]} castShadow>
+        <icosahedronGeometry args={[0.42, 1]} />
+        <meshStandardMaterial color="#5c8a44" roughness={0.85} flatShading />
+      </mesh>
+      <mesh position={[-0.26, 1.5, -0.12]} castShadow>
+        <icosahedronGeometry args={[0.38, 1]} />
+        <meshStandardMaterial color="#456d34" roughness={0.85} flatShading />
+      </mesh>
+    </group>
+  )
+}
+
+// Low foundation hedge run made of overlapping rounded boxes.
+function Hedge({
+  position,
+  length = 2,
+  rotation = 0,
+}: {
+  position: [number, number, number]
+  length?: number
+  rotation?: number
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <RoundedBox args={[length, 0.32, 0.34]} radius={0.14} smoothness={3} position={[0, 0.16, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color="#3f6a30" roughness={0.9} flatShading />
+      </RoundedBox>
+    </group>
+  )
+}
+
 function Ground() {
   const tex = useGroundTexture()
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-      <circleGeometry args={[9, 64]} />
-      <meshStandardMaterial map={tex} roughness={1} />
-    </mesh>
+    <group>
+      {/* Manicured plot the house sits on. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.3, 0, 0]} receiveShadow>
+        <circleGeometry args={[9, 96]} />
+        <meshStandardMaterial map={tex} roughness={1} />
+      </mesh>
+      {/* Raised soil bed under the foundation planting along the front wall. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 1.75]} receiveShadow>
+        <planeGeometry args={[4.4, 0.9]} />
+        <meshStandardMaterial color="#4a3524" roughness={1} />
+      </mesh>
+
+      {/* Foundation hedges flanking the door. */}
+      <Hedge position={[-1.35, 0, 1.72]} length={1.4} />
+      <Hedge position={[1.35, 0, 1.72]} length={1.4} />
+
+      {/* Trees framing the plot, kept clear of equipment (left) and flows. */}
+      <Tree position={[3.6, 0, 2.1]} scale={1.15} />
+      <Tree position={[4.3, 0, -1.6]} scale={0.9} tint="#557f3f" />
+      <Tree position={[-3.9, 0, 2.6]} scale={0.8} tint="#4b7538" />
+      <Tree position={[2.2, 0, 3.4]} scale={0.7} tint="#5c8a44" />
+
+      {/* A couple of shrubs by the utility pole for scale. */}
+      <mesh position={[-4.6, 0.18, 0.6]} castShadow>
+        <icosahedronGeometry args={[0.3, 1]} />
+        <meshStandardMaterial color="#4f7a3a" roughness={0.9} flatShading />
+      </mesh>
+    </group>
   )
 }
 
@@ -778,13 +996,13 @@ function SceneContents({
       <Ground />
       {/* Soft grounding shadow under everything. */}
       <ContactShadows
-        position={[-0.4, 0.02, 0]}
-        scale={16}
+        position={[-0.3, 0.03, 0]}
+        scale={18}
         far={6}
-        blur={2.6}
-        opacity={0.42 + frame.daylight * 0.2}
-        resolution={512}
-        color="#3a3324"
+        blur={2.8}
+        opacity={0.32 + frame.daylight * 0.22}
+        resolution={1024}
+        color="#243d16"
       />
 
       <group>
@@ -832,7 +1050,7 @@ function SceneContents({
           luminanceSmoothing={0.3}
           mipmapBlur
         />
-        <Vignette eskil={false} offset={0.28} darkness={0.55} />
+        <Vignette eskil={false} offset={0.32} darkness={0.42} />
       </EffectComposer>
     </>
   )
