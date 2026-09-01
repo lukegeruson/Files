@@ -364,40 +364,40 @@ export function SolarExplorer() {
   return (
     <section aria-label="Solar Energy Explorer" className="flex flex-col gap-4">
       {/* Heading */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-primary">
             <Sparkles className="size-3" aria-hidden="true" />
             Interactive diagram
           </span>
-          <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
-            Solar Energy Explorer
-          </h2>
-          <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
-            Tap any part and run a day to see how home solar works.
-          </p>
-        </div>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium shadow-sm",
-            isLive
-              ? "border-primary/40 bg-primary/10 text-foreground"
-              : "border-border bg-muted text-muted-foreground",
-          )}
-        >
-          <span className="relative flex size-1.5">
-            {isLive ? (
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/70" />
-            ) : null}
-            <span
-              className={cn(
-                "relative inline-flex size-1.5 rounded-full",
-                isLive ? "bg-primary" : "bg-muted-foreground",
-              )}
-            />
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium shadow-sm",
+              isLive
+                ? "border-primary/40 bg-primary/10 text-foreground"
+                : "border-border bg-muted text-muted-foreground",
+            )}
+          >
+            <span className="relative flex size-1.5">
+              {isLive ? (
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/70" />
+              ) : null}
+              <span
+                className={cn(
+                  "relative inline-flex size-1.5 rounded-full",
+                  isLive ? "bg-primary" : "bg-muted-foreground",
+                )}
+              />
+            </span>
+            {isLive ? "Live from your calculator" : "Sample data"}
           </span>
-          {isLive ? "Live from your calculator" : "Sample data"}
-        </span>
+        </div>
+        <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
+          Solar Energy Explorer
+        </h2>
+        <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+          Tap any part and run a day to see how home solar works.
+        </p>
       </div>
 
       {/* Live stats — on mobile this sits above the simulator (instead of
