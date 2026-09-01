@@ -282,6 +282,63 @@ export function SolarExplorer() {
     return { seg, active }
   })
 
+  // Shared inner content for the "Right now" live-stats card. Rendered above the
+  // simulator on mobile and as a corner overlay on larger screens.
+  const liveStatsInner = (
+    <>
+      <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Right now
+        </p>
+        <span className="rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">
+          {frame.label}
+        </span>
+      </div>
+      <dl className="flex flex-col gap-1.5 px-3 py-2.5 text-sm">
+        <StatRow
+          icon={<Sun className="size-3.5 text-primary" aria-hidden="true" />}
+          label="Solar"
+          value={kw(frame.solarKw)}
+        />
+        <StatRow
+          icon={<Home className="size-3.5 text-chart-3" aria-hidden="true" />}
+          label="Home"
+          value={kw(frame.consumptionKw)}
+        />
+        <StatRow
+          icon={<Zap className="size-3.5 text-chart-2" aria-hidden="true" />}
+          label={gridImporting ? "Grid in" : "Grid out"}
+          value={kw(Math.abs(frame.gridKw))}
+          valueClass={
+            gridExporting
+              ? "text-chart-2"
+              : gridImporting
+                ? "text-chart-3"
+                : undefined
+          }
+        />
+        {snapshot.hasBattery ? (
+          <StatRow
+            icon={
+              <BatteryCharging
+                className="size-3.5 text-[#9b83f0]"
+                aria-hidden="true"
+              />
+            }
+            label="Battery"
+            value={`${Math.round(frame.batterySoc * 100)}%`}
+          />
+        ) : null}
+      </dl>
+      <div className="border-t border-border/60 bg-gradient-to-r from-primary/8 to-transparent px-3 py-2">
+        <p className="text-[11px] text-muted-foreground">Saved today</p>
+        <p className="font-serif text-xl tabular-nums text-foreground">
+          {money(frame.savingsSoFar, 2)}
+        </p>
+      </div>
+    </>
+  )
+
   return (
     <section aria-label="Solar Energy Explorer" className="flex flex-col gap-4">
       {/* Heading */}
@@ -322,6 +379,12 @@ export function SolarExplorer() {
           </span>
           {isLive ? "Live from your calculator" : "Sample data"}
         </span>
+      </div>
+
+      {/* Live stats — on mobile this sits above the simulator (instead of
+          overlaying it). The corner-overlay version below is desktop-only. */}
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5 sm:hidden">
+        {liveStatsInner}
       </div>
 
       {/* Stage — an animated sky sits behind the transparent-backed diorama,
@@ -468,58 +531,10 @@ export function SolarExplorer() {
             />
           ) : null}
 
-          {/* Live stats (bottom-left corner, over empty margin) */}
-          <div className="absolute -bottom-1 left-0 w-40 overflow-hidden rounded-xl border border-white/50 bg-card/90 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:w-48">
-            <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Right now
-              </p>
-              <span className="rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">
-                {frame.label}
-              </span>
-            </div>
-            <dl className="flex flex-col gap-1.5 px-3 py-2.5 text-sm">
-              <StatRow
-                icon={<Sun className="size-3.5 text-primary" aria-hidden="true" />}
-                label="Solar"
-                value={kw(frame.solarKw)}
-              />
-              <StatRow
-                icon={<Home className="size-3.5 text-chart-3" aria-hidden="true" />}
-                label="Home"
-                value={kw(frame.consumptionKw)}
-              />
-              <StatRow
-                icon={<Zap className="size-3.5 text-chart-2" aria-hidden="true" />}
-                label={gridImporting ? "Grid in" : "Grid out"}
-                value={kw(Math.abs(frame.gridKw))}
-                valueClass={
-                  gridExporting
-                    ? "text-chart-2"
-                    : gridImporting
-                      ? "text-chart-3"
-                      : undefined
-                }
-              />
-              {snapshot.hasBattery ? (
-                <StatRow
-                  icon={
-                    <BatteryCharging
-                      className="size-3.5 text-[#9b83f0]"
-                      aria-hidden="true"
-                    />
-                  }
-                  label="Battery"
-                  value={`${Math.round(frame.batterySoc * 100)}%`}
-                />
-              ) : null}
-            </dl>
-            <div className="border-t border-border/60 bg-gradient-to-r from-primary/8 to-transparent px-3 py-2">
-              <p className="text-[11px] text-muted-foreground">Saved today</p>
-              <p className="font-serif text-xl tabular-nums text-foreground">
-                {money(frame.savingsSoFar, 2)}
-              </p>
-            </div>
+          {/* Live stats (desktop only — bottom-left corner, over empty margin).
+              On mobile the same card is shown above the simulator. */}
+          <div className="absolute -bottom-1 left-0 hidden w-40 overflow-hidden rounded-xl border border-white/50 bg-card/90 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:block sm:w-48">
+            {liveStatsInner}
           </div>
 
           {/* Savings breakdown (toggled) */}
