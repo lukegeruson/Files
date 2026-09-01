@@ -1,7 +1,9 @@
 "use client"
 
 import {
+  Component,
   createContext,
+  type ReactNode,
   useContext,
   useEffect,
   useMemo,
@@ -26,6 +28,7 @@ import {
   CatmullRomCurve3,
   DoubleSide,
   type Group,
+  HalfFloatType,
   type Mesh,
   RepeatWrapping,
   SRGBColorSpace,
@@ -1113,6 +1116,52 @@ function Ground() {
 // Scene assembly
 // ---------------------------------------------------------------------------
 
+// Post-processing is an enhancement, never a requirement. Some three +
+// postprocessing pairings throw while the composer builds its render target
+// (a null WebGL-context-attributes read -> "Cannot read properties of null
+// (reading 'alpha')"), which would otherwise blank the entire canvas. This
+// boundary catches that so the 3D scene always renders, just without bloom.
+class PostFXBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  componentDidCatch(err: unknown) {
+    console.log("[v0] post-processing disabled after error:", err)
+  }
+  render() {
+    if (this.state.failed) return null
+    return this.props.children
+  }
+}
+
+// Passing an explicit frameBufferType avoids the composer's auto-detect path
+// that reads the (sometimes null) context `alpha` attribute.
+function PostFX({
+  bloom,
+  vignette,
+}: {
+  bloom: { intensity: number; threshold: number }
+  vignette: number
+}) {
+  return (
+    <PostFXBoundary>
+      <EffectComposer enableNormalPass={false} frameBufferType={HalfFloatType}>
+        <Bloom
+          intensity={bloom.intensity}
+          luminanceThreshold={bloom.threshold}
+          luminanceSmoothing={0.3}
+          mipmapBlur
+        />
+        <Vignette eskil={false} offset={0.32} darkness={vignette} />
+      </EffectComposer>
+    </PostFXBoundary>
+  )
+}
+
 function SceneContents({
   frame,
   panelCount,
@@ -1192,10 +1241,7 @@ function SceneContents({
           </>
         ) : null}
 
-        <EffectComposer enableNormalPass={false}>
-          <Bloom intensity={bloom.intensity} luminanceThreshold={bloom.threshold} luminanceSmoothing={0.3} mipmapBlur />
-          <Vignette eskil={false} offset={0.32} darkness={vignette} />
-        </EffectComposer>
+        <PostFX bloom={bloom} vignette={vignette} />
       </TextureContext.Provider>
     </StyleContext.Provider>
   )
