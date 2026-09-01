@@ -407,6 +407,56 @@ export function SolarExplorer() {
     )
   }
 
+  // Time-of-day slider. Shown below the "Right now" card in the desktop left
+  // column, and inside the Controls block on mobile. Both copies live in the
+  // DOM (toggled by CSS), so each needs a unique id.
+  const renderTimeline = (id: string) => (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <label
+          htmlFor={id}
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Time of day
+        </label>
+        <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-foreground">
+          {frame.label}
+        </span>
+      </div>
+      <div className="relative">
+        <input
+          id={id}
+          type="range"
+          min={0}
+          max={24}
+          step={0.25}
+          value={hour}
+          onChange={(e) => {
+            setPlaying(false)
+            setHour(Number.parseFloat(e.target.value))
+          }}
+          className="solar-timeline h-2.5 w-full cursor-pointer appearance-none rounded-full"
+          style={{
+            background:
+              "linear-gradient(90deg, #1e293b 0%, #6b5b95 18%, #f5b445 40%, #ffe6a8 50%, #f5b445 60%, #6b5b95 82%, #1e293b 100%)",
+          }}
+          aria-label="Time of day"
+        />
+      </div>
+      <div className="flex justify-between text-[11px] text-muted-foreground">
+        {TICKS.map((t) => {
+          const Icon = t.icon
+          return (
+            <span key={t.label} className="flex items-center gap-1">
+              <Icon className="size-3" aria-hidden="true" />
+              {t.label}
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
+
   return (
     <section aria-label="Solar Energy Explorer" className="flex flex-col gap-4">
       {/* Heading */}
@@ -433,9 +483,15 @@ export function SolarExplorer() {
           left of the stage; on mobile the stage stands alone (the collapsible
           card above handles the mobile live stats). */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-        {/* Right now — desktop-only left column */}
-        <div className="hidden w-52 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5 sm:block">
-          {renderLiveStats(false)}
+        {/* Right now + timeline — desktop-only left column. The time-of-day
+            slider sits directly below the "Right now" card. */}
+        <div className="hidden w-52 shrink-0 flex-col gap-4 sm:flex">
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
+            {renderLiveStats(false)}
+          </div>
+          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+            {renderTimeline("solar-timeline")}
+          </div>
         </div>
 
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
@@ -673,51 +729,9 @@ export function SolarExplorer() {
           </ControlButton>
         </div>
 
-        {/* Timeline */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <label
-              htmlFor="solar-timeline"
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-            >
-              Time of day
-            </label>
-            <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-foreground">
-              {frame.label}
-            </span>
-          </div>
-          <div className="relative">
-            <input
-              id="solar-timeline"
-              type="range"
-              min={0}
-              max={24}
-              step={0.25}
-              value={hour}
-              onChange={(e) => {
-                setPlaying(false)
-                setHour(Number.parseFloat(e.target.value))
-              }}
-              className="solar-timeline h-2.5 w-full cursor-pointer appearance-none rounded-full"
-              style={{
-                background:
-                  "linear-gradient(90deg, #1e293b 0%, #6b5b95 18%, #f5b445 40%, #ffe6a8 50%, #f5b445 60%, #6b5b95 82%, #1e293b 100%)",
-              }}
-              aria-label="Time of day"
-            />
-          </div>
-          <div className="flex justify-between text-[11px] text-muted-foreground">
-            {TICKS.map((t) => {
-              const Icon = t.icon
-              return (
-                <span key={t.label} className="flex items-center gap-1">
-                  <Icon className="size-3" aria-hidden="true" />
-                  {t.label}
-                </span>
-              )
-            })}
-          </div>
-        </div>
+        {/* Timeline — mobile only; on desktop it lives in the left column
+            beneath the "Right now" card. */}
+        <div className="sm:hidden">{renderTimeline("solar-timeline-mobile")}</div>
       </div>
 
       <style jsx>{`
