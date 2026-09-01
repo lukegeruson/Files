@@ -278,7 +278,6 @@ export function SolarExplorer() {
 
   const gridExporting = frame.gridKw > 0.05
   const gridImporting = frame.gridKw < -0.05
-  const dayPct = (hour / 24) * 100
 
   function handleReset() {
     setSelected(null)
@@ -667,11 +666,6 @@ export function SolarExplorer() {
                   "linear-gradient(90deg, #1e293b 0%, #6b5b95 18%, #f5b445 40%, #ffe6a8 50%, #f5b445 60%, #6b5b95 82%, #1e293b 100%)",
               }}
               aria-label="Time of day"
-            />
-            <span
-              className="pointer-events-none absolute -bottom-1 h-1 w-1 -translate-x-1/2 rounded-full bg-primary"
-              style={{ left: `${dayPct}%` }}
-              aria-hidden="true"
             />
           </div>
           <div className="flex justify-between text-[11px] text-muted-foreground">
