@@ -5,7 +5,7 @@
 import sharp from "sharp"
 import path from "node:path"
 
-const SRC = path.resolve("public/solar-styles/claymation-wide.png")
+const SRC = path.resolve("public/solar-styles/claymation.png")
 const OUT = path.resolve("public/solar-styles/claymation-cutout.png")
 
 // How close a pixel must be to the sampled background color to be treated as

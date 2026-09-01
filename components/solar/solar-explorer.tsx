@@ -32,17 +32,17 @@ import {
 // ---------------------------------------------------------------------------
 const DIORAMA_SRC = "/solar-styles/claymation-cutout.png"
 
-// Hotspots: percentage positions tuned to the widened diorama (1324x1024) so a
-// marker lands on the real object. x/y are percentages of the stage box.
+// Hotspots: percentage positions tuned to the diorama so a marker lands on the
+// real object. The stage is square and the image is square, so x/y map 1:1.
 type Hotspot = { id: ComponentId; x: number; y: number }
 
 const HOTSPOTS: Hotspot[] = [
-  { id: "sun", x: 32, y: 20 },
-  { id: "panels", x: 56, y: 37 },
-  { id: "home", x: 58, y: 52 },
-  { id: "inverter", x: 41, y: 52 },
-  { id: "battery", x: 44, y: 58 },
-  { id: "grid", x: 79, y: 27 },
+  { id: "sun", x: 17, y: 16 },
+  { id: "panels", x: 52, y: 40 },
+  { id: "inverter", x: 25, y: 52 },
+  { id: "battery", x: 33, y: 61 },
+  { id: "home", x: 62, y: 57 },
+  { id: "grid", x: 88, y: 24 },
 ]
 
 // Energy-flow segments drawn between hotspots. `key` selects the flow value on
@@ -71,6 +71,128 @@ const LEGEND: Array<{ label: string; color: string }> = [
   { label: "Grid to home", color: "#5b8def" },
   { label: "Battery", color: "#9b83f0" },
 ]
+
+// Fixed star field for the night sky (deterministic so it doesn't reshuffle).
+const STARS = Array.from({ length: 40 }, (_, i) => {
+  const r = (n: number) => {
+    const x = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453
+    return x - Math.floor(x)
+  }
+  return {
+    x: r(1) * 100,
+    y: r(2) * 62, // keep stars in the upper ~2/3 (above the horizon)
+    size: 1 + r(3) * 2,
+    tw: 0.4 + r(4) * 0.6,
+    dur: 2.5 + r(5) * 3,
+    delay: r(6) * 4,
+  }
+})
+
+// Linear interpolation helpers for blending sky colors between key times.
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t
+}
+function mix(c1: number[], c2: number[], t: number) {
+  return `rgb(${Math.round(lerp(c1[0], c2[0], t))}, ${Math.round(
+    lerp(c1[1], c2[1], t),
+  )}, ${Math.round(lerp(c1[2], c2[2], t))})`
+}
+
+// Key sky "moods" across the day. Each has a top and bottom gradient color.
+type Mood = { top: number[]; bottom: number[] }
+const MOODS: Record<string, Mood> = {
+  night: { top: [12, 16, 38], bottom: [26, 26, 54] },
+  dawn: { top: [58, 62, 120], bottom: [244, 168, 122] }, // pink/orange sunrise
+  day: { top: [125, 196, 240], bottom: [214, 236, 248] }, // bright blue
+  dusk: { top: [70, 54, 110], bottom: [240, 132, 96] }, // orange/purple sunset
+}
+
+// Compute the full sky state for a given hour (0-24).
+function skyForHour(hour: number) {
+  const h = ((hour % 24) + 24) % 24
+
+  // Blend between moods based on time windows.
+  let top: string
+  let bottom: string
+  let starOpacity = 0
+  if (h < 5) {
+    top = mix(MOODS.night.top, MOODS.night.top, 0)
+    bottom = mix(MOODS.night.bottom, MOODS.night.bottom, 0)
+    starOpacity = 1
+  } else if (h < 7) {
+    const t = (h - 5) / 2 // night -> dawn
+    top = mix(MOODS.night.top, MOODS.dawn.top, t)
+    bottom = mix(MOODS.night.bottom, MOODS.dawn.bottom, t)
+    starOpacity = 1 - t
+  } else if (h < 9) {
+    const t = (h - 7) / 2 // dawn -> day
+    top = mix(MOODS.dawn.top, MOODS.day.top, t)
+    bottom = mix(MOODS.dawn.bottom, MOODS.day.bottom, t)
+  } else if (h < 16) {
+    top = mix(MOODS.day.top, MOODS.day.top, 0) // full day
+    bottom = mix(MOODS.day.bottom, MOODS.day.bottom, 0)
+  } else if (h < 18.5) {
+    const t = (h - 16) / 2.5 // day -> dusk
+    top = mix(MOODS.day.top, MOODS.dusk.top, t)
+    bottom = mix(MOODS.day.bottom, MOODS.dusk.bottom, t)
+  } else if (h < 20.5) {
+    const t = (h - 18.5) / 2 // dusk -> night
+    top = mix(MOODS.dusk.top, MOODS.night.top, t)
+    bottom = mix(MOODS.dusk.bottom, MOODS.night.bottom, t)
+    starOpacity = t
+  } else {
+    top = mix(MOODS.night.top, MOODS.night.top, 0)
+    bottom = mix(MOODS.night.bottom, MOODS.night.bottom, 0)
+    starOpacity = 1
+  }
+
+  // Daytime factor 0..1 (0 = fully dark, 1 = midday) drives sun vs moon.
+  const isDay = h >= 6 && h <= 20
+  // Sun/moon arc: map its visible window to a left->right path, arcing up.
+  const dayStart = 6
+  const dayEnd = 20
+  const p = isDay
+    ? (h - dayStart) / (dayEnd - dayStart) // 0..1 across the day
+    : // Night window wraps 20 -> 24 -> 6
+      (((h - 20 + 24) % 24) / 10)
+  const bodyX = lerp(8, 92, p)
+  // Parabolic height: highest at midday / midnight (p=0.5).
+  const arc = 1 - Math.pow((p - 0.5) * 2, 2) // 0 at ends, 1 at middle
+  const bodyY = lerp(78, 14, arc)
+
+  const sunUp = h > 6.5 && h < 19.5
+  const goldenLow = (h >= 6.5 && h < 8.5) || (h > 16.5 && h < 19.5)
+
+  const bodyColor = isDay
+    ? goldenLow
+      ? "radial-gradient(circle at 40% 40%, #ffe7a8, #ffb454 70%)"
+      : "radial-gradient(circle at 40% 40%, #fff6d8, #ffd23f 72%)"
+    : "radial-gradient(circle at 38% 34%, #fdfbe8, #d7dcc4 78%)" // moon
+
+  const bodyGlow = isDay
+    ? goldenLow
+      ? "0 0 45px 18px rgba(255,150,60,0.55)"
+      : "0 0 60px 26px rgba(255,214,90,0.6)"
+    : "0 0 26px 8px rgba(210,220,255,0.35)"
+
+  // Diorama lighting: warm/dim at golden hour, dark blue-ish at night.
+  let dioramaFilter = "none"
+  if (!sunUp) {
+    dioramaFilter = "brightness(0.62) saturate(0.85) hue-rotate(200deg)"
+  } else if (goldenLow) {
+    dioramaFilter = "brightness(1.02) saturate(1.15) sepia(0.22)"
+  }
+
+  return {
+    gradient: `linear-gradient(to bottom, ${top} 0%, ${bottom} 100%)`,
+    starOpacity,
+    bodyX,
+    bodyY,
+    bodyColor,
+    bodyGlow,
+    dioramaFilter,
+  }
+}
 
 const TICKS: Array<{ label: string; icon: typeof Sun }> = [
   { label: "Morning", icon: Sunrise },
@@ -129,6 +251,8 @@ export function SolarExplorer() {
     const idx = frameIndexForHour(timeline, hour)
     return timeline.frames[idx]
   }, [timeline, hour])
+
+  const sky = useMemo(() => skyForHour(hour), [hour])
 
   const hotspots = HOTSPOTS
   const posOf = useMemo(() => {
@@ -200,19 +324,72 @@ export function SolarExplorer() {
         </span>
       </div>
 
-      {/* Stage — frameless with a transparent-backed diorama, so the clay
-          model sits on the page with no surrounding box. Aspect matches the
-          widened image so the full lawn shows without cropping. */}
-      <div className="relative mx-auto aspect-[1324/1024] w-full max-w-3xl">
-        {/* Transparent diorama (real alpha). A soft drop shadow now follows the
-            model silhouette rather than a rectangle. */}
+      {/* Stage — an animated sky sits behind the transparent-backed diorama,
+          so the whole scene runs through sunrise, day, sunset and night as the
+          time of day changes. */}
+      <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden rounded-3xl">
+        {/* Sky gradient (dawn -> day -> dusk -> night) */}
+        <div
+          className="absolute inset-0 transition-[background] duration-700 ease-linear"
+          style={{ background: sky.gradient }}
+          aria-hidden="true"
+        />
+
+        {/* Stars — fade in at night */}
+        <div
+          className="absolute inset-0 transition-opacity duration-1000"
+          style={{ opacity: sky.starOpacity }}
+          aria-hidden="true"
+        >
+          {STARS.map((s, i) => (
+            <span
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                left: `${s.x}%`,
+                top: `${s.y}%`,
+                width: s.size,
+                height: s.size,
+                opacity: s.tw,
+                animation: reducedMotion
+                  ? undefined
+                  : `sky-twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Celestial body — sun by day, moon by night — arcs across the sky */}
+        <div
+          className="absolute transition-colors duration-700"
+          style={{
+            left: `${sky.bodyX}%`,
+            top: `${sky.bodyY}%`,
+            width: "18%",
+            height: "18%",
+            transform: "translate(-50%, -50%)",
+          }}
+          aria-hidden="true"
+        >
+          <div
+            className="size-full rounded-full transition-all duration-700"
+            style={{
+              background: sky.bodyColor,
+              boxShadow: sky.bodyGlow,
+            }}
+          />
+        </div>
+
+        {/* Transparent diorama (real alpha). Its lighting is tinted warm at
+            golden hour and dimmed at night to match the sky. */}
         <Image
           src={DIORAMA_SRC || "/placeholder.svg"}
           alt="Claymation model of a home solar system"
           fill
           priority
           sizes="(max-width: 768px) 100vw, 672px"
-          className="object-contain [filter:drop-shadow(0_16px_20px_rgba(24,20,10,0.18))]"
+          className="object-contain transition-[filter] duration-700"
+          style={{ filter: sky.dioramaFilter }}
         />
 
           {/* Energy-flow overlay */}
@@ -500,6 +677,15 @@ export function SolarExplorer() {
       </div>
 
       <style jsx>{`
+        @keyframes sky-twinkle {
+          0%,
+          100% {
+            opacity: 0.25;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
         .solar-flow {
           animation: solar-flow-dash 0.8s linear infinite;
         }
