@@ -156,9 +156,16 @@ function skyForHour(hour: number) {
     : // Night window wraps 20 -> 24 -> 6
       (((h - 20 + 24) % 24) / 10)
   const bodyX = lerp(8, 92, p)
-  // Parabolic height: highest at midday / midnight (p=0.5).
+  // Parabolic height: highest at midday / midnight (p=0.5). The arc ends dip
+  // well past the horizon so the body rises out of, and sets behind, the grass.
   const arc = 1 - Math.pow((p - 0.5) * 2, 2) // 0 at ends, 1 at middle
-  const bodyY = lerp(78, 14, arc)
+  const bodyY = lerp(94, 12, arc)
+
+  // Horizon line (percent of the stage) roughly where the grass begins. Below
+  // this the body is behind the grass; we fade it out over a short band so the
+  // sun/moon truly disappears when it dips beneath the ground.
+  const HORIZON = 66
+  const bodyOpacity = Math.max(0, Math.min(1, (HORIZON + 16 - bodyY) / 16))
 
   const sunUp = h > 6.5 && h < 19.5
   const goldenLow = (h >= 6.5 && h < 8.5) || (h > 16.5 && h < 19.5)
@@ -188,6 +195,7 @@ function skyForHour(hour: number) {
     starOpacity,
     bodyX,
     bodyY,
+    bodyOpacity,
     bodyColor,
     bodyGlow,
     dioramaFilter,
@@ -359,14 +367,16 @@ export function SolarExplorer() {
           ))}
         </div>
 
-        {/* Celestial body — sun by day, moon by night — arcs across the sky */}
+        {/* Celestial body — sun by day, moon by night — arcs across the sky and
+            fades out as it dips beneath the horizon (behind the grass). */}
         <div
-          className="absolute transition-colors duration-700"
+          className="absolute transition-[top,left,opacity] duration-700"
           style={{
             left: `${sky.bodyX}%`,
             top: `${sky.bodyY}%`,
             width: "18%",
             height: "18%",
+            opacity: sky.bodyOpacity,
             transform: "translate(-50%, -50%)",
           }}
           aria-hidden="true"
