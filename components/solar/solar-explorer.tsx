@@ -38,32 +38,35 @@ const DIORAMA_SRC = "/solar-styles/claymation-cutout.png"
 type Hotspot = { id: ComponentId; x: number; y: number }
 
 const HOTSPOTS: Hotspot[] = [
-  { id: "sun", x: 17, y: 16 },
-  { id: "panels", x: 52, y: 40 },
+  { id: "sun", x: 50, y: 14 }, // sits on the sun's high-noon apex
+  { id: "panels", x: 55, y: 36 }, // nudged up/right so flow lines don't overlap
   { id: "inverter", x: 25, y: 52 },
   { id: "battery", x: 33, y: 61 },
-  { id: "home", x: 62, y: 57 },
+  { id: "home", x: 48, y: 57 }, // on the front-left window; energy flows inside
   { id: "grid", x: 88, y: 24 },
 ]
+
+// One universal "electricity" color used for every energy channel. Direction is
+// still conveyed by the dashes animating from source toward destination.
+const ELECTRIC = "#f5b445"
 
 // Energy-flow segments drawn between hotspots. `key` selects the flow value on
 // the current frame; `always` flows depend only on solar generation.
 type Segment = {
   from: ComponentId
   to: ComponentId
-  color: string
   key?: "solarToHome" | "solarToBattery" | "solarToGrid" | "gridToHome" | "batteryToHome"
   solarDriven?: boolean
 }
 
 const SEGMENTS: Segment[] = [
-  { from: "sun", to: "panels", color: "#f5b445", solarDriven: true },
-  { from: "panels", to: "inverter", color: "#f5b445", solarDriven: true },
-  { from: "inverter", to: "home", color: "#f5b445", key: "solarToHome" },
-  { from: "inverter", to: "battery", color: "#9b83f0", key: "solarToBattery" },
-  { from: "battery", to: "home", color: "#9b83f0", key: "batteryToHome" },
-  { from: "inverter", to: "grid", color: "#3fae82", key: "solarToGrid" },
-  { from: "grid", to: "home", color: "#5b8def", key: "gridToHome" },
+  { from: "sun", to: "panels", solarDriven: true },
+  { from: "panels", to: "inverter", solarDriven: true },
+  { from: "inverter", to: "home", key: "solarToHome" },
+  { from: "inverter", to: "battery", key: "solarToBattery" },
+  { from: "battery", to: "home", key: "batteryToHome" },
+  { from: "inverter", to: "grid", key: "solarToGrid" },
+  { from: "grid", to: "home", key: "gridToHome" },
 ]
 
 // Fixed star field for the night sky (deterministic so it doesn't reshuffle).
@@ -192,6 +195,7 @@ function skyForHour(hour: number) {
     bodyColor,
     bodyGlow,
     dioramaFilter,
+    sunUp,
   }
 }
 
@@ -498,16 +502,18 @@ export function SolarExplorer() {
                   y1={a.y}
                   x2={b.x}
                   y2={b.y}
-                  stroke={seg.color}
-                  strokeWidth={active ? 0.9 : 0.5}
+                  stroke={ELECTRIC}
+                  strokeWidth={active ? 0.8 : 0.45}
                   strokeLinecap="round"
-                  strokeDasharray="2 2.5"
+                  strokeDasharray="1.6 2.2"
                   className={cn(
                     "transition-opacity duration-500",
-                    active ? "opacity-90 solar-flow" : "opacity-0",
+                    active ? "opacity-95 solar-flow" : "opacity-0",
                   )}
                   style={{
-                    filter: active ? `drop-shadow(0 0 1px ${seg.color})` : undefined,
+                    filter: active
+                      ? `drop-shadow(0 0 1.4px ${ELECTRIC})`
+                      : undefined,
                   }}
                 />
               )
@@ -516,8 +522,14 @@ export function SolarExplorer() {
 
           {/* Hotspots */}
           {hotspots.map((h) => {
+            // The sun marker only exists while the sun is up; once it sets and
+            // the moon rises, the marker disappears.
+            if (h.id === "sun" && !sky.sunUp) return null
             const info = COMPONENT_INFO[h.id]
             const isSel = selected === h.id
+            // The home marker has no visible dot, so the flow lines read as
+            // energy travelling into the window. The button stays for a11y.
+            const hideDot = h.id === "home"
             return (
               <button
                 key={h.id}
@@ -529,20 +541,26 @@ export function SolarExplorer() {
                 style={{ left: `${h.x}%`, top: `${h.y}%` }}
               >
                 <span className="relative flex size-5 items-center justify-center">
-                  {!reducedMotion ? (
-                    <span
-                      className={cn(
-                        "absolute inline-flex size-full rounded-full",
-                        isSel ? "bg-primary/40" : "bg-primary/30 animate-ping",
-                      )}
-                    />
-                  ) : null}
-                  <span
-                    className={cn(
-                      "relative inline-flex size-3.5 rounded-full border-2 border-white shadow-md transition-all group-hover:scale-125",
-                      isSel ? "bg-primary scale-125" : "bg-primary/90",
-                    )}
-                  />
+                  {hideDot ? null : (
+                    <>
+                      {!reducedMotion ? (
+                        <span
+                          className={cn(
+                            "absolute inline-flex size-full rounded-full",
+                            isSel
+                              ? "bg-primary/40"
+                              : "bg-primary/30 animate-ping",
+                          )}
+                        />
+                      ) : null}
+                      <span
+                        className={cn(
+                          "relative inline-flex size-3.5 rounded-full border-2 border-white shadow-md transition-all group-hover:scale-125",
+                          isSel ? "bg-primary scale-125" : "bg-primary/90",
+                        )}
+                      />
+                    </>
+                  )}
                 </span>
               </button>
             )
@@ -703,11 +721,11 @@ export function SolarExplorer() {
           }
         }
         .solar-flow {
-          animation: solar-flow-dash 0.8s linear infinite;
+          animation: solar-flow-dash 0.55s linear infinite;
         }
         @keyframes solar-flow-dash {
           to {
-            stroke-dashoffset: -4.5;
+            stroke-dashoffset: -3.8;
           }
         }
         .solar-timeline::-webkit-slider-thumb {
