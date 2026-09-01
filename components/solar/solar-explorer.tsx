@@ -217,18 +217,39 @@ export function SolarExplorer() {
     return () => mq.removeEventListener("change", apply)
   }, [])
 
-  // "Run day" animation loop.
+  // "Run day" animation loop. The day pauses briefly each time it reaches high
+  // noon and midnight, then resumes on its own.
+  const PAUSE_MS = 1100 // how long to hold at noon / midnight
   const raf = useRef<number | null>(null)
   const last = useRef<number | null>(null)
+  const hourRef = useRef(hour)
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Keep the ref in sync when the hour changes from outside the loop (slider).
+  useEffect(() => {
+    hourRef.current = hour
+  }, [hour])
   useEffect(() => {
     if (!playing || reducedMotion) return
     const tick = (now: number) => {
       if (last.current != null) {
         const dtSec = (now - last.current) / 1000
-        setHour((h) => {
-          const next = h + dtSec * (24 / DAY_SECONDS)
-          return next >= 24 ? next - 24 : next
-        })
+        const cur = hourRef.current
+        let next = cur + dtSec * (24 / DAY_SECONDS)
+        // Did we just cross noon (12) or midnight (24 -> 0) this frame?
+        const crossedNoon = cur < 12 && next >= 12
+        const crossedMidnight = next >= 24
+        if (crossedNoon || crossedMidnight) {
+          const landed = crossedMidnight ? 0 : 12
+          hourRef.current = landed
+          setHour(landed)
+          last.current = null
+          setPlaying(false)
+          holdTimer.current = setTimeout(() => setPlaying(true), PAUSE_MS)
+          return
+        }
+        if (next >= 24) next -= 24
+        hourRef.current = next
+        setHour(next)
       }
       last.current = now
       raf.current = requestAnimationFrame(tick)
@@ -239,6 +260,13 @@ export function SolarExplorer() {
       last.current = null
     }
   }, [playing, reducedMotion])
+
+  // Clear any pending resume timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (holdTimer.current) clearTimeout(holdTimer.current)
+    }
+  }, [])
 
   const frame = useMemo(() => {
     const idx = frameIndexForHour(timeline, hour)
@@ -259,6 +287,7 @@ export function SolarExplorer() {
   const dayPct = (hour / 24) * 100
 
   function handleReset() {
+    if (holdTimer.current) clearTimeout(holdTimer.current)
     setSelected(null)
     setPlaying(false)
     setHour(12)
