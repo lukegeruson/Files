@@ -51,24 +51,36 @@ const HOTSPOTS: Hotspot[] = [
 // still conveyed by the dashes animating from source toward destination.
 const ELECTRIC = "#f5b445"
 
-// Energy-flow segments drawn between hotspots. `key` selects the flow value on
-// the current frame; `always` flows depend only on solar generation.
+// Energy-flow segments drawn between hotspots. `keys` selects the flow value(s)
+// on the current frame (the line is active if ANY listed flow is carrying
+// power); `solarDriven` flows depend only on solar generation.
+type FlowKey =
+  | "solarToHome"
+  | "solarToBattery"
+  | "solarToGrid"
+  | "gridToHome"
+  | "batteryToHome"
+
 type Segment = {
   from: ComponentId
   to: ComponentId
-  key?: "solarToHome" | "solarToBattery" | "solarToGrid" | "gridToHome" | "batteryToHome"
+  keys?: FlowKey[]
   solarDriven?: boolean
 }
 
-// The battery marker represents the home, so every household-bound flow ends
-// there. batteryToHome is internal to that point and no longer drawn.
+// The battery marker represents the home hub, so the wiring mirrors a real
+// hybrid solar system:
+//   sun -> panels          light hits the array
+//   panels -> inverter     DC generation flows to the inverter
+//   inverter -> battery    inverter charges the battery and powers the home
+//   inverter -> grid       excess solar is exported
+//   grid -> battery        the grid supplies the home when solar is short
 const SEGMENTS: Segment[] = [
   { from: "sun", to: "panels", solarDriven: true },
   { from: "panels", to: "inverter", solarDriven: true },
-  { from: "inverter", to: "battery", key: "solarToHome" },
-  { from: "inverter", to: "battery", key: "solarToBattery" },
-  { from: "inverter", to: "grid", key: "solarToGrid" },
-  { from: "grid", to: "battery", key: "gridToHome" },
+  { from: "inverter", to: "battery", keys: ["solarToHome", "solarToBattery"] },
+  { from: "inverter", to: "grid", keys: ["solarToGrid"] },
+  { from: "grid", to: "battery", keys: ["gridToHome"] },
 ]
 
 // Fixed star field for the night sky (deterministic so it doesn't reshuffle).
@@ -299,12 +311,13 @@ export function SolarExplorer() {
     setShowSavings(false)
   }
 
-  // Which segments are currently carrying energy.
+  // Which segments are currently carrying energy. A segment with multiple keys
+  // is active when any of its flows is carrying power.
   const activeSegments = SEGMENTS.map((seg) => {
     const active = seg.solarDriven
       ? frame.solarKw > 0.05
-      : seg.key
-        ? frame.flows[seg.key] > 0.05
+      : seg.keys
+        ? seg.keys.some((k) => frame.flows[k] > 0.05)
         : false
     return { seg, active }
   })
@@ -508,7 +521,7 @@ export function SolarExplorer() {
               if (!a || !b) return null
               return (
                 <line
-                  key={`${seg.from}-${seg.to}-${seg.key ?? "solar"}`}
+                  key={`${seg.from}-${seg.to}-${seg.keys?.join("+") ?? "solar"}`}
                   x1={a.x}
                   y1={a.y}
                   x2={b.x}
