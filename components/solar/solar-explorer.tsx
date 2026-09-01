@@ -41,8 +41,9 @@ const HOTSPOTS: Hotspot[] = [
   { id: "sun", x: 50, y: 14 }, // sits on the sun's high-noon apex
   { id: "panels", x: 55, y: 36 }, // nudged up/right so flow lines don't overlap
   { id: "inverter", x: 25, y: 52 },
+  // The battery marker doubles as the home: all household energy converges here,
+  // so there is no separate "home" point.
   { id: "battery", x: 33, y: 61 },
-  { id: "home", x: 48, y: 57 }, // on the front-left window; energy flows inside
   { id: "grid", x: 88, y: 24 },
 ]
 
@@ -59,14 +60,15 @@ type Segment = {
   solarDriven?: boolean
 }
 
+// The battery marker represents the home, so every household-bound flow ends
+// there. batteryToHome is internal to that point and no longer drawn.
 const SEGMENTS: Segment[] = [
   { from: "sun", to: "panels", solarDriven: true },
   { from: "panels", to: "inverter", solarDriven: true },
-  { from: "inverter", to: "home", key: "solarToHome" },
+  { from: "inverter", to: "battery", key: "solarToHome" },
   { from: "inverter", to: "battery", key: "solarToBattery" },
-  { from: "battery", to: "home", key: "batteryToHome" },
   { from: "inverter", to: "grid", key: "solarToGrid" },
-  { from: "grid", to: "home", key: "gridToHome" },
+  { from: "grid", to: "battery", key: "gridToHome" },
 ]
 
 // Fixed star field for the night sky (deterministic so it doesn't reshuffle).
@@ -414,10 +416,19 @@ export function SolarExplorer() {
         {renderLiveStats(true)}
       </div>
 
-      {/* Stage — an animated sky sits behind the transparent-backed diorama,
-          so the whole scene runs through sunrise, day, sunset and night as the
-          time of day changes. */}
-      <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden rounded-3xl">
+      {/* Simulator row — on desktop the "Right now" bar sits in a column to the
+          left of the stage; on mobile the stage stands alone (the collapsible
+          card above handles the mobile live stats). */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+        {/* Right now — desktop-only left column */}
+        <div className="hidden w-52 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5 sm:block">
+          {renderLiveStats(false)}
+        </div>
+
+        {/* Stage — an animated sky sits behind the transparent-backed diorama,
+            so the whole scene runs through sunrise, day, sunset and night as the
+            time of day changes. */}
+        <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden rounded-3xl">
         {/* Sky gradient (dawn -> day -> dusk -> night) */}
         <div
           className="absolute inset-0 transition-[background] duration-700 ease-linear"
@@ -497,7 +508,7 @@ export function SolarExplorer() {
               if (!a || !b) return null
               return (
                 <line
-                  key={`${seg.from}-${seg.to}`}
+                  key={`${seg.from}-${seg.to}-${seg.key ?? "solar"}`}
                   x1={a.x}
                   y1={a.y}
                   x2={b.x}
@@ -527,9 +538,6 @@ export function SolarExplorer() {
             if (h.id === "sun" && !sky.sunUp) return null
             const info = COMPONENT_INFO[h.id]
             const isSel = selected === h.id
-            // The home marker has no visible dot, so the flow lines read as
-            // energy travelling into the window. The button stays for a11y.
-            const hideDot = h.id === "home"
             return (
               <button
                 key={h.id}
@@ -541,26 +549,20 @@ export function SolarExplorer() {
                 style={{ left: `${h.x}%`, top: `${h.y}%` }}
               >
                 <span className="relative flex size-5 items-center justify-center">
-                  {hideDot ? null : (
-                    <>
-                      {!reducedMotion ? (
-                        <span
-                          className={cn(
-                            "absolute inline-flex size-full rounded-full",
-                            isSel
-                              ? "bg-primary/40"
-                              : "bg-primary/30 animate-ping",
-                          )}
-                        />
-                      ) : null}
-                      <span
-                        className={cn(
-                          "relative inline-flex size-3.5 rounded-full border-2 border-white shadow-md transition-all group-hover:scale-125",
-                          isSel ? "bg-primary scale-125" : "bg-primary/90",
-                        )}
-                      />
-                    </>
-                  )}
+                  {!reducedMotion ? (
+                    <span
+                      className={cn(
+                        "absolute inline-flex size-full rounded-full",
+                        isSel ? "bg-primary/40" : "bg-primary/30 animate-ping",
+                      )}
+                    />
+                  ) : null}
+                  <span
+                    className={cn(
+                      "relative inline-flex size-3.5 rounded-full border-2 border-white shadow-md transition-all group-hover:scale-125",
+                      isSel ? "bg-primary scale-125" : "bg-primary/90",
+                    )}
+                  />
                 </span>
               </button>
             )
@@ -574,12 +576,6 @@ export function SolarExplorer() {
               onClose={() => setSelected(null)}
             />
           ) : null}
-
-          {/* Live stats (desktop only — bottom-left corner, over empty margin).
-              On mobile the same card is shown above the simulator. */}
-          <div className="absolute -bottom-1 left-0 hidden w-40 overflow-hidden rounded-xl border border-white/50 bg-card/90 shadow-lg ring-1 ring-black/5 backdrop-blur-md sm:block sm:w-48">
-            {renderLiveStats(false)}
-          </div>
 
           {/* Savings breakdown (toggled) */}
           {showSavings ? (
@@ -628,6 +624,7 @@ export function SolarExplorer() {
             Tap a marker to learn more
           </div>
         </div>
+      </div>
 
       {/* Controls */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
