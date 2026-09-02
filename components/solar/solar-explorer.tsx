@@ -589,14 +589,14 @@ export function SolarExplorer() {
             "Right now" card on top with the playback buttons pinned to the
             bottom, sitting beside a thin, full-height "Time of day" box whose
             slider runs down its right edge (closest to the stage). */}
-        <div className="hidden shrink-0 gap-3 sm:flex">
-          <div className="flex w-44 flex-col gap-4">
+        <div className="hidden shrink-0 items-center gap-3 sm:flex">
+          <div className="flex w-44 flex-col justify-center gap-4">
             <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
               {renderLiveStats(false)}
             </div>
-            <div className="mt-auto">{controlButtons}</div>
+            <div>{controlButtons}</div>
           </div>
-          <div className="flex w-28 shrink-0 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="flex h-[85%] w-28 shrink-0 flex-col self-center rounded-xl border border-border bg-card p-3 shadow-sm">
             {renderTimelineVertical()}
           </div>
         </div>
