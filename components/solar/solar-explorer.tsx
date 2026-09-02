@@ -514,6 +514,42 @@ export function SolarExplorer() {
     </div>
   )
 
+  // Playback controls (Run day / Savings / Reset). Shown in the desktop left
+  // column and inside the Controls block on mobile.
+  const controlButtons = (
+    <div className="flex flex-wrap items-center gap-2">
+      <ControlButton
+        onClick={() => setPlaying((p) => !p)}
+        disabled={reducedMotion}
+        active={playing}
+        primary
+        title={
+          reducedMotion
+            ? "Auto-play is off because your system prefers reduced motion — use the timeline instead."
+            : undefined
+        }
+      >
+        {playing ? (
+          <Pause className="size-4" aria-hidden="true" />
+        ) : (
+          <Play className="size-4" aria-hidden="true" />
+        )}
+        {playing ? "Pause" : "Run day"}
+      </ControlButton>
+      <ControlButton
+        onClick={() => setShowSavings((s) => !s)}
+        active={showSavings}
+      >
+        <Zap className="size-4" aria-hidden="true" />
+        Savings
+      </ControlButton>
+      <ControlButton onClick={handleReset}>
+        <RotateCcw className="size-4" aria-hidden="true" />
+        Reset
+      </ControlButton>
+    </div>
+  )
+
   return (
     <section aria-label="Solar Energy Explorer" className="flex flex-col gap-4">
       {/* Heading */}
@@ -548,6 +584,7 @@ export function SolarExplorer() {
           <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
             {renderLiveStats(false)}
           </div>
+          {controlButtons}
           <div className="flex flex-1 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
             {renderTimelineVertical()}
           </div>
@@ -754,43 +791,11 @@ export function SolarExplorer() {
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <ControlButton
-            onClick={() => setPlaying((p) => !p)}
-            disabled={reducedMotion}
-            active={playing}
-            primary
-            title={
-              reducedMotion
-                ? "Auto-play is off because your system prefers reduced motion — use the timeline instead."
-                : undefined
-            }
-          >
-            {playing ? (
-              <Pause className="size-4" aria-hidden="true" />
-            ) : (
-              <Play className="size-4" aria-hidden="true" />
-            )}
-            {playing ? "Pause" : "Run day"}
-          </ControlButton>
-          <ControlButton
-            onClick={() => setShowSavings((s) => !s)}
-            active={showSavings}
-          >
-            <Zap className="size-4" aria-hidden="true" />
-            Savings
-          </ControlButton>
-          <ControlButton onClick={handleReset}>
-            <RotateCcw className="size-4" aria-hidden="true" />
-            Reset
-          </ControlButton>
-        </div>
-
-        {/* Timeline — mobile only; on desktop it lives in the left column
-            beneath the "Right now" card. */}
-        <div className="sm:hidden">{renderTimeline("solar-timeline-mobile")}</div>
+      {/* Controls — mobile only; on desktop the buttons and timeline live in
+          the left column beside the simulator. */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:hidden">
+        {controlButtons}
+        <div>{renderTimeline("solar-timeline-mobile")}</div>
       </div>
 
       <style jsx>{`
