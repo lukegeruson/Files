@@ -35,26 +35,6 @@ export default async function HomePage() {
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="flex-1">
-        {/* Temporary review banner: a one-tap link so the house-style previews
-            are easy to reach on mobile without typing a URL. Remove once a
-            style is chosen. */}
-        <section className="mx-auto max-w-6xl px-4 pt-6 md:px-6">
-          <Link
-            href="/style-previews"
-            className="group flex items-center justify-between gap-4 rounded-xl border border-primary/40 bg-primary/10 px-5 py-4 transition-colors hover:bg-primary/15"
-          >
-            <span className="flex flex-col">
-              <span className="text-sm font-semibold text-foreground">
-                Review the 3D house styles
-              </span>
-              <span className="text-sm text-muted-foreground">
-                Tap to compare all six looks for the solar diagram
-              </span>
-            </span>
-            <ArrowRight className="size-5 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
-          </Link>
-        </section>
-
         {/* Intro */}
         <section className="mx-auto max-w-6xl px-4 pt-10 md:px-6">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">
