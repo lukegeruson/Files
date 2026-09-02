@@ -541,7 +541,7 @@ export function SolarExplorer() {
           card above handles the mobile live stats). The left column stretches to
           the stage height so both info boxes span the same vertical space as the
           house visual. */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch sm:gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch sm:justify-center sm:gap-3">
         {/* Right now + timeline — desktop-only left column. The vertical
             time-of-day slider fills the space beneath the "Right now" card. */}
         <div className="hidden w-52 shrink-0 flex-col gap-4 sm:flex">
@@ -556,7 +556,7 @@ export function SolarExplorer() {
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
             so the whole scene runs through sunrise, day, sunset and night as the
             time of day changes. */}
-        <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden rounded-3xl">
+        <div className="relative aspect-square w-full max-w-2xl overflow-hidden rounded-3xl">
         {/* Sky gradient (dawn -> day -> dusk -> night) */}
         <div
           className="absolute inset-0 transition-[background] duration-700 ease-linear"
