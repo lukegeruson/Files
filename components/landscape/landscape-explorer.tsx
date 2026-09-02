@@ -144,9 +144,11 @@ export function LandscapeExplorer() {
         </p>
       </div>
 
+      {/* Desktop: controls column on the left, visual stage on the right. */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
       {/* Stage — two matched clay renders crossfade on the slider */}
       <div
-        className="relative aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2]"
+        className="relative aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2] lg:order-last lg:min-w-0 lg:flex-1 lg:self-start"
         style={{
           background:
             "radial-gradient(120% 100% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
@@ -246,6 +248,8 @@ export function LandscapeExplorer() {
         ) : null}
       </div>
 
+      {/* Controls column — sits to the left of the stage on desktop */}
+      <div className="flex flex-col gap-4 lg:order-first lg:w-80 lg:shrink-0">
       {/* Slider */}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="mb-2 flex items-center justify-between gap-3 text-sm font-medium">
@@ -285,7 +289,7 @@ export function LandscapeExplorer() {
             Reset
           </ControlButton>
           {/* Legend doubles as an element selector. */}
-          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <div className="flex w-full flex-wrap items-center gap-1.5 lg:ml-0">
             {LEGEND.map((l) => {
               const isSel = selected === l.id
               return (
@@ -315,7 +319,7 @@ export function LandscapeExplorer() {
       </div>
 
       {/* Metric labels attached to the model */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5">
         <Metric
           icon={<Sparkles className="size-3.5 text-primary" aria-hidden="true" />}
           label="Estimated cost"
@@ -358,6 +362,8 @@ export function LandscapeExplorer() {
           value={`${plan.waterReductionPct}%`}
           highlight
         />
+      </div>
+      </div>
       </div>
 
       {/* Slider thumb styles, matching the solar explorer's approach. */}
