@@ -517,12 +517,13 @@ export function SolarExplorer() {
   // Playback controls (Run day / Savings / Reset). Shown in the desktop left
   // column and inside the Controls block on mobile.
   const controlButtons = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:flex-nowrap sm:items-stretch">
       <ControlButton
         onClick={() => setPlaying((p) => !p)}
         disabled={reducedMotion}
         active={playing}
         primary
+        className="sm:w-full sm:justify-center"
         title={
           reducedMotion
             ? "Auto-play is off because your system prefers reduced motion — use the timeline instead."
@@ -539,11 +540,15 @@ export function SolarExplorer() {
       <ControlButton
         onClick={() => setShowSavings((s) => !s)}
         active={showSavings}
+        className="sm:w-full sm:justify-center"
       >
         <Zap className="size-4" aria-hidden="true" />
         Savings
       </ControlButton>
-      <ControlButton onClick={handleReset}>
+      <ControlButton
+        onClick={handleReset}
+        className="sm:w-full sm:justify-center"
+      >
         <RotateCcw className="size-4" aria-hidden="true" />
         Reset
       </ControlButton>
@@ -1020,30 +1025,33 @@ function ControlButton({
   primary,
   disabled,
   title,
-}: {
+  className,
+  }: {
   children: React.ReactNode
   onClick: () => void
   active?: boolean
   primary?: boolean
   disabled?: boolean
   title?: string
-}) {
+  className?: string
+  }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-pressed={active}
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-45",
-        primary && !active
-          ? "border-primary bg-primary text-primary-foreground shadow-sm hover:brightness-105"
-          : active
-            ? "border-primary bg-primary/15 text-foreground shadow-inner"
-            : "border-input bg-background text-foreground hover:bg-muted",
-      )}
-    >
+  <button
+  type="button"
+  onClick={onClick}
+  disabled={disabled}
+  title={title}
+  aria-pressed={active}
+  className={cn(
+  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-45",
+  primary && !active
+  ? "border-primary bg-primary text-primary-foreground shadow-sm hover:brightness-105"
+  : active
+  ? "border-primary bg-primary/15 text-foreground shadow-inner"
+  : "border-input bg-background text-foreground hover:bg-muted",
+  className,
+  )}
+  >
       {children}
     </button>
   )
