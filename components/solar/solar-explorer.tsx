@@ -220,6 +220,15 @@ const TICKS: Array<{ label: string; icon: typeof Sun }> = [
   { label: "Night", icon: Moon },
 ]
 
+// Same legend for the vertical desktop slider, with the hour each label maps to
+// so it can be positioned along the 0–24 axis (bottom = 0:00, top = 24:00).
+const VERTICAL_TICKS: Array<{ label: string; icon: typeof Sun; hour: number }> = [
+  { label: "Morning", icon: Sunrise, hour: 6 },
+  { label: "Midday", icon: Sun, hour: 12 },
+  { label: "Evening", icon: Sunset, hour: 18 },
+  { label: "Night", icon: Moon, hour: 24 },
+]
+
 const DAY_SECONDS = 18 // one simulated day plays over ~18s
 
 export function SolarExplorer() {
@@ -457,6 +466,54 @@ export function SolarExplorer() {
     </div>
   )
 
+  // Vertical variant of the timeline used in the desktop left column. It fills
+  // the height of its card so the two info boxes together match the stage.
+  // Bottom = midnight, middle = midday (brightest), top = midnight — the same
+  // ordering as the horizontal slider, just rotated.
+  const renderTimelineVertical = () => (
+    <div className="flex h-full flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Time of day
+        </span>
+        <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-foreground">
+          {frame.label}
+        </span>
+      </div>
+      <div className="flex min-h-0 flex-1 items-stretch gap-3">
+        <VerticalTimeSlider
+          value={hour}
+          onChange={(h) => {
+            setPlaying(false)
+            setHour(h)
+          }}
+          ariaLabel="Time of day"
+        />
+        {/* Ticks positioned at their actual time so labels line up with the
+            gradient: midday at the bright middle, night at the dark ends. The
+            inner region is inset vertically so the top/bottom labels don't clip
+            into the header. */}
+        <div className="relative flex-1 text-[11px] text-muted-foreground">
+          <div className="absolute inset-x-0 inset-y-2">
+            {VERTICAL_TICKS.map((t) => {
+              const Icon = t.icon
+              return (
+                <span
+                  key={t.label}
+                  className="absolute flex -translate-y-1/2 items-center gap-1.5"
+                  style={{ bottom: `${(t.hour / 24) * 100}%` }}
+                >
+                  <Icon className="size-3" aria-hidden="true" />
+                  {t.label}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <section aria-label="Solar Energy Explorer" className="flex flex-col gap-4">
       {/* Heading */}
@@ -481,16 +538,18 @@ export function SolarExplorer() {
 
       {/* Simulator row — on desktop the "Right now" bar sits in a column to the
           left of the stage; on mobile the stage stands alone (the collapsible
-          card above handles the mobile live stats). */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-        {/* Right now + timeline — desktop-only left column. The time-of-day
-            slider sits directly below the "Right now" card. */}
+          card above handles the mobile live stats). The left column stretches to
+          the stage height so both info boxes span the same vertical space as the
+          house visual. */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch sm:gap-6">
+        {/* Right now + timeline — desktop-only left column. The vertical
+            time-of-day slider fills the space beneath the "Right now" card. */}
         <div className="hidden w-52 shrink-0 flex-col gap-4 sm:flex">
           <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
             {renderLiveStats(false)}
           </div>
-          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            {renderTimeline("solar-timeline")}
+          <div className="flex flex-1 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
+            {renderTimelineVertical()}
           </div>
         </div>
 
@@ -779,6 +838,106 @@ export function SolarExplorer() {
         }
       `}</style>
     </section>
+  )
+}
+
+// Custom vertical time-of-day slider. Native vertical <input type="range"> is
+// unreliable across browsers (the thumb fails to track the value), so this uses
+// pointer + keyboard handling with an absolutely-positioned thumb. The track
+// runs bottom (0:00) to top (24:00).
+function VerticalTimeSlider({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: number
+  onChange: (hour: number) => void
+  ariaLabel: string
+}) {
+  const trackRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef(false)
+
+  const setFromClientY = (clientY: number) => {
+    const el = trackRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    if (rect.height === 0) return
+    // Bottom of the track is 0:00, top is 24:00.
+    const pct = 1 - (clientY - rect.top) / rect.height
+    const clamped = Math.max(0, Math.min(1, pct))
+    onChange(Math.round(clamped * 24 * 4) / 4) // snap to 0.25h steps
+  }
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragging.current = true
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    setFromClientY(e.clientY)
+  }
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragging.current) setFromClientY(e.clientY)
+  }
+  const endDrag = () => {
+    dragging.current = false
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    let next = value
+    switch (e.key) {
+      case "ArrowUp":
+      case "ArrowRight":
+        next = Math.min(24, value + 0.25)
+        break
+      case "ArrowDown":
+      case "ArrowLeft":
+        next = Math.max(0, value - 0.25)
+        break
+      case "PageUp":
+        next = Math.min(24, value + 1)
+        break
+      case "PageDown":
+        next = Math.max(0, value - 1)
+        break
+      case "Home":
+        next = 0
+        break
+      case "End":
+        next = 24
+        break
+      default:
+        return
+    }
+    e.preventDefault()
+    onChange(next)
+  }
+
+  const pct = (value / 24) * 100
+
+  return (
+    <div
+      ref={trackRef}
+      role="slider"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      aria-valuemin={0}
+      aria-valuemax={24}
+      aria-valuenow={Math.round(value)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onKeyDown={handleKeyDown}
+      className="relative h-full w-2.5 shrink-0 cursor-pointer touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      style={{
+        background:
+          "linear-gradient(to top, #1e293b 0%, #6b5b95 18%, #f5b445 40%, #ffe6a8 50%, #f5b445 60%, #6b5b95 82%, #1e293b 100%)",
+      }}
+    >
+      <span
+        className="pointer-events-none absolute left-1/2 size-5 -translate-x-1/2 translate-y-1/2 rounded-full border-[3px] border-primary bg-white shadow-md"
+        style={{ bottom: `${pct}%` }}
+        aria-hidden="true"
+      />
+    </div>
   )
 }
 
