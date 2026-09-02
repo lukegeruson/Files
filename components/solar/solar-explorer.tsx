@@ -584,10 +584,10 @@ export function SolarExplorer() {
           <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
             {renderLiveStats(false)}
           </div>
-          {controlButtons}
           <div className="flex flex-1 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
             {renderTimelineVertical()}
           </div>
+          {controlButtons}
         </div>
 
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
