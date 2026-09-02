@@ -25,6 +25,7 @@ import {
   seasonPhase,
   SEASON_ANCHORS,
   SEASON_LABELS,
+  SEASON_ORDER,
   TOTAL_ACRES,
   usd,
   usdCompact,
@@ -32,8 +33,13 @@ import {
   type SeasonPhase,
 } from "@/lib/farm-sim"
 
-const GROWING_SRC = "/farm-styles/option-b-slab.png"
-const HARVEST_SRC = "/farm-styles/slab-harvest.png"
+// One clay render per season, crossfaded across the timeline in order.
+const SEASON_SRC = {
+  spring: "/farm-styles/slab-spring.png",
+  summer: "/farm-styles/option-b-slab.png",
+  fall: "/farm-styles/slab-harvest.png",
+  winter: "/farm-styles/slab-winter.png",
+} as const
 
 /* ------------------------------------------------------------------ *
  * Reduced motion
@@ -118,15 +124,25 @@ export function FarmSimulator() {
     setSelected(null)
   }
 
-  // Season → visual crossfade + tint.
-  const harvestOpacity = Math.max(0, Math.min(1, (season - 0.62) / 0.33))
-  const youth = Math.min(1, season / 0.37) // 0 early spring → 1 by summer
-  const baseFilter = `saturate(${(0.72 + 0.28 * youth).toFixed(2)}) brightness(${(0.96 + 0.04 * youth).toFixed(2)})`
+  // Season → 4-image crossfade. Find the two season renders bracketing the
+  // slider value and blend between them; everything else stays hidden. Because
+  // the images are stacked in season order (spring first, winter last), the
+  // painter's algorithm keeps the fully-opaque earlier season beneath the
+  // fading-in later one for a clean transition.
+  const seasonOpacity = useMemo(() => {
+    const anchors = SEASON_ORDER.map((s) => SEASON_ANCHORS[s])
+    let seg = 0
+    for (let i = 0; i < anchors.length - 1; i++) {
+      if (season >= anchors[i]) seg = i
+    }
+    const span = anchors[seg + 1] - anchors[seg]
+    const f = span > 0 ? Math.max(0, Math.min(1, (season - anchors[seg]) / span)) : 0
+    return SEASON_ORDER.map((_, i) => (i === seg ? 1 : i === seg + 1 ? f : 0))
+  }, [season])
+
   // Sun arc position across the top of the stage.
   const sunLeft = 12 + season * 76
   const sunTop = 26 - Math.sin(season * Math.PI) * 18
-
-  const isHarvested = season >= 0.985
 
   return (
     <section
@@ -189,7 +205,7 @@ export function FarmSimulator() {
                 Season
               </span>
               <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
-                {isHarvested ? "Harvest" : SEASON_LABELS[phase]}
+                {SEASON_LABELS[phase]}
               </span>
             </div>
             <input
@@ -206,18 +222,19 @@ export function FarmSimulator() {
               aria-label="Season progress"
               style={{
                 background:
-                  "linear-gradient(90deg, #a6bd72 0%, #4f7a37 40%, #d8b64a 74%, #ccb48c 100%)",
+                  "linear-gradient(90deg, #8bbf6a 0%, #4f7a37 30%, #d8b64a 60%, #cdd7de 100%)",
               }}
             />
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
               <span>Spring</span>
               <span>Summer</span>
               <span>Fall</span>
+              <span>Winter</span>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <PillButton
                 onClick={() => setPlaying((p) => !p)}
-                disabled={reducedMotion || isHarvested}
+                disabled={reducedMotion}
                 active={playing}
                 primary
                 title={
@@ -231,12 +248,12 @@ export function FarmSimulator() {
                 ) : (
                   <Play className="size-4" aria-hidden="true" />
                 )}
-                {playing ? "Pause" : "Grow"}
+                {playing ? "Pause" : "Run year"}
               </PillButton>
               <PillButton
                 onClick={() => {
                   setPlaying(false)
-                  setSeason(1)
+                  setSeason(SEASON_ANCHORS.fall)
                 }}
               >
                 <Scissors className="size-4" aria-hidden="true" />
@@ -280,31 +297,23 @@ export function FarmSimulator() {
               aria-hidden="true"
             />
 
-            {/* Diorama images — growing state with the harvest state fading in */}
-            <div
-              className="absolute inset-0 transition-[filter] duration-300"
-              style={{ filter: baseFilter }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={GROWING_SRC || "/placeholder.svg"}
-                alt="Clay model farm in the growing season"
-                className="absolute inset-0 size-full object-contain"
-                style={{ filter: "drop-shadow(0 22px 26px rgba(90,60,25,0.28))" }}
-                crossOrigin="anonymous"
-              />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={HARVEST_SRC || "/placeholder.svg"}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 size-full object-contain transition-opacity duration-300"
-                style={{
-                  opacity: harvestOpacity,
-                  filter: "drop-shadow(0 22px 26px rgba(90,60,25,0.28))",
-                }}
-                crossOrigin="anonymous"
-              />
+            {/* Diorama images — one clay render per season, crossfaded in order */}
+            <div className="absolute inset-0">
+              {SEASON_ORDER.map((s, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={s}
+                  src={SEASON_SRC[s] || "/placeholder.svg"}
+                  alt={i === 0 ? "Clay model farm through the seasons" : ""}
+                  aria-hidden={i === 0 ? undefined : true}
+                  className="absolute inset-0 size-full object-contain transition-opacity duration-300"
+                  style={{
+                    opacity: seasonOpacity[i],
+                    filter: "drop-shadow(0 22px 26px rgba(90,60,25,0.28))",
+                  }}
+                  crossOrigin="anonymous"
+                />
+              ))}
             </div>
 
             {/* Hotspots */}
@@ -352,7 +361,7 @@ export function FarmSimulator() {
 
             {/* Season badge */}
             <div className="pointer-events-none absolute left-3 top-3 rounded-full border border-white/50 bg-card/85 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-md">
-              {isHarvested ? "Harvest time" : `${SEASON_LABELS[phase]} on the farm`}
+              {`${SEASON_LABELS[phase]} on the farm`}
             </div>
 
             {/* Hint */}

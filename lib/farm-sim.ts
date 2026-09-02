@@ -304,25 +304,34 @@ export function allocateFields(mix: CropMix): Record<string, CropId | null> {
  * Season
  * ------------------------------------------------------------------ */
 
-export type SeasonPhase = "spring" | "summer" | "fall"
+export type SeasonPhase = "spring" | "summer" | "fall" | "winter"
 
 export function seasonPhase(t: number): SeasonPhase {
-  if (t < 0.37) return "spring"
-  if (t < 0.7) return "summer"
-  return "fall"
+  if (t < 0.22) return "spring"
+  if (t < 0.53) return "summer"
+  if (t < 0.82) return "fall"
+  return "winter"
 }
 
 export const SEASON_LABELS: Record<SeasonPhase, string> = {
   spring: "Spring",
   summer: "Summer",
   fall: "Fall",
+  winter: "Winter",
 }
 
-/** Anchor points on the 0–1 timeline for the phase buttons. */
+/** The four seasons in timeline order. */
+export const SEASON_ORDER: SeasonPhase[] = ["spring", "summer", "fall", "winter"]
+
+/**
+ * Anchor points on the 0–1 timeline where each season render is fully shown.
+ * The visual crossfades between the two seasons bracketing the slider value.
+ */
 export const SEASON_ANCHORS: Record<SeasonPhase, number> = {
-  spring: 0.12,
-  summer: 0.52,
-  fall: 0.9,
+  spring: 0.06,
+  summer: 0.38,
+  fall: 0.68,
+  winter: 0.96,
 }
 
 /* ------------------------------------------------------------------ *
