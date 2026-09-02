@@ -472,27 +472,20 @@ export function SolarExplorer() {
   // ordering as the horizontal slider, just rotated.
   const renderTimelineVertical = () => (
     <div className="flex h-full flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      {/* Header stacks so it fits the thin box. */}
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Time of day
         </span>
         <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-foreground">
           {frame.label}
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 items-stretch gap-3">
-        <VerticalTimeSlider
-          value={hour}
-          onChange={(h) => {
-            setPlaying(false)
-            setHour(h)
-          }}
-          ariaLabel="Time of day"
-        />
+      <div className="flex min-h-0 flex-1 items-stretch gap-2">
         {/* Ticks positioned at their actual time so labels line up with the
             gradient: midday at the bright middle, night at the dark ends. The
             inner region is inset vertically so the top/bottom labels don't clip
-            into the header. */}
+            into the header. Ticks sit to the left of the slider. */}
         <div className="relative flex-1 text-[11px] text-muted-foreground">
           <div className="absolute inset-x-0 inset-y-2">
             {VERTICAL_TICKS.map((t) => {
@@ -503,13 +496,22 @@ export function SolarExplorer() {
                   className="absolute flex -translate-y-1/2 items-center gap-1.5"
                   style={{ bottom: `${(t.hour / 24) * 100}%` }}
                 >
-                  <Icon className="size-3" aria-hidden="true" />
+                  <Icon className="size-3 shrink-0" aria-hidden="true" />
                   {t.label}
                 </span>
               )
             })}
           </div>
         </div>
+        {/* Slider on the right edge of the box (closest to the stage). */}
+        <VerticalTimeSlider
+          value={hour}
+          onChange={(h) => {
+            setPlaying(false)
+            setHour(h)
+          }}
+          ariaLabel="Time of day"
+        />
       </div>
     </div>
   )
@@ -583,16 +585,20 @@ export function SolarExplorer() {
           the stage height so both info boxes span the same vertical space as the
           house visual. */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch sm:justify-center sm:gap-3">
-        {/* Right now + timeline — desktop-only left column. The vertical
-            time-of-day slider fills the space beneath the "Right now" card. */}
-        <div className="hidden w-52 shrink-0 flex-col gap-4 sm:flex">
-          <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
-            {renderLiveStats(false)}
+        {/* Desktop-only controls to the left of the stage. A column holds the
+            "Right now" card on top with the playback buttons pinned to the
+            bottom, sitting beside a thin, full-height "Time of day" box whose
+            slider runs down its right edge (closest to the stage). */}
+        <div className="hidden shrink-0 gap-3 sm:flex">
+          <div className="flex w-44 flex-col gap-4">
+            <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
+              {renderLiveStats(false)}
+            </div>
+            <div className="mt-auto">{controlButtons}</div>
           </div>
-          <div className="flex flex-1 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="flex w-28 shrink-0 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
             {renderTimelineVertical()}
           </div>
-          {controlButtons}
         </div>
 
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
