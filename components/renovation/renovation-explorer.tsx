@@ -1,28 +1,17 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
-  ArrowRight,
-  Bath,
   Check,
   DoorOpen,
-  Droplets,
-  Fan,
-  Flame,
+  Eye,
   Home,
-  Layers,
-  LayoutGrid,
-  Lightbulb,
-  ListChecks,
-  PanelTop,
+  Info,
   Plus,
   RotateCcw,
   Sparkles,
-  Thermometer,
   TrendingUp,
-  UtensilsCrossed,
-  Wallet,
   X,
   Zap,
 } from "lucide-react"
@@ -34,32 +23,35 @@ import {
   money,
   moneyRange,
   RECOMMENDED_ORDER,
-  ROOMS,
   TIER_COLORS,
   TIER_LABELS,
   UPGRADE_BY_ID,
   UPGRADES,
   type PriorityTier,
-  type Upgrade,
   type UpgradeGroup,
   type UpgradeId,
 } from "@/lib/renovation-scene"
 
-// Per-upgrade icon, so each clay pin reads as its system at a glance.
-const UPGRADE_ICON: Record<UpgradeId, React.ComponentType<{ className?: string }>> = {
-  roof: Home,
-  insulation: Thermometer,
-  windows: PanelTop,
-  siding: Layers,
-  doors: DoorOpen,
-  electrical: Zap,
-  hvac: Fan,
-  plumbing: Droplets,
-  waterHeater: Flame,
-  flooring: LayoutGrid,
-  lighting: Lightbulb,
-  bathroom: Bath,
-  kitchen: UtensilsCrossed,
+const EXTERIOR_SRC = "/renovation-styles/option-b-exterior.png"
+const INTERIOR_SRC = "/renovation-styles/reveal-interior.png"
+
+/* ------------------------------------------------------------------ *
+ * Hotspot positions, tuned to the interior cutaway render (% of stage)
+ * ------------------------------------------------------------------ */
+const PIN_POS: Record<UpgradeId, { x: number; y: number }> = {
+  roof: { x: 52, y: 20 },
+  insulation: { x: 40, y: 27 },
+  windows: { x: 17, y: 37 },
+  siding: { x: 13, y: 47 },
+  doors: { x: 60, y: 59 },
+  electrical: { x: 53, y: 72 },
+  hvac: { x: 39, y: 71 },
+  plumbing: { x: 58, y: 66 },
+  waterHeater: { x: 45, y: 75 },
+  flooring: { x: 40, y: 63 },
+  lighting: { x: 47, y: 46 },
+  bathroom: { x: 70, y: 52 },
+  kitchen: { x: 26, y: 52 },
 }
 
 function useReducedMotion() {
@@ -75,705 +67,539 @@ function useReducedMotion() {
 }
 
 export function RenovationExplorer() {
-  const [selected, setSelected] = useState<UpgradeId[]>([])
-  const [active, setActive] = useState<UpgradeId | null>(null)
-  const [groupFilter, setGroupFilter] = useState<UpgradeGroup | "all">("all")
-  const [prioritize, setPrioritize] = useState(false)
   const reducedMotion = useReducedMotion()
-  const stageRef = useRef<HTMLDivElement>(null)
 
-  const plan = useMemo(() => computePlan(selected), [selected])
-  const activeUpgrade = active ? UPGRADE_BY_ID[active] : null
-  const selectedSet = useMemo(() => new Set(selected), [selected])
+  // 0 = closed exterior, 1 = fully revealed interior cutaway.
+  const [reveal, setReveal] = useState(0)
+  const [selectedIds, setSelectedIds] = useState<UpgradeId[]>([])
+  const [active, setActive] = useState<UpgradeId | null>(null)
 
-  const rankOf = (id: UpgradeId) =>
-    RECOMMENDED_ORDER.findIndex((u) => u.id === id) + 1
+  const plan = useMemo(() => computePlan(selectedIds), [selectedIds])
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
 
-  function togglePlan(id: UpgradeId) {
-    setSelected((prev) =>
+  const toggle = (id: UpgradeId) => {
+    setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     )
   }
-
-  function scrollToStage() {
-    stageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+  const addRecommended = () => {
+    if (plan.recommendedNext) {
+      const id = plan.recommendedNext.id
+      setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+      setActive(id)
+    }
   }
+  const reset = () => {
+    setSelectedIds([])
+    setActive(null)
+    setReveal(0)
+  }
+
+  const interiorOpacity = reveal
+  const exteriorOpacity = 1 - reveal
+  const pinOpacity = Math.max(0, Math.min(1, (reveal - 0.12) / 0.3))
+  const pinsInteractive = pinOpacity > 0.35
+  const isOpen = reveal > 0.5
 
   return (
     <section
       aria-label="Interactive Home Upgrade Explorer"
-      className="flex flex-col gap-8"
+      className="flex flex-col gap-4"
     >
-      {/* Hero */}
-      <header className="flex flex-col gap-4">
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-          Home Upgrade Explorer
-        </span>
-        <h2 className="max-w-2xl text-balance font-serif text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
-          See what your home should upgrade next.
-        </h2>
-        <p className="max-w-xl text-pretty leading-relaxed text-muted-foreground">
-          Explore your home room by room, compare improvements, and build a
-          renovation plan that fits your priorities and budget.
-        </p>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={scrollToStage}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Explore your home
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </button>
-          <a
-            href="#home-upgrade-advisor"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-          >
-            Get upgrade recommendations
-          </a>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <Home className="size-4" aria-hidden="true" />
+          </span>
+          <h3 className="text-lg font-semibold text-foreground">
+            Interactive Home Upgrade Explorer
+          </h3>
         </div>
-      </header>
+        <p className="text-pretty text-sm text-muted-foreground">
+          Slide the house open to peek inside, then tap an upgrade to build a
+          plan and see what to tackle first. Illustrative national-average
+          figures, not an inspection or a quote.
+        </p>
+      </div>
 
-      {/* Simulator row: plan panel + clay cutaway house */}
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-6">
-        <PlanPanel
-          plan={plan}
-          selected={selected}
-          onRemove={(id) => togglePlan(id)}
-          onFocus={(id) => setActive(id)}
-          onClear={() => setSelected([])}
-          onAddRecommended={(id) => {
-            togglePlan(id)
-            setActive(id)
-          }}
-        />
-
-        {/* Stage */}
-        <div className="flex flex-1 flex-col gap-3">
-          <div
-            ref={stageRef}
-            className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden rounded-[2rem] scroll-mt-24"
-            style={{
-              background:
-                "radial-gradient(120% 100% at 50% 0%, #f7f1e6 0%, #efe6d5 55%, #e7dcc7 100%)",
-              boxShadow: "inset 0 2px 30px rgba(120,95,60,0.12)",
-            }}
-          >
-            <ClayHouse
-              upgrades={UPGRADES}
-              active={active}
-              selectedSet={selectedSet}
-              groupFilter={groupFilter}
-              prioritize={prioritize}
-              reducedMotion={reducedMotion}
-              rankOf={rankOf}
-              onSelect={(id) => setActive((cur) => (cur === id ? null : id))}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+        {/* Left column — reveal control + plan */}
+        <div className="flex shrink-0 flex-col gap-3 lg:w-72">
+          {/* Reveal control */}
+          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                View
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
+                {isOpen ? (
+                  <>
+                    <Eye className="size-3" aria-hidden="true" /> Interior
+                  </>
+                ) : (
+                  <>
+                    <Home className="size-3" aria-hidden="true" /> Exterior
+                  </>
+                )}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={reveal}
+              onChange={(e) => setReveal(Number.parseFloat(e.target.value))}
+              className="reno-reveal-slider h-2.5 w-full cursor-pointer appearance-none rounded-full"
+              aria-label="Reveal interior"
             />
-
-            {/* Floating detail card */}
-            {activeUpgrade ? (
-              <UpgradeCard
-                upgrade={activeUpgrade}
-                inPlan={selectedSet.has(activeUpgrade.id)}
-                rank={rankOf(activeUpgrade.id)}
-                onToggle={() => togglePlan(activeUpgrade.id)}
-                onClose={() => setActive(null)}
-              />
-            ) : (
-              <p className="pointer-events-none absolute bottom-3 left-1/2 hidden -translate-x-1/2 rounded-full border border-border/60 bg-card/80 px-3 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur-sm sm:block">
-                Tap a marker to explore an upgrade
-              </p>
-            )}
+            <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
+              <span>Closed</span>
+              <span>Open</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReveal((r) => (r > 0.5 ? 0 : 1))}
+              className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-primary bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition hover:brightness-105"
+            >
+              <Eye className="size-4" aria-hidden="true" />
+              {isOpen ? "Close the house" : "Peek inside"}
+            </button>
           </div>
 
-          {/* Controls: group filter + prioritize toggle + legend */}
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <FilterChip
-                active={groupFilter === "all"}
-                onClick={() => setGroupFilter("all")}
-              >
-                All areas
-              </FilterChip>
-              {GROUP_ORDER.map((g) => (
-                <FilterChip
-                  key={g}
-                  active={groupFilter === g}
-                  onClick={() => setGroupFilter(g)}
-                >
-                  {GROUP_LABELS[g]}
-                </FilterChip>
-              ))}
-              <button
-                type="button"
-                onClick={() => setPrioritize((p) => !p)}
-                aria-pressed={prioritize}
-                className={cn(
-                  "ml-auto inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
-                  prioritize
-                    ? "border-primary bg-primary/15 text-foreground"
-                    : "border-border bg-background text-muted-foreground hover:border-ring hover:text-foreground",
-                )}
-              >
-                <ListChecks className="size-4" aria-hidden="true" />
-                {prioritize ? "Showing order" : "What first?"}
-              </button>
+          {/* Plan summary */}
+          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Your plan
+              </span>
+              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
+                {plan.count} item{plan.count === 1 ? "" : "s"}
+              </span>
             </div>
 
-            <TierLegend prioritize={prioritize} />
+            {plan.count === 0 ? (
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                No upgrades chosen yet. Open the house and tap a marker, or add
+                the recommended first step below.
+              </p>
+            ) : (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Metric
+                  label="Est. cost"
+                  value={moneyRange(plan.totalLow, plan.totalHigh)}
+                  accent
+                  wide
+                />
+                <Metric
+                  icon={<Zap className="size-3.5" aria-hidden="true" />}
+                  label="Energy / yr"
+                  value={money(plan.annualEnergySavings)}
+                />
+                <Metric
+                  icon={<TrendingUp className="size-3.5" aria-hidden="true" />}
+                  label="Resale add"
+                  value={money(plan.resaleAdded)}
+                />
+              </div>
+            )}
+
+            {/* Recommended next */}
+            {plan.recommendedNext && (
+              <div className="mt-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-2.5">
+                <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  <Sparkles className="size-3" aria-hidden="true" /> Do this next
+                </p>
+                <p className="mt-0.5 text-sm font-medium text-foreground">
+                  {plan.recommendedNext.label}
+                </p>
+                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                  {TIER_LABELS[plan.recommendedNext.tier]} ·{" "}
+                  {moneyRange(
+                    plan.recommendedNext.cost.low,
+                    plan.recommendedNext.cost.high,
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={addRecommended}
+                  className="mt-2 inline-flex items-center gap-1 rounded-full border border-primary bg-background px-2.5 py-1 text-[11px] font-medium text-primary transition hover:bg-primary/10"
+                >
+                  <Plus className="size-3" aria-hidden="true" /> Add to plan
+                </button>
+              </div>
+            )}
+
+            {plan.count > 0 && (
+              <button
+                type="button"
+                onClick={reset}
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                <RotateCcw className="size-3.5" aria-hidden="true" /> Clear plan
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Clay diorama stage */}
+        <div
+          className="relative flex-1 overflow-hidden rounded-3xl border border-border"
+          style={{
+            background:
+              "radial-gradient(120% 90% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
+          }}
+        >
+          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl">
+            {/* Floating shadow */}
+            <div
+              className="pointer-events-none absolute left-1/2 bottom-[10%] h-[8%] w-[60%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl"
+              aria-hidden="true"
+            />
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={EXTERIOR_SRC || "/placeholder.svg"}
+              alt="Clay model house, exterior"
+              className="absolute inset-0 size-full object-contain transition-opacity duration-200"
+              style={{
+                opacity: exteriorOpacity,
+                filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
+              }}
+              crossOrigin="anonymous"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={INTERIOR_SRC || "/placeholder.svg"}
+              alt="Clay model house, interior cutaway showing rooms and systems"
+              className="absolute inset-0 size-full object-contain transition-opacity duration-200"
+              style={{
+                opacity: interiorOpacity,
+                filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
+              }}
+              crossOrigin="anonymous"
+            />
+
+            {/* Hotspots (fade in as the house opens) */}
+            <div
+              className="absolute inset-0 transition-opacity duration-200"
+              style={{
+                opacity: pinOpacity,
+                pointerEvents: pinsInteractive ? "auto" : "none",
+              }}
+            >
+              {UPGRADES.map((u) => {
+                const pos = PIN_POS[u.id]
+                const isSel = selectedSet.has(u.id)
+                const isActive = active === u.id
+                const color = TIER_COLORS[u.tier]
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => setActive(isActive ? null : u.id)}
+                    aria-label={u.label}
+                    aria-pressed={isActive}
+                    className="group absolute -translate-x-1/2 -translate-y-1/2 outline-none"
+                    style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                  >
+                    <span className="relative flex size-5 items-center justify-center">
+                      {!reducedMotion && !isSel && (
+                        <span
+                          className="absolute inline-flex size-full animate-ping rounded-full"
+                          style={{ background: `${color}55` }}
+                        />
+                      )}
+                      <span
+                        className={cn(
+                          "relative inline-flex items-center justify-center rounded-full border-2 border-white shadow-md transition-transform group-hover:scale-125 group-focus-visible:ring-2 group-focus-visible:ring-ring",
+                          isActive ? "size-5 scale-110" : "size-4",
+                        )}
+                        style={{ background: color }}
+                      >
+                        {isSel && (
+                          <Check
+                            className="size-2.5 text-white"
+                            strokeWidth={3}
+                            aria-hidden="true"
+                          />
+                        )}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+
+              {active && (
+                <UpgradeCard
+                  id={active}
+                  selected={selectedSet.has(active)}
+                  onToggle={() => toggle(active)}
+                  onClose={() => setActive(null)}
+                />
+              )}
+            </div>
+
+            {/* Prompt when closed */}
+            {!isOpen && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-card/85 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-md">
+                  <DoorOpen className="size-3.5 text-primary" aria-hidden="true" />
+                  Drag the View slider to open the house
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Upgrade catalog */}
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-foreground">
+            All upgrades
+          </span>
+          {/* Tier legend */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {(["safety", "high", "medium", "low"] as PriorityTier[]).map(
+              (tier) => (
+                <span
+                  key={tier}
+                  className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                >
+                  <span
+                    className="inline-block size-2.5 rounded-full"
+                    style={{ background: TIER_COLORS[tier] }}
+                    aria-hidden="true"
+                  />
+                  {TIER_LABELS[tier]}
+                </span>
+              ),
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          {GROUP_ORDER.map((group) => (
+            <div key={group} className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {GROUP_LABELS[group as UpgradeGroup]}
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {UPGRADES.filter((u) => u.group === group)
+                  .sort((a, b) => b.priorityScore - a.priorityScore)
+                  .map((u) => {
+                    const isSel = selectedSet.has(u.id)
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => {
+                          toggle(u.id)
+                          setActive(u.id)
+                        }}
+                        className={cn(
+                          "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left text-xs transition-colors",
+                          isSel
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-background text-foreground hover:bg-muted",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex size-4 shrink-0 items-center justify-center rounded-full border-2",
+                            isSel
+                              ? "border-transparent"
+                              : "border-current opacity-60",
+                          )}
+                          style={
+                            isSel ? { background: TIER_COLORS[u.tier] } : undefined
+                          }
+                        >
+                          {isSel && (
+                            <Check
+                              className="size-2.5 text-white"
+                              strokeWidth={3}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </span>
+                        <span className="flex-1">{u.label}</span>
+                        <span className="tabular-nums text-[10px] text-muted-foreground">
+                          {money(u.cost.low)}+
+                        </span>
+                      </button>
+                    )
+                  })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+          <Info className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+          Priority order and figures are national-average estimates for
+          education only — not a professional inspection or a firm quote. Get
+          local bids before committing.
+        </p>
+      </div>
+
+      <style jsx>{`
+        .reno-reveal-slider {
+          background: linear-gradient(90deg, #d8cdb8 0%, #c0563c 100%);
+        }
+        .reno-reveal-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 9999px;
+          background: #ffffff;
+          border: 3px solid var(--primary);
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+          cursor: pointer;
+        }
+        .reno-reveal-slider::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 9999px;
+          background: #ffffff;
+          border: 3px solid var(--primary);
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+          cursor: pointer;
+        }
+      `}</style>
     </section>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Clay cutaway house
-// ---------------------------------------------------------------------------
-function ClayHouse({
-  upgrades,
-  active,
-  selectedSet,
-  groupFilter,
-  prioritize,
-  reducedMotion,
-  rankOf,
-  onSelect,
-}: {
-  upgrades: Upgrade[]
-  active: UpgradeId | null
-  selectedSet: Set<UpgradeId>
-  groupFilter: UpgradeGroup | "all"
-  prioritize: boolean
-  reducedMotion: boolean
-  rankOf: (id: UpgradeId) => number
-  onSelect: (id: UpgradeId) => void
-}) {
-  return (
-    <div className="absolute inset-0" aria-hidden={false}>
-      {/* Ground shadow under the model */}
-      <span className="absolute inset-x-[10%] bottom-[5%] h-6 rounded-[50%] bg-[rgba(120,90,55,0.22)] blur-lg" />
-
-      {/* House envelope (outer walls) */}
-      <div
-        className="absolute rounded-[1.6rem]"
-        style={{
-          left: "6%",
-          right: "6%",
-          top: "13%",
-          bottom: "7%",
-          background: "linear-gradient(165deg, #e9dcc2 0%, #dccbaa 100%)",
-          boxShadow:
-            "0 22px 40px rgba(110,80,50,0.24), inset 0 3px 5px rgba(255,255,255,0.55)",
-        }}
-      />
-
-      {/* Floor-plan container with the rooms */}
-      <div
-        className="absolute"
-        style={{ left: "13%", right: "13%", top: "27%", bottom: "12%" }}
-      >
-        {ROOMS.map((room) => (
-          <div
-            key={room.id}
-            className="absolute p-1.5"
-            style={{
-              left: `${room.x}%`,
-              top: `${room.y}%`,
-              width: `${room.w}%`,
-              height: `${room.h}%`,
-            }}
-          >
-            <div
-              className="flex size-full items-start justify-start rounded-[0.7rem] p-2"
-              style={{
-                background: `linear-gradient(160deg, ${room.color} 0%, ${shade(room.color, -10)} 100%)`,
-                boxShadow:
-                  "inset 0 2px 3px rgba(255,255,255,0.5), inset 0 -3px 5px rgba(120,95,60,0.16), 0 2px 4px rgba(110,80,50,0.12)",
-              }}
-            >
-              <span className="select-none text-[10px] font-medium uppercase tracking-wide text-[rgba(90,70,45,0.62)]">
-                {room.label}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Roof band across the top, with a peeled-back corner to imply cutaway */}
-      <div
-        className="absolute overflow-hidden rounded-t-[1.6rem]"
-        style={{
-          left: "6%",
-          right: "6%",
-          top: "13%",
-          height: "15%",
-          background: "linear-gradient(165deg, #cf8055 0%, #b1663f 100%)",
-          boxShadow: "inset 0 3px 6px rgba(255,255,255,0.28)",
-        }}
-      >
-        {/* ridge line */}
-        <span className="absolute inset-x-8 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[rgba(120,70,45,0.4)]" />
-        {/* peeled corner — a lighter underside folded back on the right */}
-        <span
-          className="absolute right-0 top-0 h-full w-1/3"
-          style={{
-            background: "linear-gradient(115deg, transparent 45%, #e7c9a5 45%)",
-          }}
-        />
-      </div>
-
-      {/* Front door notch at the bottom center */}
-      <span
-        className="absolute bottom-[7%] left-1/2 h-[5%] w-[10%] -translate-x-1/2 rounded-b-md"
-        style={{ background: "linear-gradient(180deg, #b1663f, #96522f)" }}
-      />
-
-      {/* Hotspots */}
-      {upgrades.map((u) => (
-        <Hotspot
-          key={u.id}
-          upgrade={u}
-          active={active === u.id}
-          inPlan={selectedSet.has(u.id)}
-          dim={groupFilter !== "all" && u.group !== groupFilter}
-          prioritize={prioritize}
-          rank={rankOf(u.id)}
-          reducedMotion={reducedMotion}
-          onSelect={() => onSelect(u.id)}
-        />
-      ))}
-    </div>
-  )
-}
-
-function Hotspot({
-  upgrade,
-  active,
-  inPlan,
-  dim,
-  prioritize,
-  rank,
-  reducedMotion,
-  onSelect,
-}: {
-  upgrade: Upgrade
-  active: boolean
-  inPlan: boolean
-  dim: boolean
-  prioritize: boolean
-  rank: number
-  reducedMotion: boolean
-  onSelect: () => void
-}) {
-  const Icon = UPGRADE_ICON[upgrade.id]
-  const color = TIER_COLORS[upgrade.tier]
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-label={`${upgrade.label} — ${TIER_LABELS[upgrade.tier]}`}
-      aria-pressed={active}
-      className={cn(
-        "group absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none transition-[opacity,transform] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        dim ? "opacity-25" : "opacity-100",
-        active && "z-20 scale-110",
-      )}
-      style={{ left: `${upgrade.x}%`, top: `${upgrade.y}%` }}
-    >
-      <span className="relative flex size-7 items-center justify-center">
-        {!reducedMotion && !dim && (active || inPlan) ? (
-          <span
-            className="absolute inline-flex size-full animate-ping rounded-full opacity-60"
-            style={{ background: color }}
-          />
-        ) : null}
-        <span
-          className={cn(
-            "relative inline-flex size-7 items-center justify-center rounded-full border-2 border-white text-white shadow-md transition-transform group-hover:scale-110",
-            active && "ring-2 ring-white",
-          )}
-          style={{ background: color }}
-        >
-          {prioritize ? (
-            <span className="text-[11px] font-bold tabular-nums">{rank}</span>
-          ) : (
-            <Icon className="size-3.5" />
-          )}
-        </span>
-        {inPlan ? (
-          <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full border border-white bg-primary text-primary-foreground">
-            <Check className="size-2.5" aria-hidden="true" />
-          </span>
-        ) : null}
-      </span>
-    </button>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Floating upgrade detail card
-// ---------------------------------------------------------------------------
-function UpgradeCard({
-  upgrade,
-  inPlan,
-  rank,
-  onToggle,
-  onClose,
-}: {
-  upgrade: Upgrade
-  inPlan: boolean
-  rank: number
-  onToggle: () => void
-  onClose: () => void
-}) {
-  const color = TIER_COLORS[upgrade.tier]
-  return (
-    <div className="absolute inset-x-3 bottom-3 z-30 rounded-2xl border border-border/70 bg-card/95 p-4 shadow-xl backdrop-blur-md sm:inset-x-auto sm:left-1/2 sm:w-[24rem] sm:-translate-x-1/2">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-flex size-2.5 rounded-full"
-              style={{ background: color }}
-              aria-hidden="true"
-            />
-            <span
-              className="text-[11px] font-semibold uppercase tracking-wide"
-              style={{ color }}
-            >
-              {TIER_LABELS[upgrade.tier]}
-            </span>
-            <span className="text-[11px] text-muted-foreground">
-              · Recommended step #{rank}
-            </span>
-          </div>
-          <h3 className="font-serif text-lg font-semibold text-foreground">
-            {upgrade.label}
-          </h3>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        {upgrade.blurb}
-      </p>
-
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <MiniStat label="Est. cost" value={moneyRange(upgrade.cost.low, upgrade.cost.high)} wide />
-      </div>
-      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-        <MiniStat
-          label="Energy / yr"
-          value={upgrade.annualEnergySavings ? money(upgrade.annualEnergySavings) : "—"}
-        />
-        <MiniStat label="Comfort" value={"●".repeat(upgrade.comfortGain) || "—"} />
-        <MiniStat label="Resale" value={`${Math.round(upgrade.resaleRecovery * 100)}%`} />
-      </div>
-
-      <button
-        type="button"
-        onClick={onToggle}
-        className={cn(
-          "mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-          inPlan
-            ? "border border-border bg-background text-foreground hover:border-ring"
-            : "bg-primary text-primary-foreground hover:bg-primary/90",
-        )}
-      >
-        {inPlan ? (
-          <>
-            <Check className="size-4" aria-hidden="true" />
-            In your plan — remove
-          </>
-        ) : (
-          <>
-            <Plus className="size-4" aria-hidden="true" />
-            Add to my plan
-          </>
-        )}
-      </button>
-    </div>
-  )
-}
-
-function MiniStat({
-  label,
-  value,
-  wide,
-}: {
-  label: string
-  value: string
-  wide?: boolean
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-lg border border-border bg-muted/40 px-2 py-1.5",
-        wide && "col-span-3",
-      )}
-    >
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="font-serif text-sm font-semibold tabular-nums text-foreground">
-        {value}
-      </p>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Plan panel (left column on desktop, below stage on mobile)
-// ---------------------------------------------------------------------------
-function PlanPanel({
-  plan,
-  selected,
-  onRemove,
-  onFocus,
-  onClear,
-  onAddRecommended,
-}: {
-  plan: ReturnType<typeof computePlan>
-  selected: UpgradeId[]
-  onRemove: (id: UpgradeId) => void
-  onFocus: (id: UpgradeId) => void
-  onClear: () => void
-  onAddRecommended: (id: UpgradeId) => void
-}) {
-  const next = plan.recommendedNext
-  return (
-    <aside className="order-2 flex shrink-0 flex-col gap-3 lg:order-1 lg:w-72">
-      {/* Start here recommendation */}
-      {next ? (
-        <div className="rounded-2xl border border-primary/30 bg-primary/8 p-4">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
-            <Sparkles className="size-3.5" aria-hidden="true" />
-            {plan.count === 0 ? "Start here" : "Do this next"}
-          </div>
-          <p className="mt-1.5 font-serif text-lg font-semibold text-foreground">
-            {next.label}
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {TIER_LABELS[next.tier]} · {moneyRange(next.cost.low, next.cost.high)}
-          </p>
-          <button
-            type="button"
-            onClick={() => onAddRecommended(next.id)}
-            className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Plus className="size-3.5" aria-hidden="true" />
-            Add to plan
-          </button>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-primary/30 bg-primary/8 p-4">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
-            <Check className="size-3.5" aria-hidden="true" />
-            Full plan
-          </div>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Every upgrade is in your plan. Remove any that can wait to sharpen
-            your priorities.
-          </p>
-        </div>
-      )}
-
-      {/* Plan list */}
-      <div className="flex flex-1 flex-col rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h3 className="flex items-center gap-1.5 font-serif text-base font-semibold text-foreground">
-            <ListChecks className="size-4 text-muted-foreground" aria-hidden="true" />
-            Your plan
-          </h3>
-          {selected.length > 0 ? (
-            <button
-              type="button"
-              onClick={onClear}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <RotateCcw className="size-3" aria-hidden="true" />
-              Clear
-            </button>
-          ) : null}
-        </div>
-
-        {selected.length === 0 ? (
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            Tap a marker on the house, then add upgrades to build a prioritized
-            renovation plan.
-          </p>
-        ) : (
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {selected.map((id) => {
-              const u = UPGRADE_BY_ID[id]
-              const Icon = UPGRADE_ICON[id]
-              return (
-                <li key={id}>
-                  <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2 py-1.5">
-                    <span
-                      className="flex size-6 shrink-0 items-center justify-center rounded-full text-white"
-                      style={{ background: TIER_COLORS[u.tier] }}
-                    >
-                      <Icon className="size-3" />
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onFocus(id)}
-                      className="flex min-w-0 flex-1 flex-col items-start text-left"
-                    >
-                      <span className="truncate text-sm font-medium text-foreground">
-                        {u.label}
-                      </span>
-                      <span className="text-[11px] tabular-nums text-muted-foreground">
-                        {moneyRange(u.cost.low, u.cost.high)}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onRemove(id)}
-                      aria-label={`Remove ${u.label}`}
-                      className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-
-        {/* Totals */}
-        <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
-          <PlanMetric
-            icon={<Wallet className="size-3.5" aria-hidden="true" />}
-            label="Est. cost"
-            value={
-              plan.count === 0
-                ? "—"
-                : moneyRange(plan.totalLow, plan.totalHigh)
-            }
-            highlight
-            wide
-          />
-          <PlanMetric
-            icon={<Zap className="size-3.5" aria-hidden="true" />}
-            label="Energy / yr"
-            value={plan.annualEnergySavings ? money(plan.annualEnergySavings) : "—"}
-          />
-          <PlanMetric
-            icon={<TrendingUp className="size-3.5" aria-hidden="true" />}
-            label="Resale added"
-            value={plan.resaleAdded ? money(plan.resaleAdded) : "—"}
-          />
-        </div>
-      </div>
-    </aside>
-  )
-}
-
-function PlanMetric({
+/* ------------------------------------------------------------------ *
+ * Metric tile
+ * ------------------------------------------------------------------ */
+function Metric({
   icon,
   label,
   value,
-  highlight,
+  accent,
   wide,
 }: {
-  icon: React.ReactNode
+  icon?: React.ReactNode
   label: string
   value: string
-  highlight?: boolean
+  accent?: boolean
   wide?: boolean
 }) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-0.5 rounded-xl border p-2.5",
+        "flex flex-col gap-0.5 rounded-xl border p-2",
         wide && "col-span-2",
-        highlight ? "border-primary/30 bg-primary/8" : "border-border bg-muted/30",
+        accent ? "border-primary/30 bg-primary/5" : "border-border bg-background",
       )}
     >
       <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
         {icon}
         {label}
       </span>
-      <span className="font-serif text-base font-semibold tabular-nums text-foreground">
+      <span className="text-sm font-semibold tabular-nums text-foreground">
         {value}
       </span>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Small shared UI
-// ---------------------------------------------------------------------------
-function FilterChip({
-  children,
-  active,
-  onClick,
+/* ------------------------------------------------------------------ *
+ * Floating upgrade info card
+ * ------------------------------------------------------------------ */
+function UpgradeCard({
+  id,
+  selected,
+  onToggle,
+  onClose,
 }: {
-  children: React.ReactNode
-  active: boolean
-  onClick: () => void
+  id: UpgradeId
+  selected: boolean
+  onToggle: () => void
+  onClose: () => void
 }) {
+  const u = UPGRADE_BY_ID[id]
+  const pos = PIN_POS[id]
+  const flip = pos.x > 55
+  const rank = RECOMMENDED_ORDER.findIndex((x) => x.id === id) + 1
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "inline-flex items-center rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors",
-        active
-          ? "border-primary bg-primary/15 text-foreground"
-          : "border-border bg-background text-muted-foreground hover:border-ring hover:text-foreground",
-      )}
+    <div
+      className="absolute z-10 w-60 -translate-y-1/2 rounded-2xl border border-border bg-card/95 p-3 shadow-xl backdrop-blur-md"
+      style={{
+        top: `${Math.min(76, Math.max(24, pos.y))}%`,
+        left: flip ? undefined : `${Math.min(pos.x + 5, 50)}%`,
+        right: flip ? `${Math.min(100 - pos.x + 5, 50)}%` : undefined,
+      }}
+      role="dialog"
+      aria-label={u.label}
     >
-      {children}
-    </button>
-  )
-}
-
-function TierLegend({ prioritize }: { prioritize: boolean }) {
-  const tiers: PriorityTier[] = ["safety", "high", "medium", "low"]
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-      {tiers.map((t) => (
-        <span key={t} className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
           <span
-            className="inline-flex size-2.5 rounded-full"
-            style={{ background: TIER_COLORS[t] }}
+            className="inline-block size-3 rounded-full"
+            style={{ background: TIER_COLORS[u.tier] }}
             aria-hidden="true"
           />
-          {TIER_LABELS[t]}
-        </span>
-      ))}
-      <span className="text-[11px] text-muted-foreground/70">
-        {prioritize
-          ? "Numbers show the suggested order"
-          : "Colour shows priority"}
-      </span>
+          <h4 className="text-sm font-semibold text-foreground">{u.label}</h4>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
+        <span className="font-medium text-primary">{TIER_LABELS[u.tier]}</span>
+        <span className="text-muted-foreground">· Priority #{rank} of 13</span>
+      </div>
+
+      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+        {u.blurb}
+      </p>
+
+      <dl className="mt-2 grid grid-cols-2 gap-1.5 text-[11px]">
+        <div className="rounded-lg bg-muted/60 px-2 py-1">
+          <dt className="text-muted-foreground">Est. cost</dt>
+          <dd className="font-semibold tabular-nums text-foreground">
+            {moneyRange(u.cost.low, u.cost.high)}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-muted/60 px-2 py-1">
+          <dt className="text-muted-foreground">Energy / yr</dt>
+          <dd className="font-semibold tabular-nums text-foreground">
+            {u.annualEnergySavings > 0 ? money(u.annualEnergySavings) : "—"}
+          </dd>
+        </div>
+      </dl>
+
+      <button
+        type="button"
+        onClick={onToggle}
+        className={cn(
+          "mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+          selected
+            ? "border-border bg-background text-foreground hover:bg-muted"
+            : "border-primary bg-primary text-primary-foreground hover:brightness-105",
+        )}
+      >
+        {selected ? (
+          <>
+            <Check className="size-4" aria-hidden="true" /> In your plan
+          </>
+        ) : (
+          <>
+            <Plus className="size-4" aria-hidden="true" /> Add to plan
+          </>
+        )}
+      </button>
     </div>
   )
-}
-
-// ---------------------------------------------------------------------------
-// Colour helper — darken a hex by a percentage for the clay bottom-shade.
-// ---------------------------------------------------------------------------
-function shade(hex: string, percent: number): string {
-  const n = hex.replace("#", "")
-  const num = Number.parseInt(n, 16)
-  const amt = Math.round(2.55 * percent)
-  const r = Math.max(0, Math.min(255, (num >> 16) + amt))
-  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xff) + amt))
-  const b = Math.max(0, Math.min(255, (num & 0xff) + amt))
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`
 }
