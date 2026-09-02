@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { CropSelectionTool } from "@/components/crop-selection-tool"
 import { FarmProfitCalculator } from "@/components/farm-profit-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
+import { FarmSimulator } from "@/components/farm/farm-simulator"
 import { type ProfitabilityHandoff } from "@/lib/crops"
 import { inputsFromHandoff, type ProfitInputs } from "@/lib/farm-profit"
 
@@ -71,8 +72,12 @@ export function AgricultureTools() {
     <div
       ref={containerRef}
       id="agriculture-calculators"
-      className="flex scroll-mt-24 flex-col gap-6"
+      className="flex scroll-mt-24 flex-col gap-10"
     >
+      {/* Interactive clay farm sits above the calculators, the agriculture
+          counterpart to the solar, landscape, and renovation explorers. */}
+      <FarmSimulator />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div role="tablist" aria-label="Agriculture calculators" className="flex flex-wrap gap-2">
