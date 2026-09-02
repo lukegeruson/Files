@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Droplets,
@@ -17,166 +18,102 @@ import {
   elementCard,
   formatArea,
   formatGallons,
-  GRID_COLS,
-  GRID_ROWS,
   money,
   type ElementId,
-  type Material,
 } from "@/lib/landscape-scene"
 
-// ---------------------------------------------------------------------------
-// Clay material palette. Muted, earthy, matte — every surface reads as the same
-// tabletop-model clay, distinguished only by hue. Kept as literal values (like
-// the solar explorer's sky colors) so the scene renders identically anywhere.
-// ---------------------------------------------------------------------------
-const MATERIALS: Record<
-  Material,
-  { label: string; top: string; bottom: string; dot: string }
-> = {
-  lawn: { label: "Lawn", top: "#a7c775", bottom: "#84a955", dot: "#8fb45f" },
-  planting: {
-    label: "Planting",
-    top: "#8f6c4f",
-    bottom: "#77543d",
-    dot: "#6f9350",
-  },
-  mulch: { label: "Mulch", top: "#9c6a44", bottom: "#814f30", dot: "#8a5a38" },
-  gravel: {
-    label: "Gravel",
-    top: "#cec1a3",
-    bottom: "#b4a682",
-    dot: "#bcae8b",
-  },
-}
+// Two matched clay renders of the SAME cottage-corner yard: a lush lawn state
+// and a water-wise xeriscape state. The slider crossfades between them, so the
+// yard appears to physically transform as you drag.
+const LAWN_SRC = "/landscape-styles/corner-lawn.png"
+const WATERWISE_SRC = "/landscape-styles/option-c-corner3d.png"
 
-const SHRUB = "radial-gradient(circle at 38% 32%, #82a862, #567c3e 78%)"
-const TREE = "radial-gradient(circle at 36% 30%, #7ba35d, #4c703a 80%)"
-const BLOOM = ["#d98a5a", "#e0b15a", "#cf7f86"] // clay flower dots
+// Clickable hotspots, tuned as percentages over the water-wise render. Each maps
+// to a selectable element in the model. Positions follow the cottage-corner
+// composition: house at back-right, yard filling the foreground.
+const HOTSPOTS: Array<{
+  id: ElementId
+  label: string
+  x: number
+  y: number
+}> = [
+  { id: "lawn", label: "Lawn", x: 33, y: 58 },
+  { id: "planting", label: "Planting beds", x: 60, y: 62 },
+  { id: "mulch", label: "Mulch", x: 46, y: 70 },
+  { id: "gravel", label: "Gravel", x: 70, y: 74 },
+  { id: "drip", label: "Drip irrigation", x: 52, y: 55 },
+  { id: "patio", label: "Patio", x: 40, y: 48 },
+  { id: "trees", label: "Shade trees", x: 24, y: 34 },
+]
 
-// Legend / selectable elements, in display order.
+// Legend / selectable elements, in display order, with clay swatch colors.
 const LEGEND: Array<{ id: ElementId; label: string; swatch: string }> = [
-  { id: "lawn", label: "Lawn", swatch: MATERIALS.lawn.bottom },
-  { id: "planting", label: "Planting", swatch: MATERIALS.planting.dot },
-  { id: "mulch", label: "Mulch", swatch: MATERIALS.mulch.bottom },
-  { id: "gravel", label: "Gravel", swatch: MATERIALS.gravel.bottom },
+  { id: "lawn", label: "Lawn", swatch: "#84a955" },
+  { id: "planting", label: "Planting", swatch: "#6f9350" },
+  { id: "mulch", label: "Mulch", swatch: "#8a5a38" },
+  { id: "gravel", label: "Gravel", swatch: "#bcae8b" },
   { id: "drip", label: "Drip", swatch: "#5b9bd0" },
   { id: "patio", label: "Patio", swatch: "#c7bfb0" },
   { id: "trees", label: "Trees", swatch: "#5c8040" },
 ]
 
-// Deterministic pseudo-random in [0,1) so decorations never reshuffle.
-function hash(i: number, n: number): number {
-  const x = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453
-  return x - Math.floor(x)
-}
-
-// Grid geometry as percentages of the square stage.
-const G = { left: 6, top: 31, width: 88, height: 62 }
-const CELL_W = G.width / GRID_COLS
-const CELL_H = G.height / GRID_ROWS
-
-// Fixed clay trees (percent positions + size). Load-bearing scenery, always on.
-const TREES = [
-  { x: 15, y: 30, s: 12 },
-  { x: 86, y: 34, s: 10 },
-  { x: 90, y: 82, s: 11 },
-]
-
-const MORPH_SECONDS = 2.4
-
 export function LandscapeExplorer() {
-  const [waterWise, setWaterWise] = useState(0.35)
+  const [waterWise, setWaterWise] = useState(0)
   const [selected, setSelected] = useState<ElementId | null>(null)
   const [playing, setPlaying] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
 
-  const plan = useMemo(() => computeLandscapePlan(waterWise), [waterWise])
+  // Refs mirror state for the rAF animation loop without stale closures.
+  const wRef = useRef(waterWise)
+  wRef.current = waterWise
+  const target = useRef(1)
+  const rafRef = useRef<number | null>(null)
 
-  // Respect reduced-motion: no auto-morph, transitions still fine.
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
-    const apply = () => {
-      setReducedMotion(mq.matches)
-      if (mq.matches) setPlaying(false)
-    }
-    apply()
-    mq.addEventListener("change", apply)
-    return () => mq.removeEventListener("change", apply)
+    const update = () => setReducedMotion(mq.matches)
+    update()
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
   }, [])
 
-  // Auto-transform: glide toward the opposite end, then stop.
-  const raf = useRef<number | null>(null)
-  const last = useRef<number | null>(null)
-  const target = useRef(1)
-  const wRef = useRef(waterWise)
+  // Auto-morph animation toward the target end of the slider.
   useEffect(() => {
-    wRef.current = waterWise
-  }, [waterWise])
-  useEffect(() => {
-    if (!playing || reducedMotion) return
-    const tick = (now: number) => {
-      if (last.current != null) {
-        const dt = (now - last.current) / 1000
-        const dir = target.current >= wRef.current ? 1 : -1
-        let next = wRef.current + (dir * dt) / MORPH_SECONDS
-        if ((dir === 1 && next >= target.current) || (dir === -1 && next <= target.current)) {
-          next = target.current
-          wRef.current = next
-          setWaterWise(next)
-          setPlaying(false)
-          last.current = null
-          return
-        }
-        wRef.current = next
-        setWaterWise(next)
+    if (!playing) {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
+      return
+    }
+    const tick = () => {
+      const cur = wRef.current
+      const dest = target.current
+      const next = cur + (dest - cur) * 0.08
+      if (Math.abs(dest - next) < 0.004) {
+        setWaterWise(dest)
+        setPlaying(false)
+        return
       }
-      last.current = now
-      raf.current = requestAnimationFrame(tick)
+      setWaterWise(next)
+      rafRef.current = requestAnimationFrame(tick)
     }
-    raf.current = requestAnimationFrame(tick)
+    rafRef.current = requestAnimationFrame(tick)
     return () => {
-      if (raf.current) cancelAnimationFrame(raf.current)
-      last.current = null
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
     }
-  }, [playing, reducedMotion])
+  }, [playing])
 
-  // Assign each grid tile a material: an open lawn at the front-center, ringed
-  // by beds, then mulch, with gravel pushed to the back corners. As the yard
-  // turns water-wise the lawn count drops and the farthest tiles convert first.
-  const cells = useMemo(() => {
-    const order = Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => i).sort(
-      (a, b) => dist(a) - dist(b),
-    )
-    function dist(i: number) {
-      const row = Math.floor(i / GRID_COLS)
-      const col = i % GRID_COLS
-      const dx = col - (GRID_COLS - 1) / 2
-      const dy = row - (GRID_ROWS - 1) // focal point at front-center
-      return dx * dx + dy * dy
-    }
-    const mat = new Array<Material>(order.length)
-    let k = 0
-    const put = (count: number, m: Material) => {
-      for (let n = 0; n < count && k < order.length; n++) mat[order[k++]] = m
-    }
-    put(plan.cells.lawn, "lawn")
-    put(plan.cells.planting, "planting")
-    put(plan.cells.mulch, "mulch")
-    while (k < order.length) mat[order[k++]] = "gravel"
+  const plan = useMemo(() => computeLandscapePlan(waterWise), [waterWise])
+  const card = selected ? elementCard(plan, selected) : null
 
-    return Array.from({ length: GRID_COLS * GRID_ROWS }, (_, i) => ({
-      i,
-      row: Math.floor(i / GRID_COLS),
-      col: i % GRID_COLS,
-      material: mat[i],
-    }))
-  }, [plan.cells])
+  // Hotspots only make sense once the yard has become water-wise enough to show
+  // the xeriscape elements; fade them in with the transformation.
+  const hotspotOpacity = Math.max(0, (waterWise - 0.25) / 0.75)
 
   function handleReset() {
     setPlaying(false)
     setSelected(null)
-    setWaterWise(0.35)
+    setWaterWise(0)
   }
+
   function handleMorph() {
     if (reducedMotion) {
       setWaterWise((w) => (w < 0.5 ? 1 : 0))
@@ -185,10 +122,6 @@ export function LandscapeExplorer() {
     target.current = wRef.current < 0.5 ? 1 : 0
     setPlaying((p) => !p)
   }
-
-  const card = selected ? elementCard(plan, selected) : null
-  const showDrip = plan.dripZones > 0
-  const showSpray = plan.sprayZones > 0
 
   return (
     <section
@@ -205,122 +138,76 @@ export function LandscapeExplorer() {
           Landscape Planner Explorer
         </h2>
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
-          Slide from a traditional lawn to a water-wise yard and watch the model
-          rearrange itself. Tap any area to see what it costs and how much water
+          Slide from a traditional lawn to a water-wise yard and watch the clay
+          model transform. Tap any area to see what it costs and how much water
           it uses.
         </p>
       </div>
 
-      {/* Stage */}
+      {/* Stage — two matched clay renders crossfade on the slider */}
       <div
         className="relative aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2]"
         style={{
           background:
-            "radial-gradient(120% 120% at 50% 20%, #f4ecda 0%, #ece0c8 70%, #e3d5b8 100%)",
+            "radial-gradient(120% 100% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
         }}
         onClick={() => setSelected(null)}
       >
-        {/* soft plot inset */}
-        <div className="pointer-events-none absolute inset-3 rounded-[1.6rem] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-10px_30px_rgba(120,96,60,0.12)]" />
+        {/* Lush lawn base */}
+        <img
+          src={LAWN_SRC || "/placeholder.svg"}
+          alt="Clay model of a traditional lush-lawn backyard"
+          className="pointer-events-none absolute inset-0 size-full select-none object-contain"
+          draggable={false}
+        />
+        {/* Water-wise overlay, revealed as the slider advances */}
+        <img
+          src={WATERWISE_SRC || "/placeholder.svg"}
+          alt="Clay model of the same backyard converted to a water-wise xeriscape"
+          className="pointer-events-none absolute inset-0 size-full select-none object-contain transition-opacity duration-300"
+          style={{ opacity: waterWise }}
+          draggable={false}
+        />
 
-        {/* House footprint */}
-        <HouseModel />
+        {/* Dim veil when an element is selected, to focus its hotspot */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-[#2c2417] transition-opacity duration-300"
+          style={{ opacity: selected ? 0.14 : 0 }}
+        />
 
-        {/* Tile grid */}
-        {cells.map((c) => {
-          const m = MATERIALS[c.material]
-          const isSel = selected === c.material
-          const dim = selected != null && !isSel && isMaterial(selected)
-          const left = G.left + c.col * CELL_W
-          const top = G.top + c.row * CELL_H
+        {/* Clickable hotspots over the water-wise yard */}
+        {HOTSPOTS.map((h) => {
+          const isSel = selected === h.id
           return (
             <button
-              key={c.i}
+              key={h.id}
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                setSelected((s) => (s === c.material ? null : c.material))
+                setSelected((s) => (s === h.id ? null : h.id))
               }}
-              aria-label={`${m.label} area`}
+              aria-label={h.label}
               aria-pressed={isSel}
-              className="group absolute rounded-[0.7rem] outline-none transition-[transform,opacity,box-shadow] duration-500 focus-visible:ring-2 focus-visible:ring-ring"
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-ring"
               style={{
-                left: `${left + 0.5}%`,
-                top: `${top + 0.5}%`,
-                width: `${CELL_W - 1}%`,
-                height: `${CELL_H - 1}%`,
-                opacity: dim ? 0.55 : 1,
-                transform: isSel ? "translateY(-2px)" : undefined,
-                zIndex: isSel ? 5 : 1,
+                left: `${h.x}%`,
+                top: `${h.y}%`,
+                opacity: isSel ? 1 : hotspotOpacity,
+                pointerEvents: hotspotOpacity < 0.4 ? "none" : "auto",
+                zIndex: isSel ? 15 : 8,
               }}
             >
               <span
                 className={cn(
-                  "absolute inset-0 rounded-[0.7rem] transition-colors duration-500",
-                  isSel
-                    ? "shadow-[0_6px_14px_rgba(80,60,35,0.28)] ring-2 ring-white/80"
-                    : "shadow-[0_2px_5px_rgba(90,70,45,0.18)]",
+                  "flex items-center justify-center rounded-full border-2 border-white bg-primary text-primary-foreground shadow-md transition-all",
+                  isSel ? "size-6 ring-2 ring-primary/40" : "size-5",
                 )}
-                style={{
-                  background: `linear-gradient(160deg, ${m.top} 0%, ${m.bottom} 100%)`,
-                }}
-              />
-              <CellDecor
-                material={c.material}
-                i={c.i}
-                showDrip={showDrip}
-                showSpray={showSpray}
-                dripFocus={selected === "drip"}
-              />
+              >
+                <span className="size-1.5 rounded-full bg-primary-foreground" />
+              </span>
             </button>
           )
         })}
-
-        {/* Walkway + patio (hardscape laid over the ground) */}
-        <PatioModel
-          selected={selected === "patio"}
-          dim={selected != null && selected !== "patio"}
-          onSelect={(e) => {
-            e.stopPropagation()
-            setSelected((s) => (s === "patio" ? null : "patio"))
-          }}
-        />
-
-        {/* Clay trees */}
-        {TREES.map((t, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setSelected((s) => (s === "trees" ? null : "trees"))
-            }}
-            aria-label="Shade trees"
-            aria-pressed={selected === "trees"}
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none transition-transform duration-500 focus-visible:ring-2 focus-visible:ring-ring"
-            style={{
-              left: `${t.x}%`,
-              top: `${t.y}%`,
-              width: `${t.s}%`,
-              height: `${t.s}%`,
-              opacity: selected != null && selected !== "trees" ? 0.6 : 1,
-              transform: `translate(-50%, -50%) scale(${selected === "trees" ? 1.08 : 1})`,
-              zIndex: 6,
-            }}
-          >
-            <span
-              className={cn(
-                "block size-full rounded-full",
-                selected === "trees" && "ring-2 ring-white/80",
-              )}
-              style={{
-                background: TREE,
-                boxShadow:
-                  "0 8px 14px rgba(60,80,40,0.35), inset 0 3px 6px rgba(255,255,255,0.25)",
-              }}
-            />
-          </button>
-        ))}
 
         {/* Floating info card */}
         {card ? (
@@ -473,8 +360,7 @@ export function LandscapeExplorer() {
         />
       </div>
 
-      {/* Slider thumb + gentle-appear styles, matching the solar explorer's
-          in-component style approach. */}
+      {/* Slider thumb styles, matching the solar explorer's approach. */}
       <style>{`
         .landscape-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
@@ -498,240 +384,6 @@ export function LandscapeExplorer() {
         }
       `}</style>
     </section>
-  )
-}
-
-function isMaterial(id: ElementId): id is Material {
-  return id === "lawn" || id === "planting" || id === "mulch" || id === "gravel"
-}
-
-// ---------------------------------------------------------------------------
-// Per-tile decorations — shrubs, blooms, pebbles, drip emitters, spray arcs.
-// ---------------------------------------------------------------------------
-function CellDecor({
-  material,
-  i,
-  showDrip,
-  showSpray,
-  dripFocus,
-}: {
-  material: Material
-  i: number
-  showDrip: boolean
-  showSpray: boolean
-  dripFocus: boolean
-}) {
-  if (material === "planting") {
-    const shrubs = 2 + Math.floor(hash(i, 1) * 2) // 2-3 shrubs
-    return (
-      <span className="absolute inset-0">
-        {Array.from({ length: shrubs }).map((_, n) => {
-          const size = 26 + hash(i, n + 2) * 16
-          return (
-            <span
-              key={n}
-              className="absolute rounded-full"
-              style={{
-                width: `${size}%`,
-                height: `${size}%`,
-                left: `${14 + hash(i, n + 3) * 52}%`,
-                top: `${14 + hash(i, n + 4) * 52}%`,
-                background: SHRUB,
-                boxShadow:
-                  "0 3px 5px rgba(50,70,35,0.35), inset 0 2px 3px rgba(255,255,255,0.3)",
-              }}
-            />
-          )
-        })}
-        {/* clay bloom */}
-        {hash(i, 9) > 0.5 ? (
-          <span
-            className="absolute size-[10%] rounded-full"
-            style={{
-              left: `${30 + hash(i, 10) * 40}%`,
-              top: `${30 + hash(i, 11) * 40}%`,
-              background: BLOOM[Math.floor(hash(i, 12) * BLOOM.length)],
-            }}
-          />
-        ) : null}
-        {showDrip ? (
-          <span
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-            style={{
-              width: dripFocus ? "18%" : "12%",
-              height: dripFocus ? "18%" : "12%",
-              background: "#5b9bd0",
-              boxShadow: dripFocus
-                ? "0 0 0 4px rgba(91,155,208,0.35)"
-                : "0 0 0 2px rgba(91,155,208,0.25)",
-              transition: "all 300ms",
-            }}
-          />
-        ) : null}
-      </span>
-    )
-  }
-
-  if (material === "gravel") {
-    const pebbles = 5 + Math.floor(hash(i, 1) * 3)
-    return (
-      <span className="absolute inset-0">
-        {Array.from({ length: pebbles }).map((_, n) => (
-          <span
-            key={n}
-            className="absolute rounded-full"
-            style={{
-              width: `${10 + hash(i, n + 2) * 10}%`,
-              height: `${10 + hash(i, n + 3) * 10}%`,
-              left: `${10 + hash(i, n + 4) * 74}%`,
-              top: `${10 + hash(i, n + 5) * 74}%`,
-              background: hash(i, n) > 0.5 ? "#b6a682" : "#cabd9c",
-              boxShadow: "inset 0 1px 1px rgba(255,255,255,0.4)",
-            }}
-          />
-        ))}
-      </span>
-    )
-  }
-
-  if (material === "mulch") {
-    return (
-      <span className="absolute inset-0">
-        {Array.from({ length: 5 }).map((_, n) => (
-          <span
-            key={n}
-            className="absolute rounded-full opacity-70"
-            style={{
-              width: `${8 + hash(i, n + 2) * 8}%`,
-              height: `${5 + hash(i, n + 3) * 4}%`,
-              left: `${12 + hash(i, n + 4) * 70}%`,
-              top: `${12 + hash(i, n + 5) * 70}%`,
-              background: "#6f4529",
-            }}
-          />
-        ))}
-      </span>
-    )
-  }
-
-  // lawn — optional spray head in a corner of some tiles
-  if (showSpray && hash(i, 7) > 0.62) {
-    return (
-      <span
-        className="absolute size-[42%] rounded-full"
-        style={{
-          right: "-6%",
-          bottom: "-6%",
-          background:
-            "radial-gradient(circle at 100% 100%, rgba(91,155,208,0.5), rgba(91,155,208,0) 70%)",
-        }}
-      />
-    )
-  }
-  return null
-}
-
-// ---------------------------------------------------------------------------
-// House — a simplified architectural clay footprint with a terracotta roof.
-// ---------------------------------------------------------------------------
-function HouseModel() {
-  return (
-    <div
-      className="pointer-events-none absolute"
-      style={{ left: "13%", top: "4%", width: "74%", height: "22%" }}
-      aria-hidden="true"
-    >
-      {/* ground shadow */}
-      <span className="absolute inset-x-4 bottom-0 h-4 rounded-full bg-[rgba(90,70,45,0.25)] blur-md" />
-      {/* walls */}
-      <span
-        className="absolute inset-0 rounded-2xl"
-        style={{
-          background: "linear-gradient(165deg, #efe4cf 0%, #e0d0b3 100%)",
-          boxShadow:
-            "0 10px 18px rgba(90,70,45,0.22), inset 0 2px 4px rgba(255,255,255,0.55)",
-        }}
-      />
-      {/* roof band */}
-      <span
-        className="absolute inset-x-0 top-0 h-1/2 rounded-2xl"
-        style={{
-          background: "linear-gradient(165deg, #cf8055 0%, #b1663f 100%)",
-          boxShadow: "inset 0 3px 6px rgba(255,255,255,0.28)",
-        }}
-      />
-      {/* ridge line */}
-      <span className="absolute left-6 right-6 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[rgba(120,80,55,0.4)]" />
-      {/* door */}
-      <span
-        className="absolute bottom-0 left-1/2 h-1/2 w-[12%] -translate-x-1/2 rounded-t-md"
-        style={{ background: "#b1663f" }}
-      />
-      {/* windows */}
-      <span className="absolute bottom-2 left-[24%] size-3 rounded-sm bg-[#cdbd9e]" />
-      <span className="absolute bottom-2 right-[24%] size-3 rounded-sm bg-[#cdbd9e]" />
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Patio + walkway — stone hardscape laid over the ground near the house.
-// ---------------------------------------------------------------------------
-function PatioModel({
-  selected,
-  dim,
-  onSelect,
-}: {
-  selected: boolean
-  dim: boolean
-  onSelect: (e: React.MouseEvent) => void
-}) {
-  return (
-    <div
-      className="absolute inset-0"
-      style={{ opacity: dim ? 0.6 : 1, zIndex: selected ? 7 : 4 }}
-    >
-      {/* walkway strip from the door toward the patio */}
-      <button
-        type="button"
-        onClick={onSelect}
-        aria-label="Patio and walkway"
-        aria-pressed={selected}
-        className="absolute -translate-x-1/2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        style={{ left: "34%", top: "26%", width: "7%", height: "16%" }}
-      >
-        <span
-          className="block size-full rounded-full"
-          style={{
-            background: "linear-gradient(160deg, #ddd4c4 0%, #c7bdac 100%)",
-            boxShadow: "0 2px 4px rgba(90,70,45,0.2)",
-          }}
-        />
-      </button>
-      {/* patio pad */}
-      <button
-        type="button"
-        onClick={onSelect}
-        aria-label="Patio and walkway"
-        aria-pressed={selected}
-        className="absolute -translate-x-1/2 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        style={{ left: "26%", top: "40%", width: "22%", height: "12%" }}
-      >
-        <span
-          className={cn(
-            "block size-full rounded-2xl",
-            selected && "ring-2 ring-white/80",
-          )}
-          style={{
-            background: "linear-gradient(160deg, #dcd3c3 0%, #c3b9a6 100%)",
-            boxShadow:
-              "0 5px 10px rgba(90,70,45,0.22), inset 0 2px 3px rgba(255,255,255,0.5)",
-          }}
-        />
-        {/* paver seams */}
-        <span className="pointer-events-none absolute inset-2 rounded-xl border border-[rgba(120,100,70,0.25)]" />
-      </button>
-    </div>
   )
 }
 
@@ -782,9 +434,7 @@ function Metric({
     <div
       className={cn(
         "flex flex-col gap-1 rounded-xl border p-3 shadow-sm",
-        highlight
-          ? "border-primary/30 bg-primary/8"
-          : "border-border bg-card",
+        highlight ? "border-primary/30 bg-primary/8" : "border-border bg-card",
       )}
     >
       <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
