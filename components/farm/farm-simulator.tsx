@@ -168,7 +168,7 @@ export function FarmSimulator() {
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         {/* Left column — live metrics + controls */}
-        <div className="flex shrink-0 flex-col gap-3 lg:w-64">
+        <div className="flex shrink-0 flex-col gap-3 lg:w-72">
           <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               This season
@@ -264,6 +264,79 @@ export function FarmSimulator() {
                 Reset
               </PillButton>
             </div>
+          </div>
+
+          {/* Crop diversity — stacked beneath the season panel in the left column */}
+          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-foreground">
+                Crop diversity
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Slide from a single cash crop toward a diversified mix across the
+                {" "}
+                {TOTAL_ACRES}-acre farm.
+              </span>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Single</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={diversity}
+                onChange={(e) => setDiversity(Number.parseFloat(e.target.value))}
+                className="farm-diversity-slider h-2.5 flex-1 cursor-pointer appearance-none rounded-full"
+                aria-label="Crop diversity"
+              />
+              <span className="text-xs text-muted-foreground">Diverse</span>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {CROP_ORDER.map((id) => {
+                const crop = CROP_BY_ID[id]
+                const acres = mix[id]
+                const active = acres > 0
+                return (
+                  <div
+                    key={id}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-medium transition-opacity",
+                      active
+                        ? "border-border bg-background text-foreground"
+                        : "border-dashed border-border/60 bg-muted/40 text-muted-foreground opacity-70",
+                    )}
+                  >
+                    <span
+                      className="inline-block size-2.5 rounded-full"
+                      style={{ background: crop.accent }}
+                      aria-hidden="true"
+                    />
+                    {crop.name}
+                    <span className="tabular-nums text-muted-foreground">
+                      {acres} ac
+                    </span>
+                  </div>
+                )
+              })}
+              {metrics.fallowAcres > 0 && (
+                <div className="flex items-center gap-1.5 rounded-full border border-dashed border-border/60 bg-muted/40 px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                  <span
+                    className="inline-block size-2.5 rounded-full bg-[#c2a173]"
+                    aria-hidden="true"
+                  />
+                  Fallow
+                  <span className="tabular-nums">{metrics.fallowAcres} ac</span>
+                </div>
+              )}
+            </div>
+
+            <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              <Info className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+              Prototype figures for illustrating trade-offs. For a real plan, use
+              the crop selection tool and profitability calculator below.
+            </p>
           </div>
         </div>
 
@@ -370,81 +443,6 @@ export function FarmSimulator() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Crop diversity + legend */}
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-foreground">
-              Crop diversity
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Slide from a single cash crop toward a diversified mix across the
-              {" "}
-              {TOTAL_ACRES}-acre farm.
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">Single</span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={diversity}
-              onChange={(e) => setDiversity(Number.parseFloat(e.target.value))}
-              className="farm-diversity-slider h-2.5 w-40 cursor-pointer appearance-none rounded-full sm:w-52"
-              aria-label="Crop diversity"
-            />
-            <span className="text-xs text-muted-foreground">Diverse</span>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {CROP_ORDER.map((id) => {
-            const crop = CROP_BY_ID[id]
-            const acres = mix[id]
-            const active = acres > 0
-            return (
-              <div
-                key={id}
-                className={cn(
-                  "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-opacity",
-                  active
-                    ? "border-border bg-background text-foreground"
-                    : "border-dashed border-border/60 bg-muted/40 text-muted-foreground opacity-70",
-                )}
-              >
-                <span
-                  className="inline-block size-3 rounded-full"
-                  style={{ background: crop.accent }}
-                  aria-hidden="true"
-                />
-                {crop.name}
-                <span className="tabular-nums text-muted-foreground">
-                  {acres} ac
-                </span>
-              </div>
-            )
-          })}
-          {metrics.fallowAcres > 0 && (
-            <div className="flex items-center gap-2 rounded-full border border-dashed border-border/60 bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              <span
-                className="inline-block size-3 rounded-full bg-[#c2a173]"
-                aria-hidden="true"
-              />
-              Fallow
-              <span className="tabular-nums">{metrics.fallowAcres} ac</span>
-            </div>
-          )}
-        </div>
-
-        <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
-          <Info className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-          Prototype figures for illustrating trade-offs. For a real plan, use the
-          crop selection tool and profitability calculator below.
-        </p>
       </div>
 
       <style jsx>{`
