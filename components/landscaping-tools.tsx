@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { LandscapeCostCalculator } from "@/components/landscape-cost-calculator"
 import { LandscapeMaterialsCalculator } from "@/components/landscape-materials-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
+import { LandscapeExplorer } from "@/components/landscape/landscape-explorer"
 
 type ToolId = "cost" | "materials"
 
@@ -61,6 +62,10 @@ export function LandscapingTools() {
       id="landscaping-calculators"
       className="flex scroll-mt-24 flex-col gap-6"
     >
+      {/* Interactive clay-model yard sits above the calculators, the landscaping
+          counterpart to the solar explorer. */}
+      <LandscapeExplorer />
+
       {/* Tool switcher — additional landscaping calculators slot in here. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

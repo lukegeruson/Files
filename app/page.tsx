@@ -36,7 +36,7 @@ export default async function HomePage() {
       <SiteHeader />
       <main className="flex-1">
         {/* Intro */}
-        <section className="mx-auto max-w-6xl px-4 pt-16 md:px-6">
+        <section className="mx-auto max-w-6xl px-4 pt-10 md:px-6">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">
             Education
           </p>

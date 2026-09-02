@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   ArrowRight,
   BatteryCharging,
@@ -12,6 +12,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
+import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
+import { snapshotFromSavings } from "@/lib/solar-scene"
 import {
   DEFAULT_ASSUMPTIONS,
   ORIENTATION_LABELS,
@@ -91,6 +93,14 @@ export function SolarSavingsTool() {
       orientation, shade, hasEv, wantsBattery, yearsInHome, payment, assumptions,
     ],
   )
+
+  // Publish results up to the 3D explorer above the tabs. Only once the inputs
+  // are sufficient for a real number; before that the scene keeps its mock so it
+  // never shows a misleading half-filled house.
+  const publishScene = usePublishSolarScene()
+  useEffect(() => {
+    publishScene(ready ? snapshotFromSavings(result, wantsBattery) : null)
+  }, [ready, result, wantsBattery, publishScene])
 
   const verdictTone =
     result.verdict === "favorable"

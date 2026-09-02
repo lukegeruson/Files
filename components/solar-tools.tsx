@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils"
 import { SolarSavingsTool } from "@/components/solar-savings-tool"
 import { SolarPanelCalculator } from "@/components/solar-panel-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
+import { SolarSceneProvider } from "@/components/solar/solar-scene-context"
+import { SolarExplorer } from "@/components/solar/solar-explorer"
 
 type ToolId = "savings" | "panels"
 
@@ -56,18 +58,22 @@ export function SolarTools() {
   }, [])
 
   return (
+    <SolarSceneProvider>
     <div
       ref={containerRef}
       id="solar-calculators"
       className="flex scroll-mt-24 flex-col gap-6"
     >
+      {/* Interactive 3D diagram sits above the calculators and reflects their
+          results once completed. */}
+      <SolarExplorer />
+
       {/* Tool switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div
           role="tablist"
           aria-label="Solar calculators"
-          className="flex flex-wrap gap-2"
+          className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap"
         >
           {TOOLS.map((tool) => {
             const isActive = tool.id === active
@@ -81,7 +87,7 @@ export function SolarTools() {
                 id={`solar-tab-${tool.id}`}
                 onClick={() => setActive(tool.id)}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors",
+                  "inline-flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-center text-xs transition-colors sm:px-4 sm:text-sm",
                   isActive
                     ? "border-primary bg-primary/15 font-medium text-foreground"
                     : "border-input bg-background text-muted-foreground hover:border-ring hover:text-foreground",
@@ -93,11 +99,15 @@ export function SolarTools() {
             )
           })}
         </div>
+        {/* Blog link sits beside the "All figures are estimates" note, with
+            space between them on mobile; both stay grouped to the right on
+            larger screens. */}
+        <div className="flex w-full items-center justify-between gap-4 sm:w-auto sm:justify-end">
           <JumpToPostsLink />
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            All figures are estimates
+          </span>
         </div>
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          All figures are estimates
-        </span>
       </div>
 
       {/* Active tool. Each stays mounted-on-demand so switching is instant. */}
@@ -109,5 +119,6 @@ export function SolarTools() {
         {active === "savings" ? <SolarSavingsTool /> : <SolarPanelCalculator />}
       </div>
     </div>
+    </SolarSceneProvider>
   )
 }

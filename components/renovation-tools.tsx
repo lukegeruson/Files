@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { RemodelCostCalculator } from "@/components/remodel-cost-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { HomeUpgradeAdvisor } from "@/components/home-upgrade-advisor"
+import { RenovationExplorer } from "@/components/renovation/renovation-explorer"
 
 type ToolId = "advisor" | "remodel"
 
@@ -59,8 +60,12 @@ export function RenovationTools() {
     <div
       ref={containerRef}
       id="renovation-calculators"
-      className="flex scroll-mt-24 flex-col gap-6"
+      className="flex scroll-mt-24 flex-col gap-10"
     >
+      {/* Interactive clay cutaway house sits above the calculators, the
+          renovation counterpart to the solar and landscape explorers. */}
+      <RenovationExplorer />
+
       {/* Tool switcher — additional renovation calculators slot in here. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
