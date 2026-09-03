@@ -6,8 +6,9 @@ import { SiteFooter } from "@/components/site-footer"
 import { ExplorerNav } from "@/components/careers/explorer-nav"
 import { ProfileStrip } from "@/components/careers/profile-strip"
 import { JobsReading } from "@/components/careers/jobs-reading"
-import { ClaySkillTree } from "@/components/careers/clay-skill-tree"
+import { EmailOpenings } from "@/components/careers/email-openings"
 import { CAREERS } from "@/lib/careers/careers"
+import { getEvergreen } from "@/lib/careers/companies"
 import { INDUSTRIES, INDUSTRY_META } from "@/lib/careers/industries"
 import { QUIZ_STEP_COUNT_WORD } from "@/lib/careers/quiz"
 import type { Career, Industry } from "@/lib/careers/types"
@@ -66,16 +67,18 @@ function industriesOf(career: Career): Industry[] {
 }
 
 export default function CareerExplorerPage() {
+  const evergreen = getEvergreen()
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <ExplorerNav />
       <main className="flex-1">
         <section className="mx-auto max-w-6xl px-4 pt-16 md:px-6">
-          {/* Two columns on large screens: the copy stays left while the clay
-              skill-tree sculpture sits top-right as a quiet illustration. On
-              smaller screens the sculpture is hidden so the hero stays lean. */}
-          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          {/* Two columns on large screens: the copy stays left while
+              Evergreen's own openings ride alongside it — the same "Working for
+              Evergreen" panel shown on the Companies tab. On smaller screens it
+              stacks below the hero copy. */}
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_21rem]">
             <div>
               <p className="text-sm font-medium uppercase tracking-widest text-primary">Careers</p>
               <h1 className="mt-3 max-w-4xl font-serif text-4xl font-semibold leading-tight tracking-tight text-balance md:text-5xl">
@@ -107,12 +110,42 @@ export default function CareerExplorerPage() {
                   className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-5 text-sm font-medium transition-colors hover:bg-secondary"
                 >
                   <Building2 className="size-4" />
-                  Work for Evergreen
+                  Explore Companies
                 </Link>
               </div>
             </div>
 
-            <ClaySkillTree className="mx-auto hidden w-full max-w-xs lg:block" />
+            {/* Same compact panel as the Companies tab: Evergreen is a single
+                employer, so a quick way to reach out sits beside the hero. */}
+            {evergreen ? (
+              <div className="rounded-xl border border-border bg-card p-5 lg:self-start">
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <h2 className="font-serif text-xl font-semibold tracking-tight">
+                    Working for Evergreen
+                  </h2>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {evergreen.city}, {evergreen.state}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  We currently have openings in Solar and Landscaping for lead
+                  generators in San Jose. We are also looking for digital PR
+                  Managers to help build relationships with other companies. If
+                  you are interested in these positions please email us
+                  directly.
+                </p>
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <EmailOpenings />
+                  <Link
+                    href="/jobs/tree"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary"
+                  >
+                    Browse all roles
+                    <ArrowRight className="size-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
 
