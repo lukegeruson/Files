@@ -26,12 +26,11 @@ import {
 
 // One matched clay render of the SAME cottage-corner yard per phase. The slider
 // crossfades between adjacent renders, so the yard appears to physically
-// transform as you move through the four stages.
+// transform as you move through the stages.
 const PHASE_SRC: Record<LandscapePhaseId, string> = {
   before: "/landscape-styles/corner-before.png",
   lawn: "/landscape-styles/corner-lawn.png",
   waterwise: "/landscape-styles/option-c-corner3d.png",
-  edible: "/landscape-styles/corner-edible.png",
 }
 
 // Evenly spaced anchor positions on the 0..1 timeline, one per phase.
@@ -177,9 +176,9 @@ export function LandscapeExplorer() {
           Landscape Planner Explorer
         </h2>
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
-          Slide through four stages — a bare lot, a traditional lawn, a
-          water-wise yard, and an edible garden — and watch the clay model
-          transform. Tap any area to see what it costs and how much water it uses.
+          Slide through three stages — a bare lot, a water-wise yard, and a
+          traditional lawn — and watch the clay model transform. Tap any area to
+          see what it costs and how much water it uses.
         </p>
       </div>
 
@@ -318,9 +317,9 @@ export function LandscapeExplorer() {
               className="landscape-slider h-3 w-full cursor-pointer appearance-none rounded-full"
               style={{
                 background:
-                  "linear-gradient(90deg, #b7a07a 0%, #84a955 34%, #5b9bd0 67%, #cf7a3a 100%)",
+                  "linear-gradient(90deg, #b7a07a 0%, #5b9bd0 50%, #84a955 100%)",
               }}
-              aria-label="Landscaping stage from bare lot to edible garden"
+              aria-label="Landscaping stage from bare lot to traditional lawn"
             />
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
               {LANDSCAPE_PHASES.map((p) => (

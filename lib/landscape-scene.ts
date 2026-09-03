@@ -198,7 +198,7 @@ export function computeLandscapePlan(waterWiseInput: number): LandscapePlan {
 // and "edible" (a raised-bed kitchen garden) are their own stops. Each phase
 // resolves to a full LandscapePlan so the metrics stay honest per phase.
 
-export type LandscapePhaseId = "before" | "lawn" | "waterwise" | "edible"
+export type LandscapePhaseId = "before" | "lawn" | "waterwise"
 
 export const LANDSCAPE_PHASES: {
   id: LandscapePhaseId
@@ -208,71 +208,7 @@ export const LANDSCAPE_PHASES: {
   { id: "before", label: "Before landscaping", short: "Before" },
   { id: "waterwise", label: "Water-wise", short: "Water-wise" },
   { id: "lawn", label: "Traditional lawn", short: "Lawn" },
-  { id: "edible", label: "Edible garden", short: "Edible" },
 ]
-
-/** Assemble a consistent plan from explicit tile counts + irrigation. */
-function assemblePlan(
-  cells: Record<Material, number>,
-  sprayZones: number,
-  dripZones: number,
-  plantingRate: number,
-  waterWiseTag: number,
-  opts: { hardscape?: boolean; trees?: boolean } = {},
-): LandscapePlan {
-  const area: Record<Material, number> = {
-    lawn: cells.lawn * CELL_SQFT,
-    planting: cells.planting * CELL_SQFT,
-    mulch: cells.mulch * CELL_SQFT,
-    gravel: cells.gravel * CELL_SQFT,
-  }
-  const mulchedSqft = area.planting + area.mulch
-  const mulchYards = (mulchedSqft * MULCH_DEPTH_FT) / 27
-  const totalZones = sprayZones + dripZones
-  const annualIrrigationGal =
-    area.lawn * LAWN_GAL_SQFT + area.planting * plantingRate
-  const baseline =
-    tiles(0.68) * CELL_SQFT * LAWN_GAL_SQFT +
-    tiles(0.2) * CELL_SQFT * PLANTING_GAL_SQFT_TRADITIONAL
-  const waterReductionPct = Math.max(
-    0,
-    Math.round(((baseline - annualIrrigationGal) / baseline) * 100),
-  )
-  const cost = {
-    lawn: area.lawn * LAWN_COST_SQFT,
-    planting: area.planting * PLANTING_COST_SQFT,
-    mulch: mulchYards * MULCH_COST_YARD,
-    gravel: area.gravel * GRAVEL_COST_SQFT,
-    irrigation: sprayZones * SPRAY_ZONE_COST + dripZones * DRIP_ZONE_COST,
-    hardscape: opts.hardscape === false ? 0 : HARDSCAPE_COST,
-    trees: opts.trees === false ? 0 : TREES_COST,
-  }
-  const estimatedCost = Math.round(
-    cost.lawn +
-      cost.planting +
-      cost.mulch +
-      cost.gravel +
-      cost.irrigation +
-      cost.hardscape +
-      cost.trees,
-  )
-  return {
-    waterWise: waterWiseTag,
-    totalAreaSqft: TOTAL_AREA_SQFT,
-    hardscapeSqft: opts.hardscape === false ? 0 : HARDSCAPE_SQFT,
-    cells,
-    area,
-    plantingSqft: area.planting,
-    mulchYards,
-    sprayZones,
-    dripZones,
-    totalZones,
-    annualIrrigationGal: Math.round(annualIrrigationGal),
-    waterReductionPct,
-    estimatedCost,
-    cost,
-  }
-}
 
 // A bare lot: nothing installed, nothing watered, nothing spent.
 const BEFORE_PLAN: LandscapePlan = {
@@ -292,17 +228,6 @@ const BEFORE_PLAN: LandscapePlan = {
   cost: { lawn: 0, planting: 0, mulch: 0, gravel: 0, irrigation: 0, hardscape: 0, trees: 0 },
 }
 
-// A productive kitchen garden: mostly raised veggie beds with gravel paths, a
-// little lawn to sit on, on drip irrigation. Thirstier than xeriscape but far
-// below a traditional lawn.
-const EDIBLE_PLAN: LandscapePlan = assemblePlan(
-  { lawn: 4, planting: 18, mulch: 4, gravel: 4 },
-  1, // spray
-  4, // drip
-  22, // gal/sqft for edible beds
-  0.6,
-)
-
 export function phasePlan(id: LandscapePhaseId): LandscapePlan {
   switch (id) {
     case "before":
@@ -311,8 +236,6 @@ export function phasePlan(id: LandscapePhaseId): LandscapePlan {
       return computeLandscapePlan(0)
     case "waterwise":
       return computeLandscapePlan(1)
-    case "edible":
-      return EDIBLE_PLAN
   }
 }
 
