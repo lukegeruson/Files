@@ -41,6 +41,14 @@ const SEASON_SRC = {
   winter: "/farm-styles/slab-winter.png",
 } as const
 
+// The square renders are letterboxed inside the 4:3 stage, so their left/right
+// edges (at 12.5% / 87.5% of the box) read as faint vertical lines against the
+// panel. Fading just those side edges to transparent dissolves the image cream
+// into the identical panel cream — the centered model and the sharp top/bottom
+// are untouched.
+const SIDE_FADE =
+  "linear-gradient(to right, transparent 10%, #000 18%, #000 82%, transparent 90%)"
+
 /* ------------------------------------------------------------------ *
  * Reduced motion
  * ------------------------------------------------------------------ */
@@ -380,6 +388,8 @@ export function FarmSimulator() {
                   style={{
                     opacity: seasonOpacity[i],
                     filter: "drop-shadow(0 22px 26px rgba(90,60,25,0.28))",
+                    WebkitMaskImage: SIDE_FADE,
+                    maskImage: SIDE_FADE,
                   }}
                   crossOrigin="anonymous"
                 />

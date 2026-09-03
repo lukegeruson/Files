@@ -34,6 +34,14 @@ import {
 const EXTERIOR_SRC = "/renovation-styles/option-b-exterior.png"
 const INTERIOR_SRC = "/renovation-styles/reveal-interior.png"
 
+// The square renders are letterboxed inside the 4:3 stage, so their left/right
+// edges (at 12.5% / 87.5% of the box) read as faint vertical lines against the
+// panel. Fading just those side edges to transparent dissolves the image cream
+// into the identical panel cream — the centered house and the sharp top/bottom
+// are untouched.
+const SIDE_FADE =
+  "linear-gradient(to right, transparent 10%, #000 18%, #000 82%, transparent 90%)"
+
 /* ------------------------------------------------------------------ *
  * Hotspot positions, tuned to the interior cutaway render (% of stage)
  * ------------------------------------------------------------------ */
@@ -226,6 +234,8 @@ export function RenovationExplorer() {
               style={{
                 opacity: exteriorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
+                WebkitMaskImage: SIDE_FADE,
+                maskImage: SIDE_FADE,
               }}
               crossOrigin="anonymous"
             />
@@ -237,6 +247,8 @@ export function RenovationExplorer() {
               style={{
                 opacity: interiorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
+                WebkitMaskImage: SIDE_FADE,
+                maskImage: SIDE_FADE,
               }}
               crossOrigin="anonymous"
             />

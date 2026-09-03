@@ -72,7 +72,7 @@ export function LandscapingTools() {
         <div
           role="tablist"
           aria-label="Landscaping calculators"
-          className="flex flex-wrap gap-2"
+          className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
         >
           {TOOLS.map((tool) => {
             const isActive = tool.id === active
@@ -86,7 +86,7 @@ export function LandscapingTools() {
                 id={`landscaping-tab-${tool.id}`}
                 onClick={() => setActive(tool.id)}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors",
+                  "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm transition-colors",
                   isActive
                     ? "border-primary bg-primary/15 font-medium text-foreground"
                     : "border-input bg-background text-muted-foreground hover:border-ring hover:text-foreground",
