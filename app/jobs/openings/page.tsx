@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowRight, Info } from "lucide-react"
+import { ArrowRight, Info, MapPin } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ExplorerNav } from "@/components/careers/explorer-nav"
@@ -81,13 +81,26 @@ export default async function CompaniesPage() {
                     {evergreen.city}, {evergreen.state}
                   </span>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  We currently have openings in Solar and Landscaping for lead
-                  generators in San Jose. We are also looking for digital PR
-                  Managers to help build relationships with other companies. If
-                  you are interested in these positions please email us
-                  directly.
-                </p>
+                <ul className="mt-4 flex flex-col gap-2.5">
+                  <li className="rounded-lg border border-border bg-secondary/40 px-4 py-3.5">
+                    <p className="font-medium leading-snug text-balance">
+                      Door to Door Lead Generation
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+                      San Jose
+                    </p>
+                  </li>
+                  <li className="rounded-lg border border-border bg-secondary/40 px-4 py-3.5">
+                    <p className="font-medium leading-snug text-balance">
+                      SEO Link Building Specialist
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+                      Remote
+                    </p>
+                  </li>
+                </ul>
                 <div className="mt-5 flex flex-wrap items-center gap-3">
                   <EmailOpenings />
                   <Link
