@@ -7,11 +7,11 @@ import { cn } from "@/lib/utils"
 const LINKS = [
   { href: "/jobs", label: "Overview" },
   { href: "/jobs/tree", label: "Skill Tree" },
-  { href: "/jobs/openings", label: "Companies" },
   // Quiz and matches are one destination: finishing the quiz swaps to results
   // in place, so splitting them into two tabs advertised a navigation step
   // that no longer exists.
   { href: "/jobs/quiz", label: "Matches" },
+  { href: "/jobs/openings", label: "Companies" },
 ] as const
 
 /**
