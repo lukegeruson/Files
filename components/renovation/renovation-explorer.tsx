@@ -71,8 +71,8 @@ export function RenovationExplorer() {
 
   const [selectedIds, setSelectedIds] = useState<UpgradeId[]>([])
   const [active, setActive] = useState<UpgradeId | null>(null)
-  // 0 = closed exterior (default), 1 = fully revealed interior cutaway.
-  const [reveal, setReveal] = useState(0)
+  // Two discrete views: closed exterior (default) and the interior cutaway.
+  const [open, setOpen] = useState(false)
 
   const plan = useMemo(() => computePlan(selectedIds), [selectedIds])
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -92,16 +92,19 @@ export function RenovationExplorer() {
   const reset = () => {
     setSelectedIds([])
     setActive(null)
-    setReveal(0)
+    setOpen(false)
+  }
+  const closeHouse = () => {
+    setOpen(false)
+    setActive(null)
   }
 
-  const interiorOpacity = reveal
-  const exteriorOpacity = 1 - reveal
-  // Pins fade in slightly after the house starts opening, and only become
-  // clickable once the interior is clearly visible.
-  const pinOpacity = Math.max(0, Math.min(1, (reveal - 0.12) / 0.3))
-  const pinsInteractive = pinOpacity > 0.35
-  const isOpen = reveal > 0.5
+  const interiorOpacity = open ? 1 : 0
+  const exteriorOpacity = open ? 0 : 1
+  // Pins only exist once we're looking at the interior.
+  const pinOpacity = open ? 1 : 0
+  const pinsInteractive = open
+  const isOpen = open
 
   return (
     <section
@@ -118,55 +121,55 @@ export function RenovationExplorer() {
           </h3>
         </div>
         <p className="text-pretty text-sm text-muted-foreground">
-          Slide the house open to peek inside, then tap an upgrade to build a
-          plan and see what to tackle first. Illustrative national-average
-          figures, not an inspection or a quote.
+          Tap the house to see inside, then tap an upgrade to build a plan and
+          see what to tackle first. Illustrative national-average figures, not
+          an inspection or a quote.
         </p>
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         {/* Left column — reveal control + plan */}
         <div className="flex shrink-0 flex-col gap-3 lg:w-72">
-          {/* Reveal control */}
+          {/* View control — a two-stop toggle between the exterior and the
+              interior cutaway. */}
           <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                View
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
-                {isOpen ? (
-                  <>
-                    <Eye className="size-3" aria-hidden="true" /> Interior
-                  </>
-                ) : (
-                  <>
-                    <Home className="size-3" aria-hidden="true" /> Exterior
-                  </>
-                )}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={reveal}
-              onChange={(e) => setReveal(Number.parseFloat(e.target.value))}
-              className="reno-reveal-slider h-2.5 w-full cursor-pointer appearance-none rounded-full"
-              aria-label="Reveal interior"
-            />
-            <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
-              <span>Closed</span>
-              <span>Open</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setReveal((r) => (r > 0.5 ? 0 : 1))}
-              className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-primary bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition hover:brightness-105"
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              View
+            </span>
+            <div
+              role="group"
+              aria-label="Toggle house view"
+              className="mt-2 grid grid-cols-2 gap-1 rounded-full border border-border bg-muted p-1"
             >
-              <Eye className="size-4" aria-hidden="true" />
-              {isOpen ? "Close the house" : "Peek inside"}
-            </button>
+              <button
+                type="button"
+                onClick={closeHouse}
+                aria-pressed={!isOpen}
+                className={cn(
+                  "inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
+                  !isOpen
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Home className="size-4" aria-hidden="true" />
+                Outside
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                aria-pressed={isOpen}
+                className={cn(
+                  "inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
+                  isOpen
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Eye className="size-4" aria-hidden="true" />
+                Inside
+              </button>
+            </div>
           </div>
 
           {/* Plan summary */}
@@ -263,7 +266,7 @@ export function RenovationExplorer() {
             <img
               src={EXTERIOR_SRC || "/placeholder.svg"}
               alt="Clay model house, exterior"
-              className="absolute inset-0 size-full object-contain transition-opacity duration-200"
+              className="absolute inset-0 size-full object-contain transition-opacity duration-300"
               style={{
                 opacity: exteriorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
@@ -274,7 +277,7 @@ export function RenovationExplorer() {
             <img
               src={INTERIOR_SRC || "/placeholder.svg"}
               alt="Clay model house, interior cutaway showing rooms and systems"
-              className="absolute inset-0 size-full object-contain transition-opacity duration-200"
+              className="absolute inset-0 size-full object-contain transition-opacity duration-300"
               style={{
                 opacity: interiorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
@@ -282,9 +285,19 @@ export function RenovationExplorer() {
               crossOrigin="anonymous"
             />
 
+            {/* Click the closed house itself to open it. */}
+            {!isOpen && (
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                aria-label="Open the house to see inside"
+                className="absolute inset-0 z-10 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            )}
+
             {/* Hotspots (fade in as the house opens) */}
             <div
-              className="absolute inset-0 transition-opacity duration-200"
+              className="absolute inset-0 transition-opacity duration-300"
               style={{
                 opacity: pinOpacity,
                 pointerEvents: pinsInteractive ? "auto" : "none",
@@ -344,10 +357,10 @@ export function RenovationExplorer() {
 
             {/* Prompt when the house is closed */}
             {!isOpen && (
-              <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+              <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-card/85 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-md">
                   <DoorOpen className="size-3.5 text-primary" aria-hidden="true" />
-                  Drag the View slider to open the house
+                  Tap the house to see inside
                 </span>
               </div>
             )}
@@ -446,31 +459,6 @@ export function RenovationExplorer() {
         </p>
       </div>
 
-      <style jsx>{`
-        .reno-reveal-slider {
-          background: linear-gradient(90deg, #d8cdb8 0%, #c0563c 100%);
-        }
-        .reno-reveal-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          height: 20px;
-          width: 20px;
-          border-radius: 9999px;
-          background: #ffffff;
-          border: 3px solid var(--primary);
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-          cursor: pointer;
-        }
-        .reno-reveal-slider::-moz-range-thumb {
-          height: 20px;
-          width: 20px;
-          border-radius: 9999px;
-          background: #ffffff;
-          border: 3px solid var(--primary);
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-          cursor: pointer;
-        }
-      `}</style>
     </section>
   )
 }
