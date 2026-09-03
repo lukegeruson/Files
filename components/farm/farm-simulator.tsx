@@ -174,10 +174,12 @@ export function FarmSimulator() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-        {/* Left column — live metrics + controls */}
-        <div className="flex shrink-0 flex-col gap-3 lg:w-72">
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+      <div className="flex flex-col gap-4">
+        {/* Controls sit below the visual. On wide screens the three boxes lay
+            out as a row of equal columns; on mobile they stack. `order-2`
+            drops them beneath the stage (which is `order-1`). */}
+        <div className="order-2 grid gap-3 md:grid-cols-3">
+          <div className="h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               This season
             </p>
@@ -207,7 +209,7 @@ export function FarmSimulator() {
           </div>
 
           {/* Season control */}
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+          <div className="h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Season
@@ -274,8 +276,8 @@ export function FarmSimulator() {
             </div>
           </div>
 
-          {/* Crop diversity — stacked beneath the season panel in the left column */}
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+          {/* Crop diversity */}
+          <div className="h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-semibold text-foreground">
                 Crop diversity
@@ -351,8 +353,9 @@ export function FarmSimulator() {
         {/* Clay diorama stage — rounded cream panel matching the other
             explorers. The render is a square image baked on a flat cream
             background, so the panel uses that same flat cream: the square
-            letterboxed inside this box blends seamlessly with no edge line. */}
-        <div className="relative flex-1 overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+            letterboxed inside this box blends seamlessly with no edge line.
+            `order-1` keeps it above the control boxes. */}
+        <div className="relative order-1 overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
           <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl">
             {/* Sun */}
             {!reducedMotion && (
