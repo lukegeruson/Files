@@ -477,9 +477,6 @@ export function SolarExplorer() {
         <span className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Time of day
         </span>
-        <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-foreground">
-          {frame.label}
-        </span>
       </div>
       <div className="flex min-h-0 flex-1 items-stretch gap-2">
         {/* Ticks positioned at their actual time so labels line up with the
