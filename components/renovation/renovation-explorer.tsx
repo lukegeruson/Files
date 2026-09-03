@@ -206,16 +206,12 @@ export function RenovationExplorer() {
         </div>
 
         {/* Clay diorama stage — framed with the same rounded cream panel the
-            other explorers use. Padding keeps the model and pins off the
-            border, and object-contain guarantees nothing is cropped. */}
+            other explorers use. The renders are square images baked on flat
+            cream, so the panel uses that same flat cream: the square
+            letterboxed inside blends in with no visible edge line, and
+            object-contain guarantees nothing is cropped. */}
         <div className="relative flex-1">
-          <div
-            className="relative mx-auto aspect-[4/3] w-full max-w-3xl overflow-hidden rounded-3xl border border-[#e4d9c2] p-3 sm:p-5"
-            style={{
-              background:
-                "radial-gradient(120% 90% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
-            }}
-          >
+          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
             {/* Floating shadow */}
             <div
               className="pointer-events-none absolute left-1/2 bottom-[10%] h-[8%] w-[60%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl"
