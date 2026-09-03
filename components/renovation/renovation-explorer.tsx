@@ -34,31 +34,24 @@ import {
 const EXTERIOR_SRC = "/renovation-styles/option-b-exterior.png"
 const INTERIOR_SRC = "/renovation-styles/reveal-interior.png"
 
-// The square renders are letterboxed inside the 4:3 stage, so their left/right
-// edges (at 12.5% / 87.5% of the box) read as faint vertical lines against the
-// panel. Fading just those side edges to transparent dissolves the image cream
-// into the identical panel cream — the centered house and the sharp top/bottom
-// are untouched.
-const SIDE_FADE =
-  "linear-gradient(to right, transparent 10%, #000 18%, #000 82%, transparent 90%)"
 
 /* ------------------------------------------------------------------ *
  * Hotspot positions, tuned to the interior cutaway render (% of stage)
  * ------------------------------------------------------------------ */
 const PIN_POS: Record<UpgradeId, { x: number; y: number }> = {
-  roof: { x: 52, y: 20 },
-  insulation: { x: 40, y: 27 },
-  windows: { x: 17, y: 37 },
-  siding: { x: 13, y: 47 },
-  doors: { x: 60, y: 59 },
-  electrical: { x: 53, y: 72 },
-  hvac: { x: 39, y: 71 },
-  plumbing: { x: 58, y: 66 },
-  waterHeater: { x: 45, y: 75 },
-  flooring: { x: 40, y: 63 },
-  lighting: { x: 47, y: 46 },
-  bathroom: { x: 70, y: 52 },
-  kitchen: { x: 26, y: 52 },
+  roof: { x: 52.7, y: 20 },
+  insulation: { x: 36.7, y: 27 },
+  windows: { x: 6, y: 37 },
+  siding: { x: 1, y: 47 },
+  doors: { x: 63.3, y: 59 },
+  electrical: { x: 54, y: 72 },
+  hvac: { x: 35.3, y: 71 },
+  plumbing: { x: 60.7, y: 66 },
+  waterHeater: { x: 43.3, y: 75 },
+  flooring: { x: 36.7, y: 63 },
+  lighting: { x: 46, y: 46 },
+  bathroom: { x: 76.7, y: 52 },
+  kitchen: { x: 18, y: 52 },
 }
 
 function useReducedMotion() {
@@ -213,13 +206,12 @@ export function RenovationExplorer() {
           </div>
         </div>
 
-        {/* Clay diorama stage — framed with the same rounded cream panel the
-            other explorers use. The renders are square images baked on flat
-            cream, so the panel uses that same flat cream: the square
-            letterboxed inside blends in with no visible edge line, and
-            object-contain guarantees nothing is cropped. */}
+        {/* Clay diorama stage — a square panel like the landscape/solar
+            explorers. The renders are square images, so an aspect-square panel
+            lets them fill edge-to-edge with no letterbox and therefore no side
+            edge line, while object-contain still guarantees nothing is cropped. */}
         <div className="relative flex-1">
-          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+          <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
             {/* Floating shadow */}
             <div
               className="pointer-events-none absolute left-1/2 bottom-[10%] h-[8%] w-[60%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl"
@@ -234,8 +226,6 @@ export function RenovationExplorer() {
               style={{
                 opacity: exteriorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
-                WebkitMaskImage: SIDE_FADE,
-                maskImage: SIDE_FADE,
               }}
               crossOrigin="anonymous"
             />
@@ -247,8 +237,6 @@ export function RenovationExplorer() {
               style={{
                 opacity: interiorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
-                WebkitMaskImage: SIDE_FADE,
-                maskImage: SIDE_FADE,
               }}
               crossOrigin="anonymous"
             />

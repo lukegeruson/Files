@@ -41,13 +41,6 @@ const SEASON_SRC = {
   winter: "/farm-styles/slab-winter.png",
 } as const
 
-// The square renders are letterboxed inside the 4:3 stage, so their left/right
-// edges (at 12.5% / 87.5% of the box) read as faint vertical lines against the
-// panel. Fading just those side edges to transparent dissolves the image cream
-// into the identical panel cream — the centered model and the sharp top/bottom
-// are untouched.
-const SIDE_FADE =
-  "linear-gradient(to right, transparent 10%, #000 18%, #000 82%, transparent 90%)"
 
 /* ------------------------------------------------------------------ *
  * Reduced motion
@@ -76,12 +69,13 @@ type Spot = {
   y: number
 }
 
+// x values are the horizontal position across the square render (0–100%).
 const SPOTS: Spot[] = [
-  { id: "fields", label: "Crop fields", x: 30, y: 58 },
-  { id: "farmhouse", label: "Farmstead", x: 45, y: 50 },
-  { id: "barn", label: "Barn & equipment", x: 63, y: 41 },
-  { id: "silos", label: "Grain storage", x: 74, y: 31 },
-  { id: "pond", label: "Irrigation pond", x: 48, y: 71 },
+  { id: "fields", label: "Crop fields", x: 23.3, y: 58 },
+  { id: "farmhouse", label: "Farmstead", x: 43.3, y: 50 },
+  { id: "barn", label: "Barn & equipment", x: 67.3, y: 41 },
+  { id: "silos", label: "Grain storage", x: 82, y: 31 },
+  { id: "pond", label: "Irrigation pond", x: 47.3, y: 71 },
 ]
 
 /* ------------------------------------------------------------------ *
@@ -149,7 +143,7 @@ export function FarmSimulator() {
   }, [season])
 
   // Sun arc position across the top of the stage.
-  const sunLeft = 12 + season * 76
+  const sunLeft = 2 + season * 96
   const sunTop = 26 - Math.sin(season * Math.PI) * 18
 
   return (
@@ -350,13 +344,12 @@ export function FarmSimulator() {
           </div>
         </div>
 
-        {/* Clay diorama stage — rounded cream panel matching the other
-            explorers. The render is a square image baked on a flat cream
-            background, so the panel uses that same flat cream: the square
-            letterboxed inside this box blends seamlessly with no edge line.
-            `order-1` keeps it above the control boxes. */}
-        <div className="relative order-1 overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
-          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl">
+        {/* Clay diorama stage — a square panel like the landscape/solar
+            explorers. The render is a square image, so an aspect-square panel
+            lets it fill edge-to-edge with no letterbox and therefore no side
+            edge line. `order-1` keeps it above the control boxes. */}
+        <div className="relative order-1 aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+          <div className="absolute inset-0">
             {/* Sun */}
             {!reducedMotion && (
               <div
@@ -391,8 +384,6 @@ export function FarmSimulator() {
                   style={{
                     opacity: seasonOpacity[i],
                     filter: "drop-shadow(0 22px 26px rgba(90,60,25,0.28))",
-                    WebkitMaskImage: SIDE_FADE,
-                    maskImage: SIDE_FADE,
                   }}
                   crossOrigin="anonymous"
                 />
