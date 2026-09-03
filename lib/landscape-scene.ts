@@ -206,8 +206,8 @@ export const LANDSCAPE_PHASES: {
   short: string
 }[] = [
   { id: "before", label: "Before landscaping", short: "Before" },
-  { id: "lawn", label: "Traditional lawn", short: "Lawn" },
   { id: "waterwise", label: "Water-wise", short: "Water-wise" },
+  { id: "lawn", label: "Traditional lawn", short: "Lawn" },
   { id: "edible", label: "Edible garden", short: "Edible" },
 ]
 
