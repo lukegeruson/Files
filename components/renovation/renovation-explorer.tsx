@@ -128,8 +128,12 @@ export function RenovationExplorer() {
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-        {/* Left column — reveal control + plan */}
-        <div className="flex shrink-0 flex-col gap-3 lg:w-72">
+        {/* Left column — reveal control + plan. On mobile it uses
+            `display: contents` so its children join the outer flex flow, which
+            lets the plan card drop below the stage (see `order-last` below)
+            while the view toggle stays on top. On desktop it re-forms a real
+            column beside the stage. */}
+        <div className="contents lg:flex lg:w-72 lg:shrink-0 lg:flex-col lg:gap-3">
           {/* View control — a two-stop toggle between the exterior and the
               interior cutaway. */}
           <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
@@ -172,8 +176,9 @@ export function RenovationExplorer() {
             </div>
           </div>
 
-          {/* Plan summary */}
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+          {/* Plan summary — sits below the stage on mobile, back in the left
+              column on desktop. */}
+          <div className="order-last rounded-2xl border border-border bg-card p-3 shadow-sm lg:order-none">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Your plan
