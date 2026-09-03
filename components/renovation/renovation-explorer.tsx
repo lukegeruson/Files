@@ -34,13 +34,6 @@ import {
 const EXTERIOR_SRC = "/renovation-styles/option-b-exterior.png"
 const INTERIOR_SRC = "/renovation-styles/reveal-interior.png"
 
-// The clay renders have a solid cream rectangle baked in. Fading the outer
-// edge with a radial mask dissolves that rectangle so the model appears to
-// float on the page with no visible box edge. The house sits in the center,
-// so only the empty cream margin is affected.
-const EDGE_MASK =
-  "radial-gradient(118% 118% at 50% 46%, #000 70%, transparent 100%)"
-
 /* ------------------------------------------------------------------ *
  * Hotspot positions, tuned to the interior cutaway render (% of stage)
  * ------------------------------------------------------------------ */
@@ -212,10 +205,17 @@ export function RenovationExplorer() {
           </div>
         </div>
 
-        {/* Clay diorama stage — no border or panel background so the model
-            floats directly on the page without a visible box edge. */}
+        {/* Clay diorama stage — framed with the same rounded cream panel the
+            other explorers use. Padding keeps the model and pins off the
+            border, and object-contain guarantees nothing is cropped. */}
         <div className="relative flex-1">
-          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl">
+          <div
+            className="relative mx-auto aspect-[4/3] w-full max-w-3xl overflow-hidden rounded-3xl border border-[#e4d9c2] p-3 sm:p-5"
+            style={{
+              background:
+                "radial-gradient(120% 90% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
+            }}
+          >
             {/* Floating shadow */}
             <div
               className="pointer-events-none absolute left-1/2 bottom-[10%] h-[8%] w-[60%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl"
@@ -230,8 +230,6 @@ export function RenovationExplorer() {
               style={{
                 opacity: exteriorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
-                WebkitMaskImage: EDGE_MASK,
-                maskImage: EDGE_MASK,
               }}
               crossOrigin="anonymous"
             />
@@ -243,8 +241,6 @@ export function RenovationExplorer() {
               style={{
                 opacity: interiorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
-                WebkitMaskImage: EDGE_MASK,
-                maskImage: EDGE_MASK,
               }}
               crossOrigin="anonymous"
             />

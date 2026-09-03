@@ -340,15 +340,16 @@ export function FarmSimulator() {
           </div>
         </div>
 
-        {/* Clay diorama stage */}
+        {/* Clay diorama stage — cream rounded panel matching the other
+            explorers. Padding keeps the slab and markers off the border. */}
         <div
-          className="relative flex-1 overflow-hidden rounded-3xl border border-border"
+          className="relative flex-1 overflow-hidden rounded-3xl border border-[#e4d9c2]"
           style={{
             background:
               "radial-gradient(120% 90% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
           }}
         >
-          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl">
+          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl p-2 sm:p-4">
             {/* Sun */}
             {!reducedMotion && (
               <div
