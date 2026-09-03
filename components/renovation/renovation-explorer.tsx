@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react"
 import {
   Check,
   DoorOpen,
-  Eye,
   Home,
   Info,
   Plus,
@@ -34,6 +33,13 @@ import {
 
 const EXTERIOR_SRC = "/renovation-styles/option-b-exterior.png"
 const INTERIOR_SRC = "/renovation-styles/reveal-interior.png"
+
+// The clay renders have a solid cream rectangle baked in. Fading the outer
+// edge with a radial mask dissolves that rectangle so the model appears to
+// float on the page with no visible box edge. The house sits in the center,
+// so only the empty cream margin is affected.
+const EDGE_MASK =
+  "radial-gradient(118% 118% at 50% 46%, #000 70%, transparent 100%)"
 
 /* ------------------------------------------------------------------ *
  * Hotspot positions, tuned to the interior cutaway render (% of stage)
@@ -94,10 +100,6 @@ export function RenovationExplorer() {
     setActive(null)
     setOpen(false)
   }
-  const closeHouse = () => {
-    setOpen(false)
-    setActive(null)
-  }
 
   const interiorOpacity = open ? 1 : 0
   const exteriorOpacity = open ? 0 : 1
@@ -134,48 +136,6 @@ export function RenovationExplorer() {
             while the view toggle stays on top. On desktop it re-forms a real
             column beside the stage. */}
         <div className="contents lg:flex lg:w-72 lg:shrink-0 lg:flex-col lg:gap-3">
-          {/* View control — a two-stop toggle between the exterior and the
-              interior cutaway. */}
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              View
-            </span>
-            <div
-              role="group"
-              aria-label="Toggle house view"
-              className="mt-2 grid grid-cols-2 gap-1 rounded-full border border-border bg-muted p-1"
-            >
-              <button
-                type="button"
-                onClick={closeHouse}
-                aria-pressed={!isOpen}
-                className={cn(
-                  "inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
-                  !isOpen
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Home className="size-4" aria-hidden="true" />
-                Outside
-              </button>
-              <button
-                type="button"
-                onClick={() => setOpen(true)}
-                aria-pressed={isOpen}
-                className={cn(
-                  "inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
-                  isOpen
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Eye className="size-4" aria-hidden="true" />
-                Inside
-              </button>
-            </div>
-          </div>
-
           {/* Plan summary — sits below the stage on mobile, back in the left
               column on desktop. */}
           <div className="order-last rounded-2xl border border-border bg-card p-3 shadow-sm lg:order-none">
@@ -252,14 +212,9 @@ export function RenovationExplorer() {
           </div>
         </div>
 
-        {/* Clay diorama stage */}
-        <div
-          className="relative flex-1 overflow-hidden rounded-3xl border border-border"
-          style={{
-            background:
-              "radial-gradient(120% 90% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
-          }}
-        >
+        {/* Clay diorama stage — no border or panel background so the model
+            floats directly on the page without a visible box edge. */}
+        <div className="relative flex-1">
           <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl">
             {/* Floating shadow */}
             <div
@@ -275,6 +230,8 @@ export function RenovationExplorer() {
               style={{
                 opacity: exteriorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
+                WebkitMaskImage: EDGE_MASK,
+                maskImage: EDGE_MASK,
               }}
               crossOrigin="anonymous"
             />
@@ -286,6 +243,8 @@ export function RenovationExplorer() {
               style={{
                 opacity: interiorOpacity,
                 filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
+                WebkitMaskImage: EDGE_MASK,
+                maskImage: EDGE_MASK,
               }}
               crossOrigin="anonymous"
             />
