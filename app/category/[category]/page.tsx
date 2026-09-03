@@ -101,10 +101,23 @@ export default async function CategoryPage({
             now that the visible category header has been removed. */}
         <h1 className="sr-only">{CATEGORY_LABELS[category]}</h1>
 
-        <div className="mx-auto max-w-6xl px-4 pt-8 md:px-6">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-8 md:px-6">
           <Breadcrumbs
             items={[{ name: "Home", href: "/" }, { name: CATEGORY_LABELS[category] }]}
           />
+          {/* Quick links to the sibling category pages so visitors can hop
+              between guides without going back to the home page. */}
+          <nav aria-label="Other categories" className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {CATEGORIES.filter((c) => c !== category).map((c) => (
+              <a
+                key={c}
+                href={`/category/${c}`}
+                className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                {CATEGORY_LABELS[c]}
+              </a>
+            ))}
+          </nav>
         </div>
 
         {category === "solar" ? (
