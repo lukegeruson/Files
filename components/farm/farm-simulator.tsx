@@ -173,7 +173,7 @@ export function FarmSimulator() {
             out as a row of equal columns; on mobile they stack. `order-2`
             drops them beneath the stage (which is `order-1`). */}
         <div className="order-2 grid gap-3 md:grid-cols-3">
-          <div className="h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
+          <div className="order-2 h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               This season
             </p>
@@ -202,8 +202,9 @@ export function FarmSimulator() {
             </div>
           </div>
 
-          {/* Season control */}
-          <div className="h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
+          {/* Season control — placed first so it sits above "This season" on
+              mobile and to its left on desktop. */}
+          <div className="order-1 h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Season
@@ -271,7 +272,7 @@ export function FarmSimulator() {
           </div>
 
           {/* Crop diversity */}
-          <div className="h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
+          <div className="order-3 h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-semibold text-foreground">
                 Crop diversity
