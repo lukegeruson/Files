@@ -220,13 +220,17 @@ const TICKS: Array<{ label: string; icon: typeof Sun }> = [
   { label: "Night", icon: Moon },
 ]
 
-// Same legend for the vertical desktop slider, with the hour each label maps to
-// so it can be positioned along the 0–24 axis (bottom = 0:00, top = 24:00).
-const VERTICAL_TICKS: Array<{ label: string; icon: typeof Sun; hour: number }> = [
-  { label: "Morning", icon: Sunrise, hour: 6 },
-  { label: "Midday", icon: Sun, hour: 12 },
-  { label: "Evening", icon: Sunset, hour: 18 },
-  { label: "Night", icon: Moon, hour: 24 },
+// Legend for the vertical desktop slider. The axis is a full day rotated so
+// that noon sits at the top and midnight in the middle (see VerticalTimeSlider).
+// Reading top → bottom follows the day forward: noon, evening, midnight,
+// morning, and back to noon. `pos` is the percentage from the bottom of the
+// track where each label sits.
+const VERTICAL_TICKS: Array<{ label: string; icon: typeof Sun; pos: number }> = [
+  { label: "Noon", icon: Sun, pos: 100 },
+  { label: "Evening", icon: Sunset, pos: 75 },
+  { label: "Midnight", icon: Moon, pos: 50 },
+  { label: "Morning", icon: Sunrise, pos: 25 },
+  { label: "Noon", icon: Sun, pos: 0 },
 ]
 
 const DAY_SECONDS = 18 // one simulated day plays over ~18s
@@ -468,8 +472,8 @@ export function SolarExplorer() {
 
   // Vertical variant of the timeline used in the desktop left column. It fills
   // the height of its card so the two info boxes together match the stage.
-  // Bottom = midnight, middle = midday (brightest), top = midnight — the same
-  // ordering as the horizontal slider, just rotated.
+  // Top = noon (brightest), middle = midnight, bottom = noon — a full day
+  // rotated so midday leads at the top.
   const renderTimelineVertical = () => (
     <div className="flex h-full flex-col gap-2">
       {/* Header stacks so it fits the thin box. */}
@@ -479,19 +483,19 @@ export function SolarExplorer() {
         </span>
       </div>
       <div className="flex min-h-0 flex-1 items-stretch gap-2">
-        {/* Ticks positioned at their actual time so labels line up with the
-            gradient: midday at the bright middle, night at the dark ends. The
-            inner region is inset vertically so the top/bottom labels don't clip
-            into the header. Ticks sit to the left of the slider. */}
+        {/* Ticks positioned to match the gradient: noon (bright) at top and
+            bottom, midnight (dark) in the middle. The inner region is inset
+            vertically so the top/bottom labels don't clip into the header.
+            Ticks sit to the left of the slider. */}
         <div className="relative flex-1 text-[11px] text-muted-foreground">
           <div className="absolute inset-x-0 inset-y-2">
             {VERTICAL_TICKS.map((t) => {
               const Icon = t.icon
               return (
                 <span
-                  key={t.label}
+                  key={`${t.label}-${t.pos}`}
                   className="absolute flex -translate-y-1/2 items-center gap-1.5"
-                  style={{ bottom: `${(t.hour / 24) * 100}%` }}
+                  style={{ bottom: `${t.pos}%` }}
                 >
                   <Icon className="size-3 shrink-0" aria-hidden="true" />
                   {t.label}
@@ -870,15 +874,24 @@ function VerticalTimeSlider({
   const trackRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
 
+  // The track is a full day rotated so noon is at the top and bottom while
+  // midnight sits in the middle. Position `p` runs 0 (bottom) → 1 (top):
+  //   top half   [0.5, 1] → hours 24 → 12  (midnight up to noon)
+  //   bottom half [0, 0.5) → hours 12 → 0   (noon down to midnight)
+  const hourToPos = (h: number) => (h >= 12 ? (36 - h) / 24 : (12 - h) / 24)
+  const posToHour = (p: number) => {
+    const clamped = Math.max(0, Math.min(1, p))
+    const h = clamped >= 0.5 ? 36 - 24 * clamped : 12 - 24 * clamped
+    return Math.round(h * 4) / 4 // snap to 0.25h steps
+  }
+
   const setFromClientY = (clientY: number) => {
     const el = trackRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
     if (rect.height === 0) return
-    // Bottom of the track is 0:00, top is 24:00.
-    const pct = 1 - (clientY - rect.top) / rect.height
-    const clamped = Math.max(0, Math.min(1, pct))
-    onChange(Math.round(clamped * 24 * 4) / 4) // snap to 0.25h steps
+    const p = 1 - (clientY - rect.top) / rect.height
+    onChange(posToHour(p))
   }
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -894,36 +907,40 @@ function VerticalTimeSlider({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    let next = value
+    // Operate on position so the thumb always moves in the pressed direction,
+    // regardless of how hours wrap across the rotated axis.
+    let p = hourToPos(value)
+    const small = 0.25 / 24
+    const big = 1 / 24
     switch (e.key) {
       case "ArrowUp":
       case "ArrowRight":
-        next = Math.min(24, value + 0.25)
+        p += small
         break
       case "ArrowDown":
       case "ArrowLeft":
-        next = Math.max(0, value - 0.25)
+        p -= small
         break
       case "PageUp":
-        next = Math.min(24, value + 1)
+        p += big
         break
       case "PageDown":
-        next = Math.max(0, value - 1)
+        p -= big
         break
       case "Home":
-        next = 0
+        p = 0
         break
       case "End":
-        next = 24
+        p = 1
         break
       default:
         return
     }
     e.preventDefault()
-    onChange(next)
+    onChange(posToHour(Math.max(0, Math.min(1, p))))
   }
 
-  const pct = (value / 24) * 100
+  const pct = hourToPos(value) * 100
 
   return (
     <div
@@ -942,7 +959,7 @@ function VerticalTimeSlider({
       className="relative h-full w-2.5 shrink-0 cursor-pointer touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       style={{
         background:
-          "linear-gradient(to top, #1e293b 0%, #6b5b95 18%, #f5b445 40%, #ffe6a8 50%, #f5b445 60%, #6b5b95 82%, #1e293b 100%)",
+          "linear-gradient(to top, #ffe6a8 0%, #f5b445 12%, #6b5b95 34%, #1e293b 50%, #6b5b95 66%, #f5b445 88%, #ffe6a8 100%)",
       }}
     >
       <span
