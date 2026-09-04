@@ -168,11 +168,12 @@ export function FarmSimulator() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4">
-        {/* Controls sit below the visual. On wide screens the three boxes lay
-            out as a row of equal columns; on mobile they stack. `order-2`
-            drops them beneath the stage (which is `order-1`). */}
-        <div className="order-2 grid gap-3 md:grid-cols-3">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        {/* Controls form a left sidebar on desktop (stacked in a single
+            column). On tablet they lay out as a row of three below the visual;
+            on mobile they stack. `order-last` drops them under the stage until
+            the desktop row re-forms them beside it. */}
+        <div className="order-last grid gap-3 md:grid-cols-3 lg:order-none lg:w-72 lg:shrink-0 lg:grid-cols-1">
           <div className="order-2 h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               This season
@@ -348,9 +349,11 @@ export function FarmSimulator() {
         {/* Clay diorama stage — a square panel like the landscape/solar
             explorers. The render is a square image, so an aspect-square panel
             lets it fill edge-to-edge with no letterbox and therefore no side
-            edge line. `order-1` keeps it above the control boxes. */}
-        <div className="relative order-1 aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
-          <div className="absolute inset-0">
+            edge line. `order-1` keeps it above the controls on mobile; on
+            desktop it becomes the right column beside the control sidebar. */}
+        <div className="order-1 flex flex-1 justify-center lg:order-none">
+          <div className="relative aspect-square w-full max-w-2xl overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+            <div className="absolute inset-0">
             {/* Sun */}
             {!reducedMotion && (
               <div
@@ -442,6 +445,7 @@ export function FarmSimulator() {
             {/* Hint */}
             <div className="pointer-events-none absolute bottom-3 right-3 hidden rounded-lg border border-white/40 bg-card/75 px-2.5 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur-md sm:block">
               Tap a marker to learn more
+            </div>
             </div>
           </div>
         </div>
