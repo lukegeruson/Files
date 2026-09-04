@@ -234,7 +234,7 @@ export function FarmSimulator() {
               aria-valuetext={SEASON_LABELS[phase]}
               style={{
                 background:
-                  "linear-gradient(90deg, #8bbf6a 0% 25%, #4f7a37 25% 50%, #d8b64a 50% 75%, #cdd7de 75% 100%)",
+                  "linear-gradient(90deg, #8bbf6a 0%, #4f7a37 30%, #d8b64a 60%, #cdd7de 100%)",
               }}
             />
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
@@ -243,12 +243,16 @@ export function FarmSimulator() {
               <span>Fall</span>
               <span>Winter</span>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            {/* Buttons share the row width (flex-1) with a tight gap and
+                reduced padding so all three fit on one line even in the narrow
+                desktop sidebar. */}
+            <div className="mt-3 flex gap-1.5">
               <PillButton
                 onClick={() => setPlaying((p) => !p)}
                 disabled={reducedMotion}
                 active={playing}
                 primary
+                className="flex-1 px-2"
                 title={
                   reducedMotion
                     ? "Auto-play is off because your system prefers reduced motion."
@@ -256,23 +260,24 @@ export function FarmSimulator() {
                 }
               >
                 {playing ? (
-                  <Pause className="size-4" aria-hidden="true" />
+                  <Pause className="size-4 shrink-0" aria-hidden="true" />
                 ) : (
-                  <Play className="size-4" aria-hidden="true" />
+                  <Play className="size-4 shrink-0" aria-hidden="true" />
                 )}
                 {playing ? "Pause" : "Run year"}
               </PillButton>
               <PillButton
+                className="flex-1 px-2"
                 onClick={() => {
                   setPlaying(false)
                   setSeason(SEASON_ANCHORS.fall)
                 }}
               >
-                <Scissors className="size-4" aria-hidden="true" />
+                <Scissors className="size-4 shrink-0" aria-hidden="true" />
                 Harvest
               </PillButton>
-              <PillButton onClick={handleReset}>
-                <RotateCcw className="size-4" aria-hidden="true" />
+              <PillButton className="flex-1 px-2" onClick={handleReset}>
+                <RotateCcw className="size-4 shrink-0" aria-hidden="true" />
                 Reset
               </PillButton>
             </div>
@@ -535,6 +540,7 @@ function PillButton({
   primary,
   disabled,
   title,
+  className,
 }: {
   children: React.ReactNode
   onClick: () => void
@@ -542,6 +548,7 @@ function PillButton({
   primary?: boolean
   disabled?: boolean
   title?: string
+  className?: string
 }) {
   return (
     <button
@@ -551,12 +558,13 @@ function PillButton({
       title={title}
       aria-pressed={active}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-45",
+        "inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-45",
         primary && !active
           ? "border-primary bg-primary text-primary-foreground shadow-sm hover:brightness-105"
           : active
             ? "border-primary bg-primary/15 text-foreground shadow-inner"
             : "border-input bg-background text-foreground hover:bg-muted",
+        className,
       )}
     >
       {children}
