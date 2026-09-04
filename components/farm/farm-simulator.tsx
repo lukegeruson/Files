@@ -357,7 +357,7 @@ export function FarmSimulator() {
             lets it fill edge-to-edge with no letterbox and therefore no side
             edge line. `order-1` keeps it above the controls on mobile; on
             desktop it becomes the right column beside the control sidebar. */}
-        <div className="order-1 flex flex-1 justify-center lg:order-none">
+        <div className="order-1 flex flex-1 justify-center lg:order-none lg:justify-start">
           <div className="relative aspect-square w-full max-w-2xl overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
             <div className="absolute inset-0">
             {/* Sun */}
