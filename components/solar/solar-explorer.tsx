@@ -593,7 +593,7 @@ export function SolarExplorer() {
             </div>
             <div>{controlButtons}</div>
           </div>
-          <div className="flex h-[85%] w-28 shrink-0 flex-col self-center rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="flex h-full w-28 shrink-0 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
             {renderTimelineVertical()}
           </div>
         </div>
