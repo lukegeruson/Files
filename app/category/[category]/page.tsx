@@ -27,30 +27,35 @@ export function generateStaticParams() {
 }
 
 /**
- * Per-category titles and descriptions, kept verbatim from the previous
- * implementation. These are already indexed, so the wording is deliberately
- * unchanged — only the canonical/OG plumbing around them is new.
+ * Per-category page-level titles and descriptions. Each is unique so the four
+ * category landing pages — the site's most important organic-search surfaces —
+ * do not compete with one another or with the homepage.
+ *
+ * Every title already carries its own brand suffix ("| Evergreen"), so
+ * generateMetadata opts these out of the root layout's title template to avoid
+ * a doubled brand name. The description feeds both the meta description and the
+ * Open Graph / Twitter cards via pageMetadata.
  */
 const CATEGORY_SEO: Record<Category, { title: string; description: string }> = {
   solar: {
-    title: "Solar Calculators: Savings, Payback & How Many Panels — Evergreen Journal",
+    title: "Free Solar Calculators | Evergreen",
     description:
-      "Two free calculators: estimate solar cost after incentives, payback period, and 25-year savings, or find how many solar panels you need, your system size, and the roof space required.",
+      "Use free solar calculators and visual guides to estimate solar costs, system size, energy production, savings, payback periods, and more.",
   },
   landscaping: {
-    title: "Landscape Cost Calculator: How Much Does Landscaping Cost? — Evergreen Journal",
+    title: "Free Landscaping Calculators | Evergreen",
     description:
-      "Free landscaping cost calculator. Estimate the cost to landscape a yard by component — sod, mulch, patio, retaining wall, irrigation, fence — with an itemized breakdown of materials, labor, and price per square foot.",
+      "Use free landscaping calculators and visual guides for mulch, soil, gravel, lawn, irrigation, plants, project costs, and other yard projects.",
   },
   renovation: {
-    title: "Remodeling Cost Calculator: Bathroom, Kitchen & Hot Tub — Evergreen Journal",
+    title: "Free Home Renovation Calculators | Evergreen",
     description:
-      "Two free renovation tools: estimate what a bathroom, kitchen, or hot tub project costs with an itemized breakdown of materials, labor, permits and contingency, or check which home upgrades to tackle first with the repair-or-replace advisor.",
+      "Plan home improvement projects with free renovation calculators, cost estimators, visual guides, diagrams, and remodeling resources.",
   },
   agriculture: {
-    title: "Crop Selection & Farm Profit Calculator Per Acre — Evergreen Journal",
+    title: "Free Agriculture Calculators | Evergreen",
     description:
-      "Two free farming tools: compare 26 crops on margin per acre, water, labor and risk for your ZIP and soil, then run a full enterprise budget with break-even price, break-even yield, ROI and profit-driver ranking.",
+      "Explore free agriculture calculators, farming tools, visual diagrams, and guides for land, crops, irrigation, equipment, costs, and planning.",
   },
 }
 
