@@ -47,9 +47,11 @@ const HOTSPOTS: Hotspot[] = [
   { id: "grid", x: 88, y: 24 },
 ]
 
-// One universal "electricity" color used for every energy channel. Direction is
-// still conveyed by the dashes animating from source toward destination.
+// Solar-generated electricity is drawn in warm amber. Grid-sourced power (which
+// is what carries the home at night) is drawn in blue so the two are easy to
+// tell apart. Direction is conveyed by the dashes animating source -> dest.
 const ELECTRIC = "#f5b445"
+const GRID_ELECTRIC = "#4da3ff"
 
 // Energy-flow segments drawn between hotspots. `keys` selects the flow value(s)
 // on the current frame (the line is active if ANY listed flow is carrying
@@ -66,6 +68,10 @@ type Segment = {
   to: ComponentId
   keys?: FlowKey[]
   solarDriven?: boolean
+  // Part of the grid -> inverter -> battery path that carries the home at night.
+  // These light up blue whenever the home is running on grid power (i.e. after
+  // dark, once the panels stop generating).
+  gridPath?: boolean
 }
 
 // The battery marker represents the home hub, so the wiring mirrors a real
@@ -74,13 +80,21 @@ type Segment = {
 //   panels -> inverter     DC generation flows to the inverter
 //   inverter -> battery    inverter charges the battery and powers the home
 //   inverter -> grid       excess solar is exported
-//   grid -> battery        the grid supplies the home when solar is short
+//   grid -> inverter       the grid feeds the inverter when solar is short
+//                          (e.g. at night); the inverter then powers the
+//                          battery/home, so the grid path runs
+//                          grid -> inverter -> battery.
 const SEGMENTS: Segment[] = [
   { from: "sun", to: "panels", solarDriven: true },
   { from: "panels", to: "inverter", solarDriven: true },
-  { from: "inverter", to: "battery", keys: ["solarToHome", "solarToBattery"] },
+  {
+    from: "inverter",
+    to: "battery",
+    keys: ["solarToHome", "solarToBattery", "gridToHome"],
+    gridPath: true,
+  },
   { from: "inverter", to: "grid", keys: ["solarToGrid"] },
-  { from: "grid", to: "battery", keys: ["gridToHome"] },
+  { from: "grid", to: "inverter", keys: ["gridToHome"], gridPath: true },
 ]
 
 // Fixed star field for the night sky (deterministic so it doesn't reshuffle).
@@ -326,13 +340,25 @@ export function SolarExplorer() {
 
   // Which segments are currently carrying energy. A segment with multiple keys
   // is active when any of its flows is carrying power.
+  // After dark the panels stop and the home is carried from the grid, so the
+  // grid -> inverter -> battery path is drawn even though the scene's reserve
+  // battery is what physically covers the small overnight load.
+  const nightSupply = !sky.sunUp && frame.consumptionKw > 0.02
   const activeSegments = SEGMENTS.map((seg) => {
-    const active = seg.solarDriven
-      ? frame.solarKw > 0.05
-      : seg.keys
-        ? seg.keys.some((k) => frame.flows[k] > 0.05)
-        : false
-    return { seg, active }
+    const solarActive = seg.solarDriven ? frame.solarKw > 0.05 : false
+    const keyActive = seg.keys
+      ? seg.keys.some((k) => frame.flows[k] > 0.05)
+      : false
+    const gridActive = !!seg.gridPath && nightSupply
+    const active = solarActive || keyActive || gridActive
+    // The grid path renders blue whenever it is the grid (not the panels)
+    // powering the home; everything solar-driven stays amber.
+    const gridDriven =
+      !!seg.gridPath &&
+      !solarActive &&
+      (gridActive || frame.flows.gridToHome > 0.05)
+    const color = gridDriven ? GRID_ELECTRIC : ELECTRIC
+    return { seg, active, color }
   })
 
   // Shared inner content for the "Right now" live-stats card. Rendered above the
@@ -715,7 +741,7 @@ export function SolarExplorer() {
             className="pointer-events-none absolute inset-0 size-full"
             aria-hidden="true"
           >
-            {activeSegments.map(({ seg, active }) => {
+            {activeSegments.map(({ seg, active, color }) => {
               const a = posOf[seg.from]
               const b = posOf[seg.to]
               if (!a || !b) return null
@@ -726,7 +752,7 @@ export function SolarExplorer() {
                   y1={a.y}
                   x2={b.x}
                   y2={b.y}
-                  stroke={ELECTRIC}
+                  stroke={color}
                   strokeWidth={active ? 0.8 : 0.45}
                   strokeLinecap="round"
                   strokeDasharray="1.6 2.2"
@@ -736,7 +762,7 @@ export function SolarExplorer() {
                   )}
                   style={{
                     filter: active
-                      ? `drop-shadow(0 0 1.4px ${ELECTRIC})`
+                      ? `drop-shadow(0 0 1.4px ${color})`
                       : undefined,
                   }}
                 />
@@ -747,8 +773,9 @@ export function SolarExplorer() {
           {/* Hotspots */}
           {hotspots.map((h) => {
             // The sun marker only exists while the sun is up; once it sets and
-            // the moon rises, the marker disappears.
-            if (h.id === "sun" && !sky.sunUp) return null
+            // the moon rises, the marker disappears. The solar-panel marker is
+            // likewise hidden at night, since the array isn't generating.
+            if ((h.id === "sun" || h.id === "panels") && !sky.sunUp) return null
             const info = COMPONENT_INFO[h.id]
             const isSel = selected === h.id
             return (
