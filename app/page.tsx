@@ -10,18 +10,21 @@ import {
   getPostSummaries,
 } from "@/lib/posts"
 import { buildSearchDocs } from "@/lib/search"
-import { pageMetadata, SITE_NAME, SITE_TAGLINE } from "@/lib/seo"
+import { pageMetadata } from "@/lib/seo"
 
-// `title.absolute` opts out of the root template, so the homepage reads as the
-// brand itself rather than "Home — Evergreen Builders".
+// `title.absolute` opts out of the root template, so the homepage title shows
+// exactly as written in Google rather than "Home — Evergreen Builders".
+const HOME_TITLE = "Evergreen - Make Better Decisions"
+const HOME_DESCRIPTION =
+  "Free calculators and visual guides for solar, landscaping, renovation, and agriculture"
+
 export const metadata = {
   ...pageMetadata({
-    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
-    description:
-      "Free calculators and guides for solar, landscaping, renovation, and agriculture. Work out what a project costs before you commit, and explore skilled trade careers in each field.",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
     path: "/",
   }),
-  title: { absolute: `${SITE_NAME} — ${SITE_TAGLINE}` },
+  title: { absolute: HOME_TITLE },
 }
 
 export default async function HomePage() {
