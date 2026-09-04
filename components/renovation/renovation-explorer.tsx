@@ -4,6 +4,7 @@ import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 import {
   Check,
+  ChevronDown,
   DoorOpen,
   Home,
   Info,
@@ -73,6 +74,19 @@ export function RenovationExplorer() {
   const [active, setActive] = useState<UpgradeId | null>(null)
   // Two discrete views: closed exterior (default) and the interior cutaway.
   const [open, setOpen] = useState(false)
+  // Which upgrade categories are collapsed in the sidebar (all expanded by
+  // default). Kept as a Set of group keys.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<UpgradeGroup>>(
+    () => new Set(),
+  )
+  const toggleGroup = (group: UpgradeGroup) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(group)) next.delete(group)
+      else next.add(group)
+      return next
+    })
+  }
 
   const plan = useMemo(() => computePlan(selectedIds), [selectedIds])
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -124,9 +138,86 @@ export function RenovationExplorer() {
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        {/* All upgrades — a left sidebar on desktop. On mobile it drops to the
-            bottom (order-last) so the clay diagram leads. */}
-        <div className="order-last rounded-2xl border border-border bg-card p-4 shadow-sm lg:order-none lg:w-80 lg:shrink-0">
+        {/* Left column — "Your plan" on top and the full "All upgrades" catalog
+            below, so both panels sit beside the explorer on desktop. On mobile
+            the whole column drops below the diagram (order-last). */}
+        <div className="order-last flex flex-col gap-4 lg:order-none lg:w-80 lg:shrink-0">
+          {/* Your plan */}
+          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Your plan
+              </span>
+              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
+                {plan.count} item{plan.count === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {plan.count === 0 ? (
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                No upgrades chosen yet. Open the house and tap a marker, or add
+                the recommended first step below.
+              </p>
+            ) : (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Metric
+                  label="Est. cost"
+                  value={moneyRange(plan.totalLow, plan.totalHigh)}
+                  accent
+                  wide
+                />
+                <Metric
+                  icon={<Zap className="size-3.5" aria-hidden="true" />}
+                  label="Energy / yr"
+                  value={money(plan.annualEnergySavings)}
+                />
+                <Metric
+                  icon={<TrendingUp className="size-3.5" aria-hidden="true" />}
+                  label="Resale add"
+                  value={money(plan.resaleAdded)}
+                />
+              </div>
+            )}
+
+            {/* Recommended next */}
+            {plan.recommendedNext && (
+              <div className="mt-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-2.5">
+                <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  <Sparkles className="size-3" aria-hidden="true" /> Do this next
+                </p>
+                <p className="mt-0.5 text-sm font-medium text-foreground">
+                  {plan.recommendedNext.label}
+                </p>
+                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                  {TIER_LABELS[plan.recommendedNext.tier]} ·{" "}
+                  {moneyRange(
+                    plan.recommendedNext.cost.low,
+                    plan.recommendedNext.cost.high,
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={addRecommended}
+                  className="mt-2 inline-flex items-center gap-1 rounded-full border border-primary bg-background px-2.5 py-1 text-[11px] font-medium text-primary transition hover:bg-primary/10"
+                >
+                  <Plus className="size-3" aria-hidden="true" /> Add to plan
+                </button>
+              </div>
+            )}
+
+            {plan.count > 0 && (
+              <button
+                type="button"
+                onClick={reset}
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                <RotateCcw className="size-3.5" aria-hidden="true" /> Clear plan
+              </button>
+            )}
+          </div>
+
+          {/* All upgrades */}
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-semibold text-foreground">
               All upgrades
@@ -151,63 +242,99 @@ export function RenovationExplorer() {
             </div>
           </div>
 
-          {/* Three groups: side by side on tablet, stacked in the narrow
-              desktop sidebar and on phones. */}
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-            {GROUP_ORDER.map((group) => (
-              <div key={group} className="flex flex-col gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {GROUP_LABELS[group as UpgradeGroup]}
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {UPGRADES.filter((u) => u.group === group)
-                    .sort((a, b) => b.priorityScore - a.priorityScore)
-                    .map((u) => {
-                      const isSel = selectedSet.has(u.id)
-                      return (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => {
-                            toggle(u.id)
-                            setActive(u.id)
-                          }}
-                          className={cn(
-                            "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left text-xs transition-colors",
-                            isSel
-                              ? "border-primary bg-primary/10 text-foreground"
-                              : "border-border bg-background text-foreground hover:bg-muted",
-                          )}
-                        >
-                          <span
+          {/* Collapsible categories, stacked vertically. Each header toggles
+              its section; a badge shows how many upgrades in the group are in
+              the plan even when the section is collapsed. */}
+          <div className="flex flex-col gap-2">
+            {GROUP_ORDER.map((group) => {
+              const groupUpgrades = UPGRADES.filter(
+                (u) => u.group === group,
+              ).sort((a, b) => b.priorityScore - a.priorityScore)
+              const isCollapsed = collapsedGroups.has(group as UpgradeGroup)
+              const selectedCount = groupUpgrades.filter((u) =>
+                selectedSet.has(u.id),
+              ).length
+              const panelId = `upgrade-group-${group}`
+              return (
+                <div
+                  key={group}
+                  className="overflow-hidden rounded-xl border border-border"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group as UpgradeGroup)}
+                    aria-expanded={!isCollapsed}
+                    aria-controls={panelId}
+                    className="flex w-full items-center justify-between gap-2 bg-muted/50 px-3 py-2 text-left transition-colors hover:bg-muted"
+                  >
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {GROUP_LABELS[group as UpgradeGroup]}
+                      {selectedCount > 0 && (
+                        <span className="rounded-full bg-primary/15 px-1.5 py-0.5 font-mono text-[10px] normal-case tracking-normal text-primary">
+                          {selectedCount}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "size-4 shrink-0 text-muted-foreground transition-transform",
+                        isCollapsed ? "" : "rotate-180",
+                      )}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {!isCollapsed && (
+                    <div id={panelId} className="flex flex-col gap-1.5 p-2">
+                      {groupUpgrades.map((u) => {
+                        const isSel = selectedSet.has(u.id)
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => {
+                              toggle(u.id)
+                              setActive(u.id)
+                            }}
                             className={cn(
-                              "flex size-4 shrink-0 items-center justify-center rounded-full border-2",
+                              "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left text-xs transition-colors",
                               isSel
-                                ? "border-transparent"
-                                : "border-current opacity-60",
+                                ? "border-primary bg-primary/10 text-foreground"
+                                : "border-border bg-background text-foreground hover:bg-muted",
                             )}
-                            style={
-                              isSel ? { background: TIER_COLORS[u.tier] } : undefined
-                            }
                           >
-                            {isSel && (
-                              <Check
-                                className="size-2.5 text-white"
-                                strokeWidth={3}
-                                aria-hidden="true"
-                              />
-                            )}
-                          </span>
-                          <span className="flex-1">{u.label}</span>
-                          <span className="tabular-nums text-[10px] text-muted-foreground">
-                            {money(u.cost.low)}+
-                          </span>
-                        </button>
-                      )
-                    })}
+                            <span
+                              className={cn(
+                                "flex size-4 shrink-0 items-center justify-center rounded-full border-2",
+                                isSel
+                                  ? "border-transparent"
+                                  : "border-current opacity-60",
+                              )}
+                              style={
+                                isSel
+                                  ? { background: TIER_COLORS[u.tier] }
+                                  : undefined
+                              }
+                            >
+                              {isSel && (
+                                <Check
+                                  className="size-2.5 text-white"
+                                  strokeWidth={3}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </span>
+                            <span className="flex-1">{u.label}</span>
+                            <span className="tabular-nums text-[10px] text-muted-foreground">
+                              {money(u.cost.low)}+
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
@@ -216,9 +343,10 @@ export function RenovationExplorer() {
             education only — not a professional inspection or a firm quote. Get
             local bids before committing.
           </p>
+          </div>
         </div>
 
-        {/* Right column: the clay diagram with "Your plan" directly below it. */}
+        {/* Right column: the clay diagram. */}
         <div className="flex flex-1 flex-col items-center gap-4">
           {/* Clay diorama stage — a square panel like the landscape/solar
               explorers. The renders are square images, so an aspect-square
@@ -336,80 +464,6 @@ export function RenovationExplorer() {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Your plan — sits directly below the diagram. */}
-          <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Your plan
-              </span>
-              <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
-                {plan.count} item{plan.count === 1 ? "" : "s"}
-              </span>
-            </div>
-
-            {plan.count === 0 ? (
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                No upgrades chosen yet. Open the house and tap a marker, or add
-                the recommended first step below.
-              </p>
-            ) : (
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Metric
-                  label="Est. cost"
-                  value={moneyRange(plan.totalLow, plan.totalHigh)}
-                  accent
-                  wide
-                />
-                <Metric
-                  icon={<Zap className="size-3.5" aria-hidden="true" />}
-                  label="Energy / yr"
-                  value={money(plan.annualEnergySavings)}
-                />
-                <Metric
-                  icon={<TrendingUp className="size-3.5" aria-hidden="true" />}
-                  label="Resale add"
-                  value={money(plan.resaleAdded)}
-                />
-              </div>
-            )}
-
-            {/* Recommended next */}
-            {plan.recommendedNext && (
-              <div className="mt-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-2.5">
-                <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                  <Sparkles className="size-3" aria-hidden="true" /> Do this next
-                </p>
-                <p className="mt-0.5 text-sm font-medium text-foreground">
-                  {plan.recommendedNext.label}
-                </p>
-                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
-                  {TIER_LABELS[plan.recommendedNext.tier]} ·{" "}
-                  {moneyRange(
-                    plan.recommendedNext.cost.low,
-                    plan.recommendedNext.cost.high,
-                  )}
-                </p>
-                <button
-                  type="button"
-                  onClick={addRecommended}
-                  className="mt-2 inline-flex items-center gap-1 rounded-full border border-primary bg-background px-2.5 py-1 text-[11px] font-medium text-primary transition hover:bg-primary/10"
-                >
-                  <Plus className="size-3" aria-hidden="true" /> Add to plan
-                </button>
-              </div>
-            )}
-
-            {plan.count > 0 && (
-              <button
-                type="button"
-                onClick={reset}
-                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                <RotateCcw className="size-3.5" aria-hidden="true" /> Clear plan
-              </button>
-            )}
           </div>
         </div>
       </div>
