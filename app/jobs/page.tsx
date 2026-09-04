@@ -139,7 +139,7 @@ export default function CareerExplorerPage() {
                   </li>
                   <li className="rounded-lg border border-border bg-secondary/40 px-4 py-3.5">
                     <p className="font-medium leading-snug text-balance">
-                      SEO Link Building Specialist
+                      Link Building Specialist
                     </p>
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
@@ -166,7 +166,7 @@ export default function CareerExplorerPage() {
           <ProfileStrip />
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 pt-14 md:px-6">
+        <section className="mx-auto max-w-6xl px-4 pt-10 md:px-6">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">Pick an industry</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {INDUSTRIES.map((industry) => {

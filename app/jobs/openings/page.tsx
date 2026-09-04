@@ -93,7 +93,7 @@ export default async function CompaniesPage() {
                   </li>
                   <li className="rounded-lg border border-border bg-secondary/40 px-4 py-3.5">
                     <p className="font-medium leading-snug text-balance">
-                      SEO Link Building Specialist
+                      Link Building Specialist
                     </p>
                     <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
