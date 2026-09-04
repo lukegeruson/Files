@@ -101,7 +101,11 @@ export default async function CategoryPage({
             now that the visible category header has been removed. */}
         <h1 className="sr-only">{CATEGORY_LABELS[category]}</h1>
 
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-8 md:px-6">
+        {/* Secondary category nav (breadcrumb + sibling links). Redundant on
+            desktop where the main SiteHeader nav already covers it, so it's
+            hidden there and kept for mobile. The Breadcrumbs JSON-LD stays in
+            the DOM regardless (display:none doesn't strip structured data). */}
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-8 md:px-6 lg:hidden">
           <Breadcrumbs
             items={[{ name: "Home", href: "/" }, { name: CATEGORY_LABELS[category] }]}
           />
