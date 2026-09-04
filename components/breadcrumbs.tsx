@@ -31,7 +31,10 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
   return (
     <>
       <script {...jsonLdProps(schema)} />
-      <nav aria-label="Breadcrumb">
+      {/* The visible trail is only shown on mobile/tablet. On desktop the main
+          top nav already covers navigation, so the mini trail is redundant —
+          but the BreadcrumbList JSON-LD above still renders for SEO. */}
+      <nav aria-label="Breadcrumb" className="lg:hidden">
         <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
           {items.map((item, i) => {
             const last = i === items.length - 1

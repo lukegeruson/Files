@@ -41,6 +41,7 @@ const SEASON_SRC = {
   winter: "/farm-styles/slab-winter.png",
 } as const
 
+
 /* ------------------------------------------------------------------ *
  * Reduced motion
  * ------------------------------------------------------------------ */
@@ -68,12 +69,13 @@ type Spot = {
   y: number
 }
 
+// x values are the horizontal position across the square render (0–100%).
 const SPOTS: Spot[] = [
-  { id: "fields", label: "Crop fields", x: 30, y: 58 },
-  { id: "farmhouse", label: "Farmstead", x: 45, y: 50 },
-  { id: "barn", label: "Barn & equipment", x: 63, y: 41 },
-  { id: "silos", label: "Grain storage", x: 74, y: 31 },
-  { id: "pond", label: "Irrigation pond", x: 48, y: 71 },
+  { id: "fields", label: "Crop fields", x: 23.3, y: 58 },
+  { id: "farmhouse", label: "Farmstead", x: 43.3, y: 50 },
+  { id: "barn", label: "Barn & equipment", x: 67.3, y: 41 },
+  { id: "silos", label: "Grain storage", x: 82, y: 31 },
+  { id: "pond", label: "Irrigation pond", x: 47.3, y: 71 },
 ]
 
 /* ------------------------------------------------------------------ *
@@ -82,8 +84,10 @@ const SPOTS: Spot[] = [
 export function FarmSimulator() {
   const reducedMotion = useReducedMotion()
 
-  // Season runs 0 (early spring) → 1 (late-fall harvest).
-  const [season, setSeason] = useState(0.52)
+  // Season runs 0 (early spring) → 1 (late-fall harvest). The manual slider
+  // snaps to the four season anchors, but the value stays a float so auto-play
+  // and the sun arc can still animate smoothly. Defaults to spring.
+  const [season, setSeason] = useState(SEASON_ANCHORS.spring)
   const [playing, setPlaying] = useState(false)
   // Crop diversity: 0 = single crop (all corn), 1 = fully diversified.
   const [diversity, setDiversity] = useState(1)
@@ -92,6 +96,8 @@ export function FarmSimulator() {
   const mix = useMemo(() => mixFromDiversity(diversity), [diversity])
   const metrics = useMemo(() => computeMetrics(mix), [mix])
   const phase = seasonPhase(season)
+  // Which of the four season stops the slider thumb sits on.
+  const seasonIndex = SEASON_ORDER.indexOf(phase)
 
   // Auto-advance the season when playing.
   const raf = useRef<number | null>(null)
@@ -119,7 +125,7 @@ export function FarmSimulator() {
 
   const handleReset = () => {
     setPlaying(false)
-    setSeason(0.52)
+    setSeason(SEASON_ANCHORS.spring)
     setDiversity(1)
     setSelected(null)
   }
@@ -141,7 +147,7 @@ export function FarmSimulator() {
   }, [season])
 
   // Sun arc position across the top of the stage.
-  const sunLeft = 12 + season * 76
+  const sunLeft = 2 + season * 96
   const sunTop = 26 - Math.sin(season * Math.PI) * 18
 
   return (
@@ -166,10 +172,13 @@ export function FarmSimulator() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-        {/* Left column — live metrics + controls */}
-        <div className="flex shrink-0 flex-col gap-3 lg:w-72">
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-2">
+        {/* Controls form a left sidebar on desktop (stacked in a single
+            column). On tablet they lay out as a row of three below the visual;
+            on mobile they stack. `order-last` drops them under the stage until
+            the desktop row re-forms them beside it. */}
+        <div className="order-last grid gap-3 md:grid-cols-3 lg:order-none lg:w-72 lg:shrink-0 lg:grid-cols-1">
+          <div className="order-2 h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               This season
             </p>
@@ -198,8 +207,9 @@ export function FarmSimulator() {
             </div>
           </div>
 
-          {/* Season control */}
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+          {/* Season control — placed first so it sits above "This season" on
+              mobile and to its left on desktop. */}
+          <div className="order-1 h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Season
@@ -211,15 +221,17 @@ export function FarmSimulator() {
             <input
               type="range"
               min={0}
-              max={1}
-              step={0.005}
-              value={season}
+              max={3}
+              step={1}
+              value={seasonIndex}
               onChange={(e) => {
                 setPlaying(false)
-                setSeason(Number.parseFloat(e.target.value))
+                const idx = Number.parseInt(e.target.value, 10)
+                setSeason(SEASON_ANCHORS[SEASON_ORDER[idx]])
               }}
               className="farm-season-slider h-2.5 w-full cursor-pointer appearance-none rounded-full"
-              aria-label="Season progress"
+              aria-label="Season"
+              aria-valuetext={SEASON_LABELS[phase]}
               style={{
                 background:
                   "linear-gradient(90deg, #8bbf6a 0%, #4f7a37 30%, #d8b64a 60%, #cdd7de 100%)",
@@ -231,12 +243,16 @@ export function FarmSimulator() {
               <span>Fall</span>
               <span>Winter</span>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            {/* Buttons share the row width (flex-1) with a tight gap and
+                reduced padding so all three fit on one line even in the narrow
+                desktop sidebar. */}
+            <div className="mt-3 flex gap-1.5">
               <PillButton
                 onClick={() => setPlaying((p) => !p)}
                 disabled={reducedMotion}
                 active={playing}
                 primary
+                className="flex-1 px-2"
                 title={
                   reducedMotion
                     ? "Auto-play is off because your system prefers reduced motion."
@@ -244,30 +260,31 @@ export function FarmSimulator() {
                 }
               >
                 {playing ? (
-                  <Pause className="size-4" aria-hidden="true" />
+                  <Pause className="size-4 shrink-0" aria-hidden="true" />
                 ) : (
-                  <Play className="size-4" aria-hidden="true" />
+                  <Play className="size-4 shrink-0" aria-hidden="true" />
                 )}
                 {playing ? "Pause" : "Run year"}
               </PillButton>
               <PillButton
+                className="flex-1 px-2"
                 onClick={() => {
                   setPlaying(false)
                   setSeason(SEASON_ANCHORS.fall)
                 }}
               >
-                <Scissors className="size-4" aria-hidden="true" />
+                <Scissors className="size-4 shrink-0" aria-hidden="true" />
                 Harvest
               </PillButton>
-              <PillButton onClick={handleReset}>
-                <RotateCcw className="size-4" aria-hidden="true" />
+              <PillButton className="flex-1 px-2" onClick={handleReset}>
+                <RotateCcw className="size-4 shrink-0" aria-hidden="true" />
                 Reset
               </PillButton>
             </div>
           </div>
 
-          {/* Crop diversity — stacked beneath the season panel in the left column */}
-          <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+          {/* Crop diversity */}
+          <div className="order-3 h-full rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-semibold text-foreground">
                 Crop diversity
@@ -340,15 +357,14 @@ export function FarmSimulator() {
           </div>
         </div>
 
-        {/* Clay diorama stage */}
-        <div
-          className="relative flex-1 overflow-hidden rounded-3xl border border-border"
-          style={{
-            background:
-              "radial-gradient(120% 90% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
-          }}
-        >
-          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl">
+        {/* Clay diorama stage — a square panel like the landscape/solar
+            explorers. The render is a square image, so an aspect-square panel
+            lets it fill edge-to-edge with no letterbox and therefore no side
+            edge line. `order-1` keeps it above the controls on mobile; on
+            desktop it becomes the right column beside the control sidebar. */}
+        <div className="order-1 flex flex-1 justify-center lg:order-none lg:justify-start">
+          <div className="relative aspect-square w-full max-w-2xl overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+            <div className="absolute inset-0">
             {/* Sun */}
             {!reducedMotion && (
               <div
@@ -441,6 +457,7 @@ export function FarmSimulator() {
             <div className="pointer-events-none absolute bottom-3 right-3 hidden rounded-lg border border-white/40 bg-card/75 px-2.5 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur-md sm:block">
               Tap a marker to learn more
             </div>
+            </div>
           </div>
         </div>
       </div>
@@ -523,6 +540,7 @@ function PillButton({
   primary,
   disabled,
   title,
+  className,
 }: {
   children: React.ReactNode
   onClick: () => void
@@ -530,6 +548,7 @@ function PillButton({
   primary?: boolean
   disabled?: boolean
   title?: string
+  className?: string
 }) {
   return (
     <button
@@ -539,12 +558,13 @@ function PillButton({
       title={title}
       aria-pressed={active}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-45",
+        "inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-45",
         primary && !active
           ? "border-primary bg-primary text-primary-foreground shadow-sm hover:brightness-105"
           : active
             ? "border-primary bg-primary/15 text-foreground shadow-inner"
             : "border-input bg-background text-foreground hover:bg-muted",
+        className,
       )}
     >
       {children}

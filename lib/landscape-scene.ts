@@ -190,6 +190,56 @@ export function computeLandscapePlan(waterWiseInput: number): LandscapePlan {
 }
 
 // ---------------------------------------------------------------------------
+// Discrete phases (Before / Traditional lawn / Water-wise / Edible garden)
+// ---------------------------------------------------------------------------
+//
+// The explorer slides through four distinct yards. Lawn and water-wise are the
+// two ends of the continuous model above; "before" (a bare, unlandscaped lot)
+// and "edible" (a raised-bed kitchen garden) are their own stops. Each phase
+// resolves to a full LandscapePlan so the metrics stay honest per phase.
+
+export type LandscapePhaseId = "before" | "lawn" | "waterwise"
+
+export const LANDSCAPE_PHASES: {
+  id: LandscapePhaseId
+  label: string
+  short: string
+}[] = [
+  { id: "before", label: "Before landscaping", short: "Before" },
+  { id: "waterwise", label: "Water-wise", short: "Water-wise" },
+  { id: "lawn", label: "Traditional lawn", short: "Lawn" },
+]
+
+// A bare lot: nothing installed, nothing watered, nothing spent.
+const BEFORE_PLAN: LandscapePlan = {
+  waterWise: 0,
+  totalAreaSqft: TOTAL_AREA_SQFT,
+  hardscapeSqft: 0,
+  cells: { lawn: 0, planting: 0, mulch: 0, gravel: 0 },
+  area: { lawn: 0, planting: 0, mulch: 0, gravel: 0 },
+  plantingSqft: 0,
+  mulchYards: 0,
+  sprayZones: 0,
+  dripZones: 0,
+  totalZones: 0,
+  annualIrrigationGal: 0,
+  waterReductionPct: 0,
+  estimatedCost: 0,
+  cost: { lawn: 0, planting: 0, mulch: 0, gravel: 0, irrigation: 0, hardscape: 0, trees: 0 },
+}
+
+export function phasePlan(id: LandscapePhaseId): LandscapePlan {
+  switch (id) {
+    case "before":
+      return BEFORE_PLAN
+    case "lawn":
+      return computeLandscapePlan(0)
+    case "waterwise":
+      return computeLandscapePlan(1)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Selectable elements (floating info cards)
 // ---------------------------------------------------------------------------
 

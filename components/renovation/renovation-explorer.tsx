@@ -4,6 +4,8 @@ import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 import {
   Check,
+  ChevronDown,
+  DoorOpen,
   Home,
   Info,
   Plus,
@@ -30,25 +32,27 @@ import {
   type UpgradeId,
 } from "@/lib/renovation-scene"
 
+const EXTERIOR_SRC = "/renovation-styles/option-b-exterior.png"
 const INTERIOR_SRC = "/renovation-styles/reveal-interior.png"
+
 
 /* ------------------------------------------------------------------ *
  * Hotspot positions, tuned to the interior cutaway render (% of stage)
  * ------------------------------------------------------------------ */
 const PIN_POS: Record<UpgradeId, { x: number; y: number }> = {
-  roof: { x: 52, y: 20 },
-  insulation: { x: 40, y: 27 },
-  windows: { x: 17, y: 37 },
-  siding: { x: 13, y: 47 },
-  doors: { x: 60, y: 59 },
-  electrical: { x: 53, y: 72 },
-  hvac: { x: 39, y: 71 },
-  plumbing: { x: 58, y: 66 },
-  waterHeater: { x: 45, y: 75 },
-  flooring: { x: 40, y: 63 },
-  lighting: { x: 47, y: 46 },
-  bathroom: { x: 70, y: 52 },
-  kitchen: { x: 26, y: 52 },
+  roof: { x: 49, y: 20 },
+  insulation: { x: 44, y: 28 },
+  windows: { x: 21, y: 35 },
+  siding: { x: 17, y: 44 },
+  doors: { x: 59, y: 50 },
+  electrical: { x: 53, y: 66 },
+  hvac: { x: 42, y: 69 },
+  plumbing: { x: 60, y: 67 },
+  waterHeater: { x: 49, y: 70 },
+  flooring: { x: 39, y: 60 },
+  lighting: { x: 46, y: 44 },
+  bathroom: { x: 63, y: 51 },
+  kitchen: { x: 24, y: 51 },
 }
 
 function useReducedMotion() {
@@ -68,6 +72,22 @@ export function RenovationExplorer() {
 
   const [selectedIds, setSelectedIds] = useState<UpgradeId[]>([])
   const [active, setActive] = useState<UpgradeId | null>(null)
+  // Two discrete views: closed exterior (default) and the interior cutaway.
+  const [open, setOpen] = useState(false)
+  // Which upgrade categories are collapsed in the sidebar. All start collapsed
+  // so the catalog opens compact; tapping a header expands that section. Kept
+  // as a Set of group keys.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<UpgradeGroup>>(
+    () => new Set(GROUP_ORDER),
+  )
+  const toggleGroup = (group: UpgradeGroup) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(group)) next.delete(group)
+      else next.add(group)
+      return next
+    })
+  }
 
   const plan = useMemo(() => computePlan(selectedIds), [selectedIds])
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -87,7 +107,15 @@ export function RenovationExplorer() {
   const reset = () => {
     setSelectedIds([])
     setActive(null)
+    setOpen(false)
   }
+
+  const interiorOpacity = open ? 1 : 0
+  const exteriorOpacity = open ? 0 : 1
+  // Pins only exist once we're looking at the interior.
+  const pinOpacity = open ? 1 : 0
+  const pinsInteractive = open
+  const isOpen = open
 
   return (
     <section
@@ -104,16 +132,18 @@ export function RenovationExplorer() {
           </h3>
         </div>
         <p className="text-pretty text-sm text-muted-foreground">
-          Tap an upgrade inside the house to build a plan and see what to tackle
-          first. Illustrative national-average figures, not an inspection or a
-          quote.
+          Tap the house to see inside, then tap an upgrade to build a plan and
+          see what to tackle first. Illustrative national-average figures, not
+          an inspection or a quote.
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-        {/* Left column — plan */}
-        <div className="flex shrink-0 flex-col gap-3 lg:w-72">
-          {/* Plan summary */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-2">
+        {/* Left column — "Your plan" on top and the full "All upgrades" catalog
+            below, so both panels sit beside the explorer on desktop. On mobile
+            the whole column drops below the diagram (order-last). */}
+        <div className="order-last flex flex-col gap-4 lg:order-none lg:w-80 lg:shrink-0">
+          {/* Your plan */}
           <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -126,8 +156,8 @@ export function RenovationExplorer() {
 
             {plan.count === 0 ? (
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                No upgrades chosen yet. Tap a marker inside the house, or add the
-                recommended first step below.
+                No upgrades chosen yet. Open the house and tap a marker, or add
+                the recommended first step below.
               </p>
             ) : (
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -186,153 +216,221 @@ export function RenovationExplorer() {
               </button>
             )}
           </div>
-        </div>
 
-        {/* Clay diorama stage */}
-        <div
-          className="relative flex-1 overflow-hidden rounded-3xl border border-border"
-          style={{
-            background:
-              "radial-gradient(120% 90% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
-          }}
-        >
-          <div className="relative mx-auto aspect-[4/3] w-full max-w-3xl">
-            {/* Floating shadow */}
-            <div
-              className="pointer-events-none absolute left-1/2 bottom-[10%] h-[8%] w-[60%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl"
-              aria-hidden="true"
-            />
-
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={INTERIOR_SRC || "/placeholder.svg"}
-              alt="Clay model house, interior cutaway showing rooms and systems"
-              className="absolute inset-0 size-full object-contain"
-              style={{
-                filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
-              }}
-              crossOrigin="anonymous"
-            />
-
-            {/* Hotspots */}
-            <div className="absolute inset-0">
-              {UPGRADES.map((u) => {
-                const pos = PIN_POS[u.id]
-                const isSel = selectedSet.has(u.id)
-                const isActive = active === u.id
-                const color = TIER_COLORS[u.tier]
-                return (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => setActive(isActive ? null : u.id)}
-                    aria-label={u.label}
-                    aria-pressed={isActive}
-                    className="group absolute -translate-x-1/2 -translate-y-1/2 outline-none"
-                    style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+          {/* All upgrades */}
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-foreground">
+              All upgrades
+            </span>
+            {/* Tier legend */}
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {(["safety", "high", "medium", "low"] as PriorityTier[]).map(
+                (tier) => (
+                  <span
+                    key={tier}
+                    className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
                   >
-                    <span className="relative flex size-5 items-center justify-center">
-                      {!reducedMotion && !isSel && (
-                        <span
-                          className="absolute inline-flex size-full animate-ping rounded-full"
-                          style={{ background: `${color}55` }}
-                        />
-                      )}
-                      <span
-                        className={cn(
-                          "relative inline-flex items-center justify-center rounded-full border-2 border-white shadow-md transition-transform group-hover:scale-125 group-focus-visible:ring-2 group-focus-visible:ring-ring",
-                          isActive ? "size-5 scale-110" : "size-4",
-                        )}
-                        style={{ background: color }}
-                      >
-                        {isSel && (
-                          <Check
-                            className="size-2.5 text-white"
-                            strokeWidth={3}
-                            aria-hidden="true"
-                          />
-                        )}
-                      </span>
-                    </span>
-                  </button>
-                )
-              })}
-
-              {active && (
-                <UpgradeCard
-                  id={active}
-                  selected={selectedSet.has(active)}
-                  onToggle={() => toggle(active)}
-                  onClose={() => setActive(null)}
-                />
+                    <span
+                      className="inline-block size-2.5 rounded-full"
+                      style={{ background: TIER_COLORS[tier] }}
+                      aria-hidden="true"
+                    />
+                    {TIER_LABELS[tier]}
+                  </span>
+                ),
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Upgrade catalog */}
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-semibold text-foreground">
-            All upgrades
-          </span>
-          {/* Tier legend */}
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {(["safety", "high", "medium", "low"] as PriorityTier[]).map(
-              (tier) => (
-                <span
-                  key={tier}
-                  className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+          {/* Collapsible categories, stacked vertically. Each header toggles
+              its section; a badge shows how many upgrades in the group are in
+              the plan even when the section is collapsed. */}
+          <div className="flex flex-col gap-2">
+            {GROUP_ORDER.map((group) => {
+              const groupUpgrades = UPGRADES.filter(
+                (u) => u.group === group,
+              ).sort((a, b) => b.priorityScore - a.priorityScore)
+              const isCollapsed = collapsedGroups.has(group as UpgradeGroup)
+              const selectedCount = groupUpgrades.filter((u) =>
+                selectedSet.has(u.id),
+              ).length
+              const panelId = `upgrade-group-${group}`
+              return (
+                <div
+                  key={group}
+                  className="overflow-hidden rounded-xl border border-border"
                 >
-                  <span
-                    className="inline-block size-2.5 rounded-full"
-                    style={{ background: TIER_COLORS[tier] }}
-                    aria-hidden="true"
-                  />
-                  {TIER_LABELS[tier]}
-                </span>
-              ),
-            )}
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group as UpgradeGroup)}
+                    aria-expanded={!isCollapsed}
+                    aria-controls={panelId}
+                    className="flex w-full items-center justify-between gap-2 bg-muted/50 px-3 py-2 text-left transition-colors hover:bg-muted"
+                  >
+                    <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {GROUP_LABELS[group as UpgradeGroup]}
+                      {selectedCount > 0 && (
+                        <span className="rounded-full bg-primary/15 px-1.5 py-0.5 font-mono text-[10px] normal-case tracking-normal text-primary">
+                          {selectedCount}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "size-4 shrink-0 text-muted-foreground transition-transform",
+                        isCollapsed ? "" : "rotate-180",
+                      )}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {!isCollapsed && (
+                    <div id={panelId} className="flex flex-col gap-1.5 p-2">
+                      {groupUpgrades.map((u) => {
+                        const isSel = selectedSet.has(u.id)
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => {
+                              toggle(u.id)
+                              setActive(u.id)
+                            }}
+                            className={cn(
+                              "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left text-xs transition-colors",
+                              isSel
+                                ? "border-primary bg-primary/10 text-foreground"
+                                : "border-border bg-background text-foreground hover:bg-muted",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "flex size-4 shrink-0 items-center justify-center rounded-full border-2",
+                                isSel
+                                  ? "border-transparent"
+                                  : "border-current opacity-60",
+                              )}
+                              style={
+                                isSel
+                                  ? { background: TIER_COLORS[u.tier] }
+                                  : undefined
+                              }
+                            >
+                              {isSel && (
+                                <Check
+                                  className="size-2.5 text-white"
+                                  strokeWidth={3}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </span>
+                            <span className="flex-1">{u.label}</span>
+                            <span className="tabular-nums text-[10px] text-muted-foreground">
+                              {money(u.cost.low)}+
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            <Info className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+            Priority order and figures are national-average estimates for
+            education only — not a professional inspection or a firm quote. Get
+            local bids before committing.
+          </p>
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          {GROUP_ORDER.map((group) => (
-            <div key={group} className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {GROUP_LABELS[group as UpgradeGroup]}
-              </p>
-              <div className="flex flex-col gap-1.5">
-                {UPGRADES.filter((u) => u.group === group)
-                  .sort((a, b) => b.priorityScore - a.priorityScore)
-                  .map((u) => {
-                    const isSel = selectedSet.has(u.id)
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => {
-                          toggle(u.id)
-                          setActive(u.id)
-                        }}
-                        className={cn(
-                          "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-left text-xs transition-colors",
-                          isSel
-                            ? "border-primary bg-primary/10 text-foreground"
-                            : "border-border bg-background text-foreground hover:bg-muted",
+        {/* Right column: the clay diagram. */}
+        <div className="flex flex-1 flex-col items-center gap-4">
+          {/* Clay diorama stage — a square panel like the landscape/solar
+              explorers. The renders are square images, so an aspect-square
+              panel lets them fill edge-to-edge with no letterbox and therefore
+              no side edge line, while object-contain still guarantees nothing
+              is cropped. */}
+          <div className="relative w-full max-w-2xl">
+            <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+              {/* Floating shadow */}
+              <div
+                className="pointer-events-none absolute left-1/2 bottom-[10%] h-[8%] w-[60%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl"
+                aria-hidden="true"
+              />
+
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={EXTERIOR_SRC || "/placeholder.svg"}
+                alt="Clay model house, exterior"
+                className="absolute inset-0 size-full object-contain transition-opacity duration-300"
+                style={{
+                  opacity: exteriorOpacity,
+                  filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
+                }}
+                crossOrigin="anonymous"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={INTERIOR_SRC || "/placeholder.svg"}
+                alt="Clay model house, interior cutaway showing rooms and systems"
+                className="absolute inset-0 size-full object-contain transition-opacity duration-300"
+                style={{
+                  opacity: interiorOpacity,
+                  filter: "drop-shadow(0 20px 24px rgba(90,60,25,0.26))",
+                }}
+                crossOrigin="anonymous"
+              />
+
+              {/* Click the closed house itself to open it. */}
+              {!isOpen && (
+                <button
+                  type="button"
+                  onClick={() => setOpen(true)}
+                  aria-label="Open the house to see inside"
+                  className="absolute inset-0 z-10 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              )}
+
+              {/* Hotspots (fade in as the house opens) */}
+              <div
+                className="absolute inset-0 transition-opacity duration-300"
+                style={{
+                  opacity: pinOpacity,
+                  pointerEvents: pinsInteractive ? "auto" : "none",
+                }}
+              >
+                {UPGRADES.map((u) => {
+                  const pos = PIN_POS[u.id]
+                  const isSel = selectedSet.has(u.id)
+                  const isActive = active === u.id
+                  const color = TIER_COLORS[u.tier]
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => setActive(isActive ? null : u.id)}
+                      aria-label={u.label}
+                      aria-pressed={isActive}
+                      className="group absolute -translate-x-1/2 -translate-y-1/2 outline-none"
+                      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                    >
+                      <span className="relative flex size-5 items-center justify-center">
+                        {!reducedMotion && !isSel && (
+                          <span
+                            className="absolute inline-flex size-full animate-ping rounded-full"
+                            style={{ background: `${color}55` }}
+                          />
                         )}
-                      >
                         <span
                           className={cn(
-                            "flex size-4 shrink-0 items-center justify-center rounded-full border-2",
-                            isSel
-                              ? "border-transparent"
-                              : "border-current opacity-60",
+                            "relative inline-flex items-center justify-center rounded-full border-2 border-white shadow-md transition-transform group-hover:scale-125 group-focus-visible:ring-2 group-focus-visible:ring-ring",
+                            isActive ? "size-5 scale-110" : "size-4",
                           )}
-                          style={
-                            isSel ? { background: TIER_COLORS[u.tier] } : undefined
-                          }
+                          style={{ background: color }}
                         >
                           {isSel && (
                             <Check
@@ -342,24 +440,33 @@ export function RenovationExplorer() {
                             />
                           )}
                         </span>
-                        <span className="flex-1">{u.label}</span>
-                        <span className="tabular-nums text-[10px] text-muted-foreground">
-                          {money(u.cost.low)}+
-                        </span>
-                      </button>
-                    )
-                  })}
-              </div>
-            </div>
-          ))}
-        </div>
+                      </span>
+                    </button>
+                  )
+                })}
 
-        <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
-          <Info className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-          Priority order and figures are national-average estimates for
-          education only — not a professional inspection or a firm quote. Get
-          local bids before committing.
-        </p>
+                {active && (
+                  <UpgradeCard
+                    id={active}
+                    selected={selectedSet.has(active)}
+                    onToggle={() => toggle(active)}
+                    onClose={() => setActive(null)}
+                  />
+                )}
+              </div>
+
+              {/* Prompt when the house is closed */}
+              {!isOpen && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-card/85 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-md">
+                    <DoorOpen className="size-3.5 text-primary" aria-hidden="true" />
+                    Tap the house to see inside
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
     </section>

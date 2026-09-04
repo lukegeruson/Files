@@ -1,13 +1,14 @@
 import Link from "next/link"
-import { ArrowRight, Building2, GitBranch, ListChecks } from "lucide-react"
+import { ArrowRight, Building2, GitBranch, ListChecks, MapPin } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ExplorerNav } from "@/components/careers/explorer-nav"
 import { ProfileStrip } from "@/components/careers/profile-strip"
 import { JobsReading } from "@/components/careers/jobs-reading"
-import { ClaySkillTree } from "@/components/careers/clay-skill-tree"
+import { EmailOpenings } from "@/components/careers/email-openings"
 import { CAREERS } from "@/lib/careers/careers"
+import { getEvergreen } from "@/lib/careers/companies"
 import { INDUSTRIES, INDUSTRY_META } from "@/lib/careers/industries"
 import { QUIZ_STEP_COUNT_WORD } from "@/lib/careers/quiz"
 import type { Career, Industry } from "@/lib/careers/types"
@@ -66,16 +67,18 @@ function industriesOf(career: Career): Industry[] {
 }
 
 export default function CareerExplorerPage() {
+  const evergreen = getEvergreen()
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <ExplorerNav />
       <main className="flex-1">
         <section className="mx-auto max-w-6xl px-4 pt-16 md:px-6">
-          {/* Two columns on large screens: the copy stays left while the clay
-              skill-tree sculpture sits top-right as a quiet illustration. On
-              smaller screens the sculpture is hidden so the hero stays lean. */}
-          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          {/* Two columns on large screens: the copy stays left while
+              Evergreen's own openings ride alongside it — the same "Working for
+              Evergreen" panel shown on the Companies tab. On smaller screens it
+              stacks below the hero copy. */}
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_21rem]">
             <div>
               <p className="text-sm font-medium uppercase tracking-widest text-primary">Careers</p>
               <h1 className="mt-3 max-w-4xl font-serif text-4xl font-semibold leading-tight tracking-tight text-balance md:text-5xl">
@@ -107,12 +110,55 @@ export default function CareerExplorerPage() {
                   className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-5 text-sm font-medium transition-colors hover:bg-secondary"
                 >
                   <Building2 className="size-4" />
-                  Work for Evergreen
+                  Explore Companies
                 </Link>
               </div>
             </div>
 
-            <ClaySkillTree className="mx-auto hidden w-full max-w-xs lg:block" />
+            {/* Same compact panel as the Companies tab: Evergreen is a single
+                employer, so a quick way to reach out sits beside the hero. */}
+            {evergreen ? (
+              <div className="rounded-xl border border-border bg-card p-5 lg:self-start">
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <h2 className="font-serif text-xl font-semibold tracking-tight">
+                    Working for Evergreen
+                  </h2>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {evergreen.city}, {evergreen.state}
+                  </span>
+                </div>
+                <ul className="mt-4 flex flex-col gap-2.5">
+                  <li className="rounded-lg border border-border bg-secondary/40 px-4 py-3.5">
+                    <p className="font-medium leading-snug text-balance">
+                      Door to Door Lead Generation
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+                      San Jose
+                    </p>
+                  </li>
+                  <li className="rounded-lg border border-border bg-secondary/40 px-4 py-3.5">
+                    <p className="font-medium leading-snug text-balance">
+                      Link Building Specialist
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+                      Remote
+                    </p>
+                  </li>
+                </ul>
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <EmailOpenings />
+                  <Link
+                    href="/jobs/tree"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary"
+                  >
+                    Browse all roles
+                    <ArrowRight className="size-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -120,7 +166,7 @@ export default function CareerExplorerPage() {
           <ProfileStrip />
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 pt-14 md:px-6">
+        <section className="mx-auto max-w-6xl px-4 pt-10 md:px-6">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">Pick an industry</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {INDUSTRIES.map((industry) => {

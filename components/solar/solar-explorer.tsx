@@ -47,9 +47,11 @@ const HOTSPOTS: Hotspot[] = [
   { id: "grid", x: 88, y: 24 },
 ]
 
-// One universal "electricity" color used for every energy channel. Direction is
-// still conveyed by the dashes animating from source toward destination.
+// Solar-generated electricity is drawn in warm amber. Grid-sourced power (which
+// is what carries the home at night) is drawn in blue so the two are easy to
+// tell apart. Direction is conveyed by the dashes animating source -> dest.
 const ELECTRIC = "#f5b445"
+const GRID_ELECTRIC = "#4da3ff"
 
 // Energy-flow segments drawn between hotspots. `keys` selects the flow value(s)
 // on the current frame (the line is active if ANY listed flow is carrying
@@ -66,6 +68,10 @@ type Segment = {
   to: ComponentId
   keys?: FlowKey[]
   solarDriven?: boolean
+  // Part of the grid -> inverter -> battery path that carries the home at night.
+  // These light up blue whenever the home is running on grid power (i.e. after
+  // dark, once the panels stop generating).
+  gridPath?: boolean
 }
 
 // The battery marker represents the home hub, so the wiring mirrors a real
@@ -74,13 +80,21 @@ type Segment = {
 //   panels -> inverter     DC generation flows to the inverter
 //   inverter -> battery    inverter charges the battery and powers the home
 //   inverter -> grid       excess solar is exported
-//   grid -> battery        the grid supplies the home when solar is short
+//   grid -> inverter       the grid feeds the inverter when solar is short
+//                          (e.g. at night); the inverter then powers the
+//                          battery/home, so the grid path runs
+//                          grid -> inverter -> battery.
 const SEGMENTS: Segment[] = [
   { from: "sun", to: "panels", solarDriven: true },
   { from: "panels", to: "inverter", solarDriven: true },
-  { from: "inverter", to: "battery", keys: ["solarToHome", "solarToBattery"] },
+  {
+    from: "inverter",
+    to: "battery",
+    keys: ["solarToHome", "solarToBattery", "gridToHome"],
+    gridPath: true,
+  },
   { from: "inverter", to: "grid", keys: ["solarToGrid"] },
-  { from: "grid", to: "battery", keys: ["gridToHome"] },
+  { from: "grid", to: "inverter", keys: ["gridToHome"], gridPath: true },
 ]
 
 // Fixed star field for the night sky (deterministic so it doesn't reshuffle).
@@ -220,13 +234,17 @@ const TICKS: Array<{ label: string; icon: typeof Sun }> = [
   { label: "Night", icon: Moon },
 ]
 
-// Same legend for the vertical desktop slider, with the hour each label maps to
-// so it can be positioned along the 0–24 axis (bottom = 0:00, top = 24:00).
-const VERTICAL_TICKS: Array<{ label: string; icon: typeof Sun; hour: number }> = [
-  { label: "Morning", icon: Sunrise, hour: 6 },
-  { label: "Midday", icon: Sun, hour: 12 },
-  { label: "Evening", icon: Sunset, hour: 18 },
-  { label: "Night", icon: Moon, hour: 24 },
+// Legend for the vertical desktop slider. The axis is a full day rotated so
+// that noon sits at the top and midnight in the middle (see VerticalTimeSlider).
+// Reading top → bottom follows the day forward: noon, evening, midnight,
+// morning, and back to noon. `pos` is the percentage from the bottom of the
+// track where each label sits.
+const VERTICAL_TICKS: Array<{ label: string; icon: typeof Sun; pos: number }> = [
+  { label: "Noon", icon: Sun, pos: 100 },
+  { label: "Evening", icon: Sunset, pos: 75 },
+  { label: "Midnight", icon: Moon, pos: 50 },
+  { label: "Morning", icon: Sunrise, pos: 25 },
+  { label: "Noon", icon: Sun, pos: 0 },
 ]
 
 const DAY_SECONDS = 18 // one simulated day plays over ~18s
@@ -322,13 +340,25 @@ export function SolarExplorer() {
 
   // Which segments are currently carrying energy. A segment with multiple keys
   // is active when any of its flows is carrying power.
+  // After dark the panels stop and the home is carried from the grid, so the
+  // grid -> inverter -> battery path is drawn even though the scene's reserve
+  // battery is what physically covers the small overnight load.
+  const nightSupply = !sky.sunUp && frame.consumptionKw > 0.02
   const activeSegments = SEGMENTS.map((seg) => {
-    const active = seg.solarDriven
-      ? frame.solarKw > 0.05
-      : seg.keys
-        ? seg.keys.some((k) => frame.flows[k] > 0.05)
-        : false
-    return { seg, active }
+    const solarActive = seg.solarDriven ? frame.solarKw > 0.05 : false
+    const keyActive = seg.keys
+      ? seg.keys.some((k) => frame.flows[k] > 0.05)
+      : false
+    const gridActive = !!seg.gridPath && nightSupply
+    const active = solarActive || keyActive || gridActive
+    // The grid path renders blue whenever it is the grid (not the panels)
+    // powering the home; everything solar-driven stays amber.
+    const gridDriven =
+      !!seg.gridPath &&
+      !solarActive &&
+      (gridActive || frame.flows.gridToHome > 0.05)
+    const color = gridDriven ? GRID_ELECTRIC : ELECTRIC
+    return { seg, active, color }
   })
 
   // Shared inner content for the "Right now" live-stats card. Rendered above the
@@ -416,6 +446,37 @@ export function SolarExplorer() {
     )
   }
 
+  // Desktop-only part description. On desktop this replaces the on-stage popup:
+  // it sits at the top of the left column and swaps its contents as different
+  // parts are clicked, falling back to a prompt when nothing is selected.
+  const renderPartInfo = () => {
+    const info = selected ? COMPONENT_INFO[selected] : null
+    return (
+      <>
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
+          <p className="font-serif text-sm font-semibold text-foreground">
+            {info ? info.title : "Solar parts"}
+          </p>
+          {selected ? (
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              aria-label="Clear selection"
+              className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+        <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+          {info
+            ? info.blurb
+            : "Tap any marker on the diagram to see what that part does."}
+        </p>
+      </>
+    )
+  }
+
   // Time-of-day slider. Shown below the "Right now" card in the desktop left
   // column, and inside the Controls block on mobile. Both copies live in the
   // DOM (toggled by CSS), so each needs a unique id.
@@ -468,30 +529,30 @@ export function SolarExplorer() {
 
   // Vertical variant of the timeline used in the desktop left column. It fills
   // the height of its card so the two info boxes together match the stage.
-  // Bottom = midnight, middle = midday (brightest), top = midnight — the same
-  // ordering as the horizontal slider, just rotated.
+  // Top = noon (brightest), middle = midnight, bottom = noon — a full day
+  // rotated so midday leads at the top.
   const renderTimelineVertical = () => (
     <div className="flex h-full flex-col gap-2">
       {/* Header stacks so it fits the thin box. */}
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-1 pb-2">
         <span className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Time of day
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 items-stretch gap-2">
-        {/* Ticks positioned at their actual time so labels line up with the
-            gradient: midday at the bright middle, night at the dark ends. The
-            inner region is inset vertically so the top/bottom labels don't clip
-            into the header. Ticks sit to the left of the slider. */}
+      <div className="flex min-h-0 flex-1 items-stretch gap-2 pt-1">
+        {/* Ticks positioned to match the gradient: noon (bright) at top and
+            bottom, midnight (dark) in the middle. The inner region is inset
+            vertically so the top/bottom labels don't clip into the header.
+            Ticks sit to the left of the slider. */}
         <div className="relative flex-1 text-[11px] text-muted-foreground">
           <div className="absolute inset-x-0 inset-y-2">
             {VERTICAL_TICKS.map((t) => {
               const Icon = t.icon
               return (
                 <span
-                  key={t.label}
+                  key={`${t.label}-${t.pos}`}
                   className="absolute flex -translate-y-1/2 items-center gap-1.5"
-                  style={{ bottom: `${(t.hour / 24) * 100}%` }}
+                  style={{ bottom: `${t.pos}%` }}
                 >
                   <Icon className="size-3 shrink-0" aria-hidden="true" />
                   {t.label}
@@ -582,18 +643,23 @@ export function SolarExplorer() {
           the stage height so both info boxes span the same vertical space as the
           house visual. */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch sm:justify-center sm:gap-3">
-        {/* Desktop-only controls to the left of the stage. A column holds the
-            "Right now" card on top with the playback buttons pinned to the
-            bottom, sitting beside a thin, full-height "Time of day" box whose
-            slider runs down its right edge (closest to the stage). */}
-        <div className="hidden shrink-0 items-center gap-3 sm:flex">
-          <div className="flex w-44 flex-col justify-center gap-4">
+        {/* Desktop-only controls to the left of the stage. The far-left column
+            stacks three groups over the full stage height — the part
+            description on top, the "Right now" card in the middle, and the
+            playback buttons at the bottom — beside a thin, full-height "Time of
+            day" box whose slider runs down its right edge (closest to the
+            stage). */}
+        <div className="hidden shrink-0 items-stretch gap-3 sm:flex">
+          <div className="flex w-44 flex-col gap-3">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
+              {renderPartInfo()}
+            </div>
             <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
               {renderLiveStats(false)}
             </div>
             <div>{controlButtons}</div>
           </div>
-          <div className="flex h-[85%] w-28 shrink-0 flex-col self-center rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="flex w-28 shrink-0 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
             {renderTimelineVertical()}
           </div>
         </div>
@@ -675,7 +741,7 @@ export function SolarExplorer() {
             className="pointer-events-none absolute inset-0 size-full"
             aria-hidden="true"
           >
-            {activeSegments.map(({ seg, active }) => {
+            {activeSegments.map(({ seg, active, color }) => {
               const a = posOf[seg.from]
               const b = posOf[seg.to]
               if (!a || !b) return null
@@ -686,7 +752,7 @@ export function SolarExplorer() {
                   y1={a.y}
                   x2={b.x}
                   y2={b.y}
-                  stroke={ELECTRIC}
+                  stroke={color}
                   strokeWidth={active ? 0.8 : 0.45}
                   strokeLinecap="round"
                   strokeDasharray="1.6 2.2"
@@ -696,7 +762,7 @@ export function SolarExplorer() {
                   )}
                   style={{
                     filter: active
-                      ? `drop-shadow(0 0 1.4px ${ELECTRIC})`
+                      ? `drop-shadow(0 0 1.4px ${color})`
                       : undefined,
                   }}
                 />
@@ -707,8 +773,9 @@ export function SolarExplorer() {
           {/* Hotspots */}
           {hotspots.map((h) => {
             // The sun marker only exists while the sun is up; once it sets and
-            // the moon rises, the marker disappears.
-            if (h.id === "sun" && !sky.sunUp) return null
+            // the moon rises, the marker disappears. The solar-panel marker is
+            // likewise hidden at night, since the array isn't generating.
+            if ((h.id === "sun" || h.id === "panels") && !sky.sunUp) return null
             const info = COMPONENT_INFO[h.id]
             const isSel = selected === h.id
             return (
@@ -741,13 +808,16 @@ export function SolarExplorer() {
             )
           })}
 
-          {/* Selected component popup */}
+          {/* Selected component popup — mobile only. On desktop the same
+              description is shown in the left column (renderPartInfo). */}
           {selected ? (
-            <SelectedCard
-              id={selected}
-              pos={posOf[selected]}
-              onClose={() => setSelected(null)}
-            />
+            <div className="sm:hidden">
+              <SelectedCard
+                id={selected}
+                pos={posOf[selected]}
+                onClose={() => setSelected(null)}
+              />
+            </div>
           ) : null}
 
           {/* Savings breakdown (toggled) */}
@@ -870,15 +940,24 @@ function VerticalTimeSlider({
   const trackRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
 
+  // The track is a full day rotated so noon is at the top and bottom while
+  // midnight sits in the middle. Position `p` runs 0 (bottom) → 1 (top):
+  //   top half   [0.5, 1] → hours 24 → 12  (midnight up to noon)
+  //   bottom half [0, 0.5) → hours 12 → 0   (noon down to midnight)
+  const hourToPos = (h: number) => (h >= 12 ? (36 - h) / 24 : (12 - h) / 24)
+  const posToHour = (p: number) => {
+    const clamped = Math.max(0, Math.min(1, p))
+    const h = clamped >= 0.5 ? 36 - 24 * clamped : 12 - 24 * clamped
+    return Math.round(h * 4) / 4 // snap to 0.25h steps
+  }
+
   const setFromClientY = (clientY: number) => {
     const el = trackRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
     if (rect.height === 0) return
-    // Bottom of the track is 0:00, top is 24:00.
-    const pct = 1 - (clientY - rect.top) / rect.height
-    const clamped = Math.max(0, Math.min(1, pct))
-    onChange(Math.round(clamped * 24 * 4) / 4) // snap to 0.25h steps
+    const p = 1 - (clientY - rect.top) / rect.height
+    onChange(posToHour(p))
   }
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -894,36 +973,40 @@ function VerticalTimeSlider({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    let next = value
+    // Operate on position so the thumb always moves in the pressed direction,
+    // regardless of how hours wrap across the rotated axis.
+    let p = hourToPos(value)
+    const small = 0.25 / 24
+    const big = 1 / 24
     switch (e.key) {
       case "ArrowUp":
       case "ArrowRight":
-        next = Math.min(24, value + 0.25)
+        p += small
         break
       case "ArrowDown":
       case "ArrowLeft":
-        next = Math.max(0, value - 0.25)
+        p -= small
         break
       case "PageUp":
-        next = Math.min(24, value + 1)
+        p += big
         break
       case "PageDown":
-        next = Math.max(0, value - 1)
+        p -= big
         break
       case "Home":
-        next = 0
+        p = 0
         break
       case "End":
-        next = 24
+        p = 1
         break
       default:
         return
     }
     e.preventDefault()
-    onChange(next)
+    onChange(posToHour(Math.max(0, Math.min(1, p))))
   }
 
-  const pct = (value / 24) * 100
+  const pct = hourToPos(value) * 100
 
   return (
     <div
@@ -942,7 +1025,7 @@ function VerticalTimeSlider({
       className="relative h-full w-2.5 shrink-0 cursor-pointer touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       style={{
         background:
-          "linear-gradient(to top, #1e293b 0%, #6b5b95 18%, #f5b445 40%, #ffe6a8 50%, #f5b445 60%, #6b5b95 82%, #1e293b 100%)",
+          "linear-gradient(to top, #ffe6a8 0%, #f5b445 12%, #6b5b95 34%, #1e293b 50%, #6b5b95 66%, #f5b445 88%, #ffe6a8 100%)",
       }}
     >
       <span
