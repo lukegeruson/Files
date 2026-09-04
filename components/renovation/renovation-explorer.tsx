@@ -74,10 +74,11 @@ export function RenovationExplorer() {
   const [active, setActive] = useState<UpgradeId | null>(null)
   // Two discrete views: closed exterior (default) and the interior cutaway.
   const [open, setOpen] = useState(false)
-  // Which upgrade categories are collapsed in the sidebar (all expanded by
-  // default). Kept as a Set of group keys.
+  // Which upgrade categories are collapsed in the sidebar. All start collapsed
+  // so the catalog opens compact; tapping a header expands that section. Kept
+  // as a Set of group keys.
   const [collapsedGroups, setCollapsedGroups] = useState<Set<UpgradeGroup>>(
-    () => new Set(),
+    () => new Set(GROUP_ORDER),
   )
   const toggleGroup = (group: UpgradeGroup) => {
     setCollapsedGroups((prev) => {
@@ -137,7 +138,7 @@ export function RenovationExplorer() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-2">
         {/* Left column — "Your plan" on top and the full "All upgrades" catalog
             below, so both panels sit beside the explorer on desktop. On mobile
             the whole column drops below the diagram (order-last). */}
