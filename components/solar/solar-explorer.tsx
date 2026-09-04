@@ -420,6 +420,37 @@ export function SolarExplorer() {
     )
   }
 
+  // Desktop-only part description. On desktop this replaces the on-stage popup:
+  // it sits at the top of the left column and swaps its contents as different
+  // parts are clicked, falling back to a prompt when nothing is selected.
+  const renderPartInfo = () => {
+    const info = selected ? COMPONENT_INFO[selected] : null
+    return (
+      <>
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
+          <p className="font-serif text-sm font-semibold text-foreground">
+            {info ? info.title : "Solar parts"}
+          </p>
+          {selected ? (
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              aria-label="Clear selection"
+              className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+        <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+          {info
+            ? info.blurb
+            : "Tap any marker on the diagram to see what that part does."}
+        </p>
+      </>
+    )
+  }
+
   // Time-of-day slider. Shown below the "Right now" card in the desktop left
   // column, and inside the Controls block on mobile. Both copies live in the
   // DOM (toggled by CSS), so each needs a unique id.
@@ -477,12 +508,12 @@ export function SolarExplorer() {
   const renderTimelineVertical = () => (
     <div className="flex h-full flex-col gap-2">
       {/* Header stacks so it fits the thin box. */}
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-1 pb-2">
         <span className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Time of day
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 items-stretch gap-2">
+      <div className="flex min-h-0 flex-1 items-stretch gap-2 pt-1">
         {/* Ticks positioned to match the gradient: noon (bright) at top and
             bottom, midnight (dark) in the middle. The inner region is inset
             vertically so the top/bottom labels don't clip into the header.
@@ -586,18 +617,23 @@ export function SolarExplorer() {
           the stage height so both info boxes span the same vertical space as the
           house visual. */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch sm:justify-center sm:gap-3">
-        {/* Desktop-only controls to the left of the stage. A column holds the
-            "Right now" card on top with the playback buttons pinned to the
-            bottom, sitting beside a thin, full-height "Time of day" box whose
-            slider runs down its right edge (closest to the stage). */}
-        <div className="hidden shrink-0 items-center gap-3 sm:flex">
-          <div className="flex w-44 flex-col justify-center gap-4">
+        {/* Desktop-only controls to the left of the stage. The far-left column
+            stacks three groups over the full stage height — the part
+            description on top, the "Right now" card in the middle, and the
+            playback buttons at the bottom — beside a thin, full-height "Time of
+            day" box whose slider runs down its right edge (closest to the
+            stage). */}
+        <div className="hidden shrink-0 items-stretch gap-3 sm:flex">
+          <div className="flex w-44 flex-col gap-3">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
+              {renderPartInfo()}
+            </div>
             <div className="overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
               {renderLiveStats(false)}
             </div>
             <div>{controlButtons}</div>
           </div>
-          <div className="flex h-full w-28 shrink-0 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="flex w-28 shrink-0 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
             {renderTimelineVertical()}
           </div>
         </div>
@@ -745,13 +781,16 @@ export function SolarExplorer() {
             )
           })}
 
-          {/* Selected component popup */}
+          {/* Selected component popup — mobile only. On desktop the same
+              description is shown in the left column (renderPartInfo). */}
           {selected ? (
-            <SelectedCard
-              id={selected}
-              pos={posOf[selected]}
-              onClose={() => setSelected(null)}
-            />
+            <div className="sm:hidden">
+              <SelectedCard
+                id={selected}
+                pos={posOf[selected]}
+                onClose={() => setSelected(null)}
+              />
+            </div>
           ) : null}
 
           {/* Savings breakdown (toggled) */}
