@@ -84,8 +84,10 @@ const SPOTS: Spot[] = [
 export function FarmSimulator() {
   const reducedMotion = useReducedMotion()
 
-  // Season runs 0 (early spring) → 1 (late-fall harvest).
-  const [season, setSeason] = useState(0.52)
+  // Season runs 0 (early spring) → 1 (late-fall harvest). The manual slider
+  // snaps to the four season anchors, but the value stays a float so auto-play
+  // and the sun arc can still animate smoothly. Defaults to spring.
+  const [season, setSeason] = useState(SEASON_ANCHORS.spring)
   const [playing, setPlaying] = useState(false)
   // Crop diversity: 0 = single crop (all corn), 1 = fully diversified.
   const [diversity, setDiversity] = useState(1)
@@ -94,6 +96,8 @@ export function FarmSimulator() {
   const mix = useMemo(() => mixFromDiversity(diversity), [diversity])
   const metrics = useMemo(() => computeMetrics(mix), [mix])
   const phase = seasonPhase(season)
+  // Which of the four season stops the slider thumb sits on.
+  const seasonIndex = SEASON_ORDER.indexOf(phase)
 
   // Auto-advance the season when playing.
   const raf = useRef<number | null>(null)
@@ -121,7 +125,7 @@ export function FarmSimulator() {
 
   const handleReset = () => {
     setPlaying(false)
-    setSeason(0.52)
+    setSeason(SEASON_ANCHORS.spring)
     setDiversity(1)
     setSelected(null)
   }
@@ -168,7 +172,7 @@ export function FarmSimulator() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-2">
         {/* Controls form a left sidebar on desktop (stacked in a single
             column). On tablet they lay out as a row of three below the visual;
             on mobile they stack. `order-last` drops them under the stage until
@@ -217,15 +221,17 @@ export function FarmSimulator() {
             <input
               type="range"
               min={0}
-              max={1}
-              step={0.005}
-              value={season}
+              max={3}
+              step={1}
+              value={seasonIndex}
               onChange={(e) => {
                 setPlaying(false)
-                setSeason(Number.parseFloat(e.target.value))
+                const idx = Number.parseInt(e.target.value, 10)
+                setSeason(SEASON_ANCHORS[SEASON_ORDER[idx]])
               }}
               className="farm-season-slider h-2.5 w-full cursor-pointer appearance-none rounded-full"
-              aria-label="Season progress"
+              aria-label="Season"
+              aria-valuetext={SEASON_LABELS[phase]}
               style={{
                 background:
                   "linear-gradient(90deg, #8bbf6a 0%, #4f7a37 30%, #d8b64a 60%, #cdd7de 100%)",
