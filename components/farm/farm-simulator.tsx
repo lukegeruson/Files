@@ -234,7 +234,7 @@ export function FarmSimulator() {
               aria-valuetext={SEASON_LABELS[phase]}
               style={{
                 background:
-                  "linear-gradient(90deg, #8bbf6a 0%, #4f7a37 30%, #d8b64a 60%, #cdd7de 100%)",
+                  "linear-gradient(90deg, #8bbf6a 0% 25%, #4f7a37 25% 50%, #d8b64a 50% 75%, #cdd7de 75% 100%)",
               }}
             />
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
