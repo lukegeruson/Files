@@ -11,17 +11,33 @@ export function SiteFooter() {
             Explore the Horizon. Make Better Decisions.
           </p>
         </div>
-        <nav aria-label="Footer categories" className="flex flex-wrap gap-x-6 gap-y-2">
-          {CATEGORIES.map((category) => (
+        <div className="flex flex-col gap-3 md:items-end">
+          <nav aria-label="Footer categories" className="flex flex-wrap gap-x-6 gap-y-2">
+            {CATEGORIES.map((category) => (
+              <Link
+                key={category}
+                href={`/category/${category}`}
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {CATEGORY_LABELS[category]}
+              </Link>
+            ))}
+          </nav>
+          <nav aria-label="Get involved" className="flex flex-wrap gap-x-6 gap-y-2">
             <Link
-              key={category}
-              href={`/category/${category}`}
+              href="/find-a-pro"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              {CATEGORY_LABELS[category]}
+              Find a Professional
             </Link>
-          ))}
-        </nav>
+            <Link
+              href="/partners"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Partner with Evergreen
+            </Link>
+          </nav>
+        </div>
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 md:px-6">

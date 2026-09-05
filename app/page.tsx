@@ -51,6 +51,25 @@ export default async function HomePage() {
             Do you know how much it costs to go solar? Want to renovate your front yard? Looking to
             upgrade your home? Explore our tools to make better decisions about your property.
           </p>
+          {/* Two primary actions, kept directly under the intro so the hero
+              stays a single clean block. "Find a Professional" is the primary
+              consumer path (filled); "Partner with Evergreen" is the primary
+              business path (outline). Deliberately no third CTA here. */}
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href="/find-a-pro"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Find a Professional
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/partners"
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-6 text-sm font-medium transition-colors hover:bg-secondary"
+            >
+              Partner with Evergreen
+            </Link>
+          </div>
         </section>
 
         {/* Categories */}
