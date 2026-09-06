@@ -48,8 +48,9 @@ export default async function HomePage() {
             Make Better Decisions.
           </h1>
           <p className="mt-4 max-w-3xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            Do you know how much it costs to go solar? Want to renovate your front yard? Looking to
-            upgrade your home? Explore our tools to make better decisions about your property.
+            Do you know how much it costs to go solar? Looking to upgrade your home?
+            <br />
+            Explore our tools to make better decisions about your property.
           </p>
           {/* Two primary actions, kept directly under the intro so the hero
               stays a single clean block. "Find a Professional" is the primary
