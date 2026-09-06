@@ -18,7 +18,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
   },
   {
     id: "remodel",
-    label: "Remodeling Cost Calculator",
+    label: "Remodeling Cost",
     icon: <Calculator className="size-4" aria-hidden="true" />,
   },
 ]

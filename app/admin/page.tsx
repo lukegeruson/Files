@@ -1,6 +1,17 @@
 import Link from "next/link"
-import { Plus, Pencil, ArrowUpRight, Briefcase, Inbox } from "lucide-react"
+import {
+  Plus,
+  Pencil,
+  ArrowUpRight,
+  Briefcase,
+  Inbox,
+  Users,
+  Handshake,
+  Building2,
+} from "lucide-react"
 import { countUnreadInquiries } from "@/app/actions/job-inquiry"
+import { countUnreadLeads } from "@/app/actions/leads"
+import { countUnreadPartnerApplications } from "@/app/actions/partners"
 import { getLivePostings } from "@/lib/careers/postings"
 import { Button } from "@/components/ui/button"
 import { DeletePostButton } from "@/components/delete-post-button"
@@ -43,11 +54,14 @@ export default async function AdminPage() {
   await requireAdmin()
 
   // Independent queries, so run them together rather than in series.
-  const [posts, unreadInquiries, livePostings] = await Promise.all([
-    getPosts({ includeUnpublished: true }),
-    countUnreadInquiries(),
-    getLivePostings(),
-  ])
+  const [posts, unreadInquiries, livePostings, unreadLeads, unreadPartners] =
+    await Promise.all([
+      getPosts({ includeUnpublished: true }),
+      countUnreadInquiries(),
+      getLivePostings(),
+      countUnreadLeads(),
+      countUnreadPartnerApplications(),
+    ])
   const liveOpenings = livePostings.length
 
   // Id of the single most recently edited post across all categories.
@@ -156,6 +170,43 @@ export default async function AdminPage() {
                 {unreadInquiries}
               </span>
             ) : null}
+          </Link>
+          <Link
+            href="/admin/leads"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Users className="size-4 shrink-0" aria-hidden="true" />
+            <span className="hidden sm:inline">Leads</span>
+            {unreadLeads > 0 ? (
+              <span
+                className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground"
+                aria-label={`${unreadLeads} to route`}
+              >
+                {unreadLeads}
+              </span>
+            ) : null}
+          </Link>
+          <Link
+            href="/admin/partners"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Handshake className="size-4 shrink-0" aria-hidden="true" />
+            <span className="hidden sm:inline">Partners</span>
+            {unreadPartners > 0 ? (
+              <span
+                className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground"
+                aria-label={`${unreadPartners} unhandled`}
+              >
+                {unreadPartners}
+              </span>
+            ) : null}
+          </Link>
+          <Link
+            href="/admin/companies"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Building2 className="size-4 shrink-0" aria-hidden="true" />
+            <span className="hidden sm:inline">Companies</span>
           </Link>
           <Button
             nativeButton={false}

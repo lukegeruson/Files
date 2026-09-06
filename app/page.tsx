@@ -10,18 +10,21 @@ import {
   getPostSummaries,
 } from "@/lib/posts"
 import { buildSearchDocs } from "@/lib/search"
-import { pageMetadata, SITE_NAME, SITE_TAGLINE } from "@/lib/seo"
+import { pageMetadata } from "@/lib/seo"
 
-// `title.absolute` opts out of the root template, so the homepage reads as the
-// brand itself rather than "Home — Evergreen Builders".
+// `title.absolute` opts out of the root template, so the homepage title shows
+// exactly as written in Google rather than "Home — Evergreen Builders".
+const HOME_TITLE = "Evergreen - Make Better Decisions"
+const HOME_DESCRIPTION =
+  "Free calculators and visual guides for solar, landscaping, renovation, and agriculture"
+
 export const metadata = {
   ...pageMetadata({
-    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
-    description:
-      "Free calculators and guides for solar, landscaping, renovation, and agriculture. Work out what a project costs before you commit, and explore skilled trade careers in each field.",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
     path: "/",
   }),
-  title: { absolute: `${SITE_NAME} — ${SITE_TAGLINE}` },
+  title: { absolute: HOME_TITLE },
 }
 
 export default async function HomePage() {
@@ -48,6 +51,25 @@ export default async function HomePage() {
             Do you know how much it costs to go solar? Want to renovate your front yard? Looking to
             upgrade your home? Explore our tools to make better decisions about your property.
           </p>
+          {/* Two primary actions, kept directly under the intro so the hero
+              stays a single clean block. "Find a Professional" is the primary
+              consumer path (filled); "Partner with Evergreen" is the primary
+              business path (outline). Deliberately no third CTA here. */}
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href="/find-a-pro"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Find a Professional
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/partners"
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-6 text-sm font-medium transition-colors hover:bg-secondary"
+            >
+              Partner with Evergreen
+            </Link>
+          </div>
         </section>
 
         {/* Categories */}

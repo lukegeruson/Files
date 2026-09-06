@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next"
 import { CATEGORIES } from "@/lib/categories"
 import { CAREERS } from "@/lib/careers/careers"
 import { getPostSummaries } from "@/lib/posts"
+import { getPublishedCompanies } from "@/lib/companies/companies"
 import { absoluteUrl } from "@/lib/seo"
 
 /**
@@ -32,6 +33,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
+    },
+    {
+      url: absoluteUrl("/find-a-pro"),
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: absoluteUrl("/partners"),
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: absoluteUrl("/companies"),
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.6,
     },
   ]
 
@@ -66,5 +85,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.log("[v0] sitemap: could not load posts", error)
   }
 
-  return [...staticEntries, ...categoryEntries, ...careerEntries, ...postEntries]
+  // getPublishedCompanies() returns published rows only, so a draft profile
+  // never leaks into the sitemap.
+  let companyEntries: MetadataRoute.Sitemap = []
+  try {
+    const companies = await getPublishedCompanies()
+    companyEntries = companies.map((company) => ({
+      url: absoluteUrl(`/companies/${company.slug}`),
+      lastModified: company.updatedAt,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    }))
+  } catch (error) {
+    console.log("[v0] sitemap: could not load companies", error)
+  }
+
+  return [
+    ...staticEntries,
+    ...categoryEntries,
+    ...careerEntries,
+    ...postEntries,
+    ...companyEntries,
+  ]
 }

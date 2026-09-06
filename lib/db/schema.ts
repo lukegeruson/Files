@@ -129,3 +129,127 @@ export const jobPostings = pgTable(
 )
 
 export type JobPostingRow = typeof jobPostings.$inferSelect
+
+/**
+ * Consumer project leads from /find-a-pro.
+ *
+ * Like job_inquiries, this row IS the lead — nothing is emailed, so
+ * /admin/leads is the only record. `readAt` drives the unhandled count, and the
+ * `category`, `service`, `zip` columns are the fields lead-to-company matching
+ * is built on. `matchedCompanyId` is null until Evergreen routes the lead; it
+ * makes no claim that a match exists on its own.
+ */
+export const leads = pgTable(
+  "leads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** One of the four trades, mirrors CATEGORIES. Drives matching. */
+    category: text("category").notNull(),
+    /** Consumer-facing service picked in step 2, scoped to the category. */
+    service: text("service").notNull(),
+    zip: text("zip").notNull(),
+    description: text("description").notNull(),
+    /** Optional at the form level, so stored as "" rather than null. */
+    budget: text("budget").notNull().default(""),
+    timeframe: text("timeframe").notNull(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone").notNull(),
+    /** Set when a lead is routed to a company. Null means unrouted. */
+    matchedCompanyId: uuid("matched_company_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("leads_created_idx").on(table.createdAt),
+    // Backs the "which companies serve this trade + area" matching lookup.
+    index("leads_category_zip_idx").on(table.category, table.zip),
+  ],
+)
+
+export type LeadRow = typeof leads.$inferSelect
+
+/**
+ * B2B partnership applications from /partners.
+ *
+ * A single table rather than one per partnership type: every application shares
+ * the same contact block, and the interest-specific fields (services/areas for
+ * lead partners, jobs for employers, expertise for contributors) are additive
+ * columns that stay empty when they do not apply. That keeps the admin inbox a
+ * single list instead of several, matching how job_inquiries is handled.
+ */
+export const partnerApplications = pgTable(
+  "partner_applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Which partnership option was chosen. See PARTNERSHIP_OPTIONS. */
+    interest: text("interest").notNull(),
+    name: text("name").notNull(),
+    workEmail: text("work_email").notNull(),
+    company: text("company").notNull(),
+    companyWebsite: text("company_website").notNull().default(""),
+    industry: text("industry").notNull(),
+    location: text("location").notNull(),
+    message: text("message").notNull().default(""),
+    // Lead-partner specifics: what they do and where.
+    services: text("services").array().notNull().default([]),
+    serviceAreas: text("service_areas").array().notNull().default([]),
+    zips: text("zips").array().notNull().default([]),
+    // Employer specifics.
+    jobs: text("jobs").array().notNull().default([]),
+    hiringLocations: text("hiring_locations").array().notNull().default([]),
+    // Expert-contributor specifics.
+    jobTitle: text("job_title").notNull().default(""),
+    expertise: text("expertise").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+  },
+  (table) => [index("partner_applications_created_idx").on(table.createdAt)],
+)
+
+export type PartnerApplicationRow = typeof partnerApplications.$inferSelect
+
+/**
+ * Participating company profiles.
+ *
+ * Supporting infrastructure behind both consumer and business flows rather than
+ * a headline feature: Find a Professional matches leads against these rows, and
+ * Partner with Evergreen is how a company eventually gets one. Only `published`
+ * rows are ever shown or matched, so a draft profile can be prepared without
+ * leaking a half-finished page or a false match.
+ *
+ * The `services`/`serviceAreas`/`zips` arrays mirror the lead-partner fields on
+ * partner_applications on purpose: an approved application maps straight onto a
+ * company record.
+ */
+export const companies = pgTable(
+  "companies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    logo: text("logo"),
+    website: text("website"),
+    /** One of the four trades, mirrors CATEGORIES. */
+    industry: text("industry").notNull(),
+    services: text("services").array().notNull().default([]),
+    locations: text("locations").array().notNull().default([]),
+    serviceAreas: text("service_areas").array().notNull().default([]),
+    zips: text("zips").array().notNull().default([]),
+    description: text("description").notNull().default(""),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
+    /** Accepts routed consumer leads. Only these are matched in /find-a-pro. */
+    leadPartner: boolean("lead_partner").notNull().default(false),
+    hiring: boolean("hiring").notNull().default(false),
+    published: boolean("published").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("companies_industry_idx").on(table.industry),
+    index("companies_published_idx").on(table.published),
+  ],
+)
+
+export type CompanyRow = typeof companies.$inferSelect

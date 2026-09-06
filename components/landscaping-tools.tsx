@@ -13,12 +13,12 @@ type ToolId = "cost" | "materials"
 const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
   {
     id: "cost",
-    label: "Landscape Cost Calculator",
+    label: "Landscape Cost",
     icon: <Calculator className="size-4" aria-hidden="true" />,
   },
   {
     id: "materials",
-    label: "Materials & Irrigation Planner",
+    label: "Materials Calculator",
     icon: <Ruler className="size-4" aria-hidden="true" />,
   },
 ]

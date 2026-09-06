@@ -20,7 +20,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
   },
   {
     id: "profit",
-    label: "Farm Profitability Calculator",
+    label: "Farm Profitability",
     icon: <Calculator className="size-4" aria-hidden="true" />,
   },
 ]
