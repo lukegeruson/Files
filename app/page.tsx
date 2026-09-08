@@ -47,10 +47,12 @@ export default async function HomePage() {
             Explore the Horizon. <br />
             Make Better Decisions.
           </h1>
-          <p className="mt-4 max-w-3xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            Do you know how much it costs to go solar? Looking to upgrade your home?
-            <br />
-            Explore our tools to make better decisions about your property.
+          {/* text-balance evens out the two wrapped lines so they render at
+              roughly the same width on desktop, instead of a hard break that
+              leaves a long first line over a short second line. */}
+          <p className="mt-4 max-w-2xl text-balance text-lg leading-relaxed text-muted-foreground">
+            Do you know how much it costs to go solar? Looking to upgrade your home? Explore our
+            tools to make better decisions about your property.
           </p>
           {/* Two primary actions, kept directly under the intro so the hero
               stays a single clean block. "Find a Professional" is the primary
