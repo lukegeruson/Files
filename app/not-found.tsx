@@ -30,7 +30,7 @@ export default function NotFound() {
             {CATEGORIES.map((category) => (
               <Link
                 key={category}
-                href={`/category/${category}`}
+                href={`/${category}`}
                 className="group flex items-baseline justify-between gap-4 border-b border-border pb-3 text-sm transition-colors hover:text-primary"
               >
                 <span className="font-medium">{CATEGORY_LABELS[category]}</span>

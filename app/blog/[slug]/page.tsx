@@ -311,7 +311,7 @@ export default async function PostPage({
           <Breadcrumbs
             items={[
               { name: "Home", href: "/" },
-              { name: CATEGORY_LABELS[post.category], href: `/category/${post.category}` },
+              { name: CATEGORY_LABELS[post.category], href: `/${post.category}` },
               { name: post.title },
             ]}
           />

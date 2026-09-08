@@ -50,10 +50,19 @@ const nextConfig = {
     return [
       // The renovation category used to live at /category/home-improvement.
       // A 308 preserves any accumulated search ranking and keeps old links,
-      // bookmarks, and inbound backlinks working.
+      // bookmarks, and inbound backlinks working. Listed before the wildcard
+      // below so it lands on /renovation rather than a dead /home-improvement.
       {
         source: "/category/home-improvement",
-        destination: "/category/renovation",
+        destination: "/renovation",
+        permanent: true,
+      },
+      // Category pages moved from /category/:category to the shorter
+      // /:category. A 308 keeps existing links, bookmarks, and accumulated
+      // search ranking pointed at the new canonical URLs.
+      {
+        source: "/category/:category",
+        destination: "/:category",
         permanent: true,
       },
     ]

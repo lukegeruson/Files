@@ -79,7 +79,7 @@ export default async function HomePage() {
             {CATEGORIES.map((category) => (
               <Link
                 key={category}
-                href={`/category/${category}`}
+                href={`/${category}`}
                 className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary"
               >
                 {/* h2, not h3: these four cards are the top-level sections of

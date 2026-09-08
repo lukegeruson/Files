@@ -78,7 +78,7 @@ export async function generateMetadata({
     ...pageMetadata({
       title: seo.title,
       description: seo.description,
-      path: `/category/${category}`,
+      path: `/${category}`,
     }),
     // These titles are already tuned and carry their own brand suffix, so opt
     // out of the root template rather than appending a second one.
@@ -120,7 +120,7 @@ export default async function CategoryPage({
             {CATEGORIES.filter((c) => c !== category).map((c) => (
               <a
                 key={c}
-                href={`/category/${c}`}
+                href={`/${c}`}
                 className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
               >
                 {CATEGORY_LABELS[c]}

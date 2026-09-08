@@ -27,7 +27,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
 
 /**
  * Deep-link targets so articles can point a reader at one specific tool, e.g.
- * `/category/agriculture#farm-profit-calculator`.
+ * `/agriculture#farm-profit-calculator`.
  *
  * Both tools stay mounted here (they are only toggled with `hidden`), so the
  * browser still cannot scroll to the inactive one — a hidden element has no

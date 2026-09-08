@@ -16,8 +16,8 @@ export const revalidate = 3600
  *  - /admin/**        private CMS, also Disallow-ed in robots.ts
  *  - /jobs/matches    308 redirect to /jobs/quiz; a sitemap should only list
  *                     final destinations, never redirect hops
- *  - /blog?category=  query-parameter duplicates of /category/[category]
- *  - /category/home-improvement  permanent redirect to /category/renovation
+ *  - /blog?category=  query-parameter duplicates of /[category]
+ *  - /category/*  permanent redirects to the new top-level /[category] URLs
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
@@ -55,7 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   const categoryEntries: MetadataRoute.Sitemap = CATEGORIES.map((category) => ({
-    url: absoluteUrl(`/category/${category}`),
+    url: absoluteUrl(`/${category}`),
     lastModified: now,
     changeFrequency: "weekly",
     priority: 0.9,

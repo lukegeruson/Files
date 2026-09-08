@@ -26,7 +26,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
 
 /**
  * Deep-link targets so articles can point a reader at one specific calculator,
- * e.g. `/category/solar#solar-panel-calculator`.
+ * e.g. `/solar#solar-panel-calculator`.
  *
  * These hashes intentionally do not match a real element id: only one tool is
  * mounted at a time, so the browser cannot scroll to the inactive one. The

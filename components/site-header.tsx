@@ -70,7 +70,7 @@ export function SiteHeader() {
           {CATEGORIES.map((category) => (
             <Link
               key={category}
-              href={`/category/${category}`}
+              href={`/${category}`}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {CATEGORY_LABELS[category]}

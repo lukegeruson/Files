@@ -11,7 +11,7 @@ import {
 import { collectionPageSchema, jsonLdProps, pageMetadata } from "@/lib/seo"
 
 // Canonical is the unfiltered /blog for every variant of this route: the
-// ?category= views are filtered duplicates of /category/[category], so
+// ?category= views are filtered duplicates of /[category], so
 // pointing them all here stops near-identical URLs competing with each other.
 export const metadata = pageMetadata({
   title: "All articles",
