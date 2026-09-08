@@ -313,6 +313,12 @@ export type ComponentInfo = {
   id: ComponentId
   title: string
   blurb: string
+  /**
+   * One extra sentence of context, shown only in the roomier desktop "Solar
+   * parts" box so the description nearly fills it. The compact mobile popup
+   * intentionally omits this and shows `blurb` alone.
+   */
+  detail: string
 }
 
 export const COMPONENT_INFO: Record<ComponentId, ComponentInfo> = {
@@ -321,42 +327,56 @@ export const COMPONENT_INFO: Record<ComponentId, ComponentInfo> = {
     title: "Solar panels",
     blurb:
       "Convert sunlight into DC electricity. More sun means more power — output peaks around midday.",
+    detail:
+      "A typical residential array combines 15 to 25 panels wired together, and cool, clear days often produce more than hot, hazy ones.",
   },
   inverter: {
     id: "inverter",
     title: "Inverter",
     blurb:
       "Converts the panels' DC electricity into the AC electricity your home and appliances actually use.",
+    detail:
+      "It is also the brain of the system, tracking production in real time and safely shutting down if the grid goes out.",
   },
   battery: {
     id: "battery",
     title: "Home battery",
     blurb:
       "Stores extra solar energy during the day so you can use it at night or during an outage instead of buying from the grid.",
+    detail:
+      "By shifting stored power into the evening, it can also cut what you pay during peak-rate hours when electricity is most expensive.",
   },
   grid: {
     id: "grid",
     title: "Utility grid",
     blurb:
       "Supplies power when your panels can't keep up, and accepts your extra solar — often crediting your bill for what you export.",
+    detail:
+      "This two-way relationship, known as net metering, effectively lets the grid act as a giant backup battery for your system.",
   },
   meter: {
     id: "meter",
     title: "Electricity meter",
     blurb:
       "Measures power flowing both ways: what you draw from the grid and what your system sends back to it.",
+    detail:
+      "The net difference between those two totals is what appears on your monthly bill, so heavy exporters can owe very little.",
   },
   home: {
     id: "home",
     title: "Your home",
     blurb:
       "Your appliances, lights, and devices. Solar covers this load first; anything left over charges the battery or flows to the grid.",
+    detail:
+      "Running big loads like laundry or EV charging during daylight lets you use solar power directly instead of pulling from the grid later.",
   },
   sun: {
     id: "sun",
     title: "The sun",
     blurb:
       "The energy source. As it climbs toward noon, your panels produce more; in the evening production tapers to zero.",
+    detail:
+      "Its angle shifts with the seasons too, which is why the same roof generates noticeably more energy in summer than in winter.",
   },
 }
 

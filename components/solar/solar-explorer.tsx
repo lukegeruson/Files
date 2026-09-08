@@ -93,7 +93,6 @@ const SEGMENTS: Segment[] = [
     keys: ["solarToHome", "solarToBattery", "gridToHome"],
     gridPath: true,
   },
-  { from: "inverter", to: "grid", keys: ["solarToGrid"] },
   { from: "grid", to: "inverter", keys: ["gridToHome"], gridPath: true },
 ]
 
@@ -470,7 +469,7 @@ export function SolarExplorer() {
         </div>
         <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
           {info
-            ? info.blurb
+            ? `${info.blurb} ${info.detail}`
             : "Tap any marker on the diagram to see what that part does."}
         </p>
       </>
@@ -745,27 +744,24 @@ export function SolarExplorer() {
               const a = posOf[seg.from]
               const b = posOf[seg.to]
               if (!a || !b) return null
+              const key = `${seg.from}-${seg.to}-${seg.keys?.join("+") ?? "solar"}`
+              const shared = {
+                stroke: color,
+                strokeWidth: active ? 0.8 : 0.45,
+                strokeLinecap: "round" as const,
+                strokeDasharray: "1.6 2.2",
+                className: cn(
+                  "transition-opacity duration-500",
+                  active ? "opacity-95 solar-flow" : "opacity-0",
+                ),
+                style: {
+                  filter: active
+                    ? `drop-shadow(0 0 1.4px ${color})`
+                    : undefined,
+                },
+              }
               return (
-                <line
-                  key={`${seg.from}-${seg.to}-${seg.keys?.join("+") ?? "solar"}`}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
-                  stroke={color}
-                  strokeWidth={active ? 0.8 : 0.45}
-                  strokeLinecap="round"
-                  strokeDasharray="1.6 2.2"
-                  className={cn(
-                    "transition-opacity duration-500",
-                    active ? "opacity-95 solar-flow" : "opacity-0",
-                  )}
-                  style={{
-                    filter: active
-                      ? `drop-shadow(0 0 1.4px ${color})`
-                      : undefined,
-                  }}
-                />
+                <line key={key} x1={a.x} y1={a.y} x2={b.x} y2={b.y} {...shared} />
               )
             })}
           </svg>
