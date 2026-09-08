@@ -470,7 +470,7 @@ export function SolarExplorer() {
         </div>
         <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
           {info
-            ? info.blurb
+            ? `${info.blurb} ${info.detail}`
             : "Tap any marker on the diagram to see what that part does."}
         </p>
       </>
