@@ -745,27 +745,42 @@ export function SolarExplorer() {
               const a = posOf[seg.from]
               const b = posOf[seg.to]
               if (!a || !b) return null
+              const key = `${seg.from}-${seg.to}-${seg.keys?.join("+") ?? "solar"}`
+              const shared = {
+                stroke: color,
+                strokeWidth: active ? 0.8 : 0.45,
+                strokeLinecap: "round" as const,
+                strokeDasharray: "1.6 2.2",
+                className: cn(
+                  "transition-opacity duration-500",
+                  active ? "opacity-95 solar-flow" : "opacity-0",
+                ),
+                style: {
+                  filter: active
+                    ? `drop-shadow(0 0 1.4px ${color})`
+                    : undefined,
+                },
+              }
+              // The daytime solar-export line (inverter -> grid) routes up and
+              // over the house instead of cutting diagonally across the
+              // diorama: straight up from the inverter, across the top, then
+              // down to the grid. Rounded joins let the flowing dashes glide
+              // through the two bends. This segment only carries power while
+              // solar is exporting, so it naturally shows during the day.
+              if (seg.from === "inverter" && seg.to === "grid") {
+                const topY = 15
+                return (
+                  <polyline
+                    key={key}
+                    points={`${a.x},${a.y} ${a.x},${topY} ${b.x},${topY} ${b.x},${b.y}`}
+                    fill="none"
+                    strokeLinejoin="round"
+                    {...shared}
+                  />
+                )
+              }
               return (
-                <line
-                  key={`${seg.from}-${seg.to}-${seg.keys?.join("+") ?? "solar"}`}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
-                  stroke={color}
-                  strokeWidth={active ? 0.8 : 0.45}
-                  strokeLinecap="round"
-                  strokeDasharray="1.6 2.2"
-                  className={cn(
-                    "transition-opacity duration-500",
-                    active ? "opacity-95 solar-flow" : "opacity-0",
-                  )}
-                  style={{
-                    filter: active
-                      ? `drop-shadow(0 0 1.4px ${color})`
-                      : undefined,
-                  }}
-                />
+                <line key={key} x1={a.x} y1={a.y} x2={b.x} y2={b.y} {...shared} />
               )
             })}
           </svg>
