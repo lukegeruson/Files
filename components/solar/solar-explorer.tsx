@@ -763,19 +763,26 @@ export function SolarExplorer() {
               }
               // The daytime solar-export line (inverter -> grid) routes up and
               // over the house instead of cutting diagonally across the
-              // diorama: straight up from the inverter, across the top, then
-              // down to the grid. Rounded joins let the flowing dashes glide
-              // through the two bends. This segment only carries power while
-              // solar is exporting, so it naturally shows during the day.
+              // diorama: straight up from the inverter, across the top portion
+              // of the roof, then down to the grid. Rounded joins let the
+              // flowing dashes glide through the two bends, and it is drawn blue
+              // to read as grid-tied export. This segment only carries power
+              // while solar is exporting, so it naturally shows during the day.
               if (seg.from === "inverter" && seg.to === "grid") {
-                const topY = 15
+                const roofY = 30
                 return (
                   <polyline
                     key={key}
-                    points={`${a.x},${a.y} ${a.x},${topY} ${b.x},${topY} ${b.x},${b.y}`}
+                    points={`${a.x},${a.y} ${a.x},${roofY} ${b.x},${roofY} ${b.x},${b.y}`}
                     fill="none"
                     strokeLinejoin="round"
                     {...shared}
+                    stroke={GRID_ELECTRIC}
+                    style={{
+                      filter: active
+                        ? `drop-shadow(0 0 1.4px ${GRID_ELECTRIC})`
+                        : undefined,
+                    }}
                   />
                 )
               }
