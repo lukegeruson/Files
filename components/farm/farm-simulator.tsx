@@ -460,6 +460,7 @@ export function FarmSimulator() {
             </div>
             </div>
           </div>
+          </div>
         </div>
       </div>
 
