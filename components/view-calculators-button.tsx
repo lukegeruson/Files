@@ -18,7 +18,7 @@ export function ViewCalculatorsButton({ targetId }: { targetId: string }) {
       }
       className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-ring hover:bg-accent"
     >
-      View Calculators
+      View Calculator
       <ChevronDown className="size-3.5" aria-hidden="true" />
     </button>
   )
