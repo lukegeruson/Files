@@ -47,55 +47,6 @@ const HOTSPOTS: Hotspot[] = [
   { id: "grid", x: 88, y: 24 },
 ]
 
-// Solar-generated electricity is drawn in warm amber. Grid-sourced power (which
-// is what carries the home at night) is drawn in blue so the two are easy to
-// tell apart. Direction is conveyed by the dashes animating source -> dest.
-const ELECTRIC = "#f5b445"
-const GRID_ELECTRIC = "#4da3ff"
-
-// Energy-flow segments drawn between hotspots. `keys` selects the flow value(s)
-// on the current frame (the line is active if ANY listed flow is carrying
-// power); `solarDriven` flows depend only on solar generation.
-type FlowKey =
-  | "solarToHome"
-  | "solarToBattery"
-  | "solarToGrid"
-  | "gridToHome"
-  | "batteryToHome"
-
-type Segment = {
-  from: ComponentId
-  to: ComponentId
-  keys?: FlowKey[]
-  solarDriven?: boolean
-  // Part of the grid -> inverter -> battery path that carries the home at night.
-  // These light up blue whenever the home is running on grid power (i.e. after
-  // dark, once the panels stop generating).
-  gridPath?: boolean
-}
-
-// The battery marker represents the home hub, so the wiring mirrors a real
-// hybrid solar system:
-//   sun -> panels          light hits the array
-//   panels -> inverter     DC generation flows to the inverter
-//   inverter -> battery    inverter charges the battery and powers the home
-//   inverter -> grid       excess solar is exported
-//   grid -> inverter       the grid feeds the inverter when solar is short
-//                          (e.g. at night); the inverter then powers the
-//                          battery/home, so the grid path runs
-//                          grid -> inverter -> battery.
-const SEGMENTS: Segment[] = [
-  { from: "sun", to: "panels", solarDriven: true },
-  { from: "panels", to: "inverter", solarDriven: true },
-  {
-    from: "inverter",
-    to: "battery",
-    keys: ["solarToHome", "solarToBattery", "gridToHome"],
-    gridPath: true,
-  },
-  { from: "grid", to: "inverter", keys: ["gridToHome"], gridPath: true },
-]
-
 // Fixed star field for the night sky (deterministic so it doesn't reshuffle).
 const STARS = Array.from({ length: 40 }, (_, i) => {
   const r = (n: number) => {
@@ -336,29 +287,6 @@ export function SolarExplorer() {
     setHour(12)
     setShowSavings(false)
   }
-
-  // Which segments are currently carrying energy. A segment with multiple keys
-  // is active when any of its flows is carrying power.
-  // After dark the panels stop and the home is carried from the grid, so the
-  // grid -> inverter -> battery path is drawn even though the scene's reserve
-  // battery is what physically covers the small overnight load.
-  const nightSupply = !sky.sunUp && frame.consumptionKw > 0.02
-  const activeSegments = SEGMENTS.map((seg) => {
-    const solarActive = seg.solarDriven ? frame.solarKw > 0.05 : false
-    const keyActive = seg.keys
-      ? seg.keys.some((k) => frame.flows[k] > 0.05)
-      : false
-    const gridActive = !!seg.gridPath && nightSupply
-    const active = solarActive || keyActive || gridActive
-    // The grid path renders blue whenever it is the grid (not the panels)
-    // powering the home; everything solar-driven stays amber.
-    const gridDriven =
-      !!seg.gridPath &&
-      !solarActive &&
-      (gridActive || frame.flows.gridToHome > 0.05)
-    const color = gridDriven ? GRID_ELECTRIC : ELECTRIC
-    return { seg, active, color }
-  })
 
   // Shared inner content for the "Right now" live-stats card. Rendered above the
   // simulator on mobile and as a corner overlay on larger screens. When
@@ -734,38 +662,6 @@ export function SolarExplorer() {
           style={{ filter: sky.dioramaFilter }}
         />
 
-          {/* Energy-flow overlay */}
-          <svg
-            viewBox="0 0 100 100"
-            className="pointer-events-none absolute inset-0 size-full"
-            aria-hidden="true"
-          >
-            {activeSegments.map(({ seg, active, color }) => {
-              const a = posOf[seg.from]
-              const b = posOf[seg.to]
-              if (!a || !b) return null
-              const key = `${seg.from}-${seg.to}-${seg.keys?.join("+") ?? "solar"}`
-              const shared = {
-                stroke: color,
-                strokeWidth: active ? 0.8 : 0.45,
-                strokeLinecap: "round" as const,
-                strokeDasharray: "1.6 2.2",
-                className: cn(
-                  "transition-opacity duration-500",
-                  active ? "opacity-95 solar-flow" : "opacity-0",
-                ),
-                style: {
-                  filter: active
-                    ? `drop-shadow(0 0 1.4px ${color})`
-                    : undefined,
-                },
-              }
-              return (
-                <line key={key} x1={a.x} y1={a.y} x2={b.x} y2={b.y} {...shared} />
-              )
-            })}
-          </svg>
-
           {/* Hotspots */}
           {hotspots.map((h) => {
             // The sun marker only exists while the sun is up; once it sets and
@@ -882,14 +778,6 @@ export function SolarExplorer() {
             opacity: 1;
           }
         }
-        .solar-flow {
-          animation: solar-flow-dash 0.55s linear infinite;
-        }
-        @keyframes solar-flow-dash {
-          to {
-            stroke-dashoffset: -3.8;
-          }
-        }
         .solar-timeline::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
@@ -909,11 +797,6 @@ export function SolarExplorer() {
           border: 3px solid var(--primary);
           box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
           cursor: pointer;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .solar-flow {
-            animation: none;
-          }
         }
       `}</style>
     </section>
