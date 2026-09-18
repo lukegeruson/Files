@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewCalculatorsButton } from "@/components/view-calculators-button"
 import {
   computePlan,
   GROUP_LABELS,
@@ -123,13 +124,16 @@ export function RenovationExplorer() {
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Home className="size-4" aria-hidden="true" />
-          </span>
-          <h3 className="text-lg font-semibold text-foreground">
-            Interactive Home Upgrade Explorer
-          </h3>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Home className="size-4" aria-hidden="true" />
+            </span>
+            <h3 className="text-lg font-semibold text-foreground">
+              Interactive Home Upgrade Explorer
+            </h3>
+          </div>
+          <ViewCalculatorsButton targetId="renovation-calculator-tools" />
         </div>
         <p className="text-pretty text-sm text-muted-foreground">
           Tap the house to see inside, then tap an upgrade to build a plan and
@@ -138,7 +142,7 @@ export function RenovationExplorer() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-2">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-2">
         {/* Left column — "Your plan" on top and the full "All upgrades" catalog
             below, so both panels sit beside the explorer on desktop. On mobile
             the whole column drops below the diagram (order-last). */}
@@ -354,8 +358,8 @@ export function RenovationExplorer() {
               panel lets them fill edge-to-edge with no letterbox and therefore
               no side edge line, while object-contain still guarantees nothing
               is cropped. */}
-          <div className="relative w-full max-w-2xl">
-            <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+          <div className="relative w-full max-w-2xl lg:flex lg:h-full lg:items-center lg:justify-center">
+            <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7] lg:h-full lg:w-auto">
               {/* Floating shadow */}
               <div
                 className="pointer-events-none absolute left-1/2 bottom-[10%] h-[8%] w-[60%] -translate-x-1/2 rounded-[50%] bg-black/20 blur-xl"

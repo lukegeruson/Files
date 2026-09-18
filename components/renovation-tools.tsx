@@ -7,6 +7,7 @@ import { RemodelCostCalculator } from "@/components/remodel-cost-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { HomeUpgradeAdvisor } from "@/components/home-upgrade-advisor"
 import { RenovationExplorer } from "@/components/renovation/renovation-explorer"
+import { QuoteCapture } from "@/components/quote-capture"
 
 type ToolId = "advisor" | "remodel"
 
@@ -25,7 +26,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
 
 /**
  * Deep-link targets so articles can point a reader at one specific tool, e.g.
- * `/category/renovation#remodel-cost-calculator`.
+ * `/renovation#remodel-cost-calculator`.
  *
  * These hashes intentionally do not match a real element id: only one tool is
  * mounted at a time, so the browser cannot scroll to the inactive one. The
@@ -66,8 +67,14 @@ export function RenovationTools() {
           renovation counterpart to the solar and landscape explorers. */}
       <RenovationExplorer />
 
+      {/* Lead capture sits directly beneath the Visual Explorer. */}
+      <QuoteCapture category="home-improvement" />
+
       {/* Tool switcher — additional renovation calculators slot in here. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        id="renovation-calculator-tools"
+        className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
+      >
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div
           role="tablist"

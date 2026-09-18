@@ -7,6 +7,7 @@ import { CropSelectionTool } from "@/components/crop-selection-tool"
 import { FarmProfitCalculator } from "@/components/farm-profit-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { FarmSimulator } from "@/components/farm/farm-simulator"
+import { QuoteCapture } from "@/components/quote-capture"
 import { type ProfitabilityHandoff } from "@/lib/crops"
 import { inputsFromHandoff, type ProfitInputs } from "@/lib/farm-profit"
 
@@ -27,7 +28,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
 
 /**
  * Deep-link targets so articles can point a reader at one specific tool, e.g.
- * `/category/agriculture#farm-profit-calculator`.
+ * `/agriculture#farm-profit-calculator`.
  *
  * Both tools stay mounted here (they are only toggled with `hidden`), so the
  * browser still cannot scroll to the inactive one — a hidden element has no
@@ -78,7 +79,13 @@ export function AgricultureTools() {
           counterpart to the solar, landscape, and renovation explorers. */}
       <FarmSimulator />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Lead capture sits directly beneath the Visual Explorer. */}
+      <QuoteCapture category="agriculture" />
+
+      <div
+        id="agriculture-calculator-tools"
+        className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
+      >
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div role="tablist" aria-label="Agriculture calculators" className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
           {TOOLS.map((tool) => {

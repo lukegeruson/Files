@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewCalculatorsButton } from "@/components/view-calculators-button"
 import {
   elementCard,
   formatArea,
@@ -145,6 +146,20 @@ export function LandscapeExplorer() {
     setPos(0)
   }
 
+  // When the user lets go of the slider, glide to the nearest phase anchor
+  // (Before / Water-wise / Lawn) so the thumb never rests between stages.
+  function snapToNearestPhase() {
+    const idx = Math.round(posRef.current * (PHASE_COUNT - 1))
+    const anchor = ANCHORS[idx]
+    if (posRef.current === anchor) return
+    if (reducedMotion) {
+      setPos(anchor)
+      return
+    }
+    target.current = anchor
+    setPlaying(true)
+  }
+
   function handleMorph() {
     const nextAnchor = ANCHORS[(activeIndex + 1) % PHASE_COUNT]
     if (reducedMotion) {
@@ -172,9 +187,12 @@ export function LandscapeExplorer() {
           <Sparkles className="size-3" aria-hidden="true" />
           Interactive model
         </span>
-        <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
-          Landscape Planner Explorer
-        </h2>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
+            Landscape Planner Explorer
+          </h2>
+          <ViewCalculatorsButton targetId="landscaping-calculator-tools" />
+        </div>
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
           Slide through three stages — a bare lot, a water-wise yard, and a
           traditional lawn — and watch the clay model transform. Tap any area to
@@ -183,10 +201,10 @@ export function LandscapeExplorer() {
       </div>
 
       {/* Desktop: controls column on the left, visual stage on the right. */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         {/* Stage — matched clay renders crossfade on the slider */}
         <div
-          className="relative aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2] lg:order-last lg:min-w-0 lg:flex-1 lg:self-start"
+          className="relative aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2] lg:order-last lg:aspect-auto lg:min-w-0 lg:flex-1 lg:self-auto"
           style={{
             background:
               "radial-gradient(120% 100% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
@@ -314,6 +332,10 @@ export function LandscapeExplorer() {
                 setPlaying(false)
                 setPos(Number.parseFloat(e.target.value))
               }}
+              onPointerUp={snapToNearestPhase}
+              onTouchEnd={snapToNearestPhase}
+              onKeyUp={snapToNearestPhase}
+              onBlur={snapToNearestPhase}
               className="landscape-slider h-3 w-full cursor-pointer appearance-none rounded-full"
               style={{
                 background:

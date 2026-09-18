@@ -7,6 +7,7 @@ import { LandscapeCostCalculator } from "@/components/landscape-cost-calculator"
 import { LandscapeMaterialsCalculator } from "@/components/landscape-materials-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { LandscapeExplorer } from "@/components/landscape/landscape-explorer"
+import { QuoteCapture } from "@/components/quote-capture"
 
 type ToolId = "cost" | "materials"
 
@@ -25,7 +26,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
 
 /**
  * Deep-link targets so articles can point a reader at one specific tool, e.g.
- * `/category/landscaping#landscape-materials-calculator`.
+ * `/landscaping#landscape-materials-calculator`.
  *
  * These hashes intentionally do not match a real element id: only one tool is
  * mounted at a time, so the browser cannot scroll to the inactive one. The
@@ -66,8 +67,14 @@ export function LandscapingTools() {
           counterpart to the solar explorer. */}
       <LandscapeExplorer />
 
+      {/* Lead capture sits directly beneath the Visual Explorer. */}
+      <QuoteCapture category="landscaping" />
+
       {/* Tool switcher — additional landscaping calculators slot in here. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        id="landscaping-calculator-tools"
+        className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
+      >
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div
           role="tablist"

@@ -156,7 +156,7 @@ export function organizationSchema() {
 
 /**
  * CollectionPage + ItemList for a page whose purpose is to list articles
- * (`/blog` and each `/category/[category]`).
+ * (`/blog` and each `/[category]`).
  *
  * Shared by both templates so the two listing pages cannot describe themselves
  * differently. Every item is a real, visible link on the page, and the list is

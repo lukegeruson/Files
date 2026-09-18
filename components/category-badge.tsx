@@ -17,7 +17,7 @@ export function CategoryBadge({
   }
 
   return (
-    <Link href={`/category/${category}`} className={`${className} transition-colors hover:bg-primary hover:text-primary-foreground`}>
+    <Link href={`/${category}`} className={`${className} transition-colors hover:bg-primary hover:text-primary-foreground`}>
       {label}
     </Link>
   )

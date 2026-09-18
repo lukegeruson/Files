@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewCalculatorsButton } from "@/components/view-calculators-button"
 import { useSolarScene } from "@/components/solar/solar-scene-context"
 import {
   COMPONENT_INFO,
@@ -45,55 +46,6 @@ const HOTSPOTS: Hotspot[] = [
   // so there is no separate "home" point.
   { id: "battery", x: 33, y: 61 },
   { id: "grid", x: 88, y: 24 },
-]
-
-// Solar-generated electricity is drawn in warm amber. Grid-sourced power (which
-// is what carries the home at night) is drawn in blue so the two are easy to
-// tell apart. Direction is conveyed by the dashes animating source -> dest.
-const ELECTRIC = "#f5b445"
-const GRID_ELECTRIC = "#4da3ff"
-
-// Energy-flow segments drawn between hotspots. `keys` selects the flow value(s)
-// on the current frame (the line is active if ANY listed flow is carrying
-// power); `solarDriven` flows depend only on solar generation.
-type FlowKey =
-  | "solarToHome"
-  | "solarToBattery"
-  | "solarToGrid"
-  | "gridToHome"
-  | "batteryToHome"
-
-type Segment = {
-  from: ComponentId
-  to: ComponentId
-  keys?: FlowKey[]
-  solarDriven?: boolean
-  // Part of the grid -> inverter -> battery path that carries the home at night.
-  // These light up blue whenever the home is running on grid power (i.e. after
-  // dark, once the panels stop generating).
-  gridPath?: boolean
-}
-
-// The battery marker represents the home hub, so the wiring mirrors a real
-// hybrid solar system:
-//   sun -> panels          light hits the array
-//   panels -> inverter     DC generation flows to the inverter
-//   inverter -> battery    inverter charges the battery and powers the home
-//   inverter -> grid       excess solar is exported
-//   grid -> inverter       the grid feeds the inverter when solar is short
-//                          (e.g. at night); the inverter then powers the
-//                          battery/home, so the grid path runs
-//                          grid -> inverter -> battery.
-const SEGMENTS: Segment[] = [
-  { from: "sun", to: "panels", solarDriven: true },
-  { from: "panels", to: "inverter", solarDriven: true },
-  {
-    from: "inverter",
-    to: "battery",
-    keys: ["solarToHome", "solarToBattery", "gridToHome"],
-    gridPath: true,
-  },
-  { from: "grid", to: "inverter", keys: ["gridToHome"], gridPath: true },
 ]
 
 // Fixed star field for the night sky (deterministic so it doesn't reshuffle).
@@ -337,29 +289,6 @@ export function SolarExplorer() {
     setShowSavings(false)
   }
 
-  // Which segments are currently carrying energy. A segment with multiple keys
-  // is active when any of its flows is carrying power.
-  // After dark the panels stop and the home is carried from the grid, so the
-  // grid -> inverter -> battery path is drawn even though the scene's reserve
-  // battery is what physically covers the small overnight load.
-  const nightSupply = !sky.sunUp && frame.consumptionKw > 0.02
-  const activeSegments = SEGMENTS.map((seg) => {
-    const solarActive = seg.solarDriven ? frame.solarKw > 0.05 : false
-    const keyActive = seg.keys
-      ? seg.keys.some((k) => frame.flows[k] > 0.05)
-      : false
-    const gridActive = !!seg.gridPath && nightSupply
-    const active = solarActive || keyActive || gridActive
-    // The grid path renders blue whenever it is the grid (not the panels)
-    // powering the home; everything solar-driven stays amber.
-    const gridDriven =
-      !!seg.gridPath &&
-      !solarActive &&
-      (gridActive || frame.flows.gridToHome > 0.05)
-    const color = gridDriven ? GRID_ELECTRIC : ELECTRIC
-    return { seg, active, color }
-  })
-
   // Shared inner content for the "Right now" live-stats card. Rendered above the
   // simulator on mobile and as a corner overlay on larger screens. When
   // `collapsible` is set (mobile), the middle stat rows can be toggled via a
@@ -467,11 +396,11 @@ export function SolarExplorer() {
             </button>
           ) : null}
         </div>
-        <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-          {info
-            ? `${info.blurb} ${info.detail}`
-            : "Tap any marker on the diagram to see what that part does."}
-        </p>
+          <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+            {info
+              ? info.blurb
+              : "Tap any marker on the diagram to see what that part does."}
+          </p>
       </>
     )
   }
@@ -622,9 +551,12 @@ export function SolarExplorer() {
           <Sparkles className="size-3" aria-hidden="true" />
           Interactive diagram
         </span>
-        <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
-          Solar Energy Explorer
-        </h2>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
+            Solar Energy Explorer
+          </h2>
+          <ViewCalculatorsButton targetId="solar-calculator-tools" />
+        </div>
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
           Tap any part and run a day to see how home solar works.
         </p>
@@ -648,8 +580,8 @@ export function SolarExplorer() {
             playback buttons at the bottom — beside a thin, full-height "Time of
             day" box whose slider runs down its right edge (closest to the
             stage). */}
-        <div className="hidden shrink-0 items-stretch gap-3 sm:flex">
-          <div className="flex w-44 flex-col gap-3">
+        <div className="hidden min-h-0 shrink-0 items-stretch gap-3 sm:flex">
+          <div className="flex min-h-0 w-44 flex-col gap-3">
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
               {renderPartInfo()}
             </div>
@@ -666,7 +598,7 @@ export function SolarExplorer() {
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
             so the whole scene runs through sunrise, day, sunset and night as the
             time of day changes. */}
-        <div className="relative aspect-square w-full max-w-2xl overflow-hidden rounded-3xl">
+        <div className="relative aspect-square w-full max-w-xl overflow-hidden rounded-3xl sm:self-start">
         {/* Sky gradient (dawn -> day -> dusk -> night) */}
         <div
           className="absolute inset-0 transition-[background] duration-700 ease-linear"
@@ -733,38 +665,6 @@ export function SolarExplorer() {
           className="object-contain transition-[filter] duration-700"
           style={{ filter: sky.dioramaFilter }}
         />
-
-          {/* Energy-flow overlay */}
-          <svg
-            viewBox="0 0 100 100"
-            className="pointer-events-none absolute inset-0 size-full"
-            aria-hidden="true"
-          >
-            {activeSegments.map(({ seg, active, color }) => {
-              const a = posOf[seg.from]
-              const b = posOf[seg.to]
-              if (!a || !b) return null
-              const key = `${seg.from}-${seg.to}-${seg.keys?.join("+") ?? "solar"}`
-              const shared = {
-                stroke: color,
-                strokeWidth: active ? 0.8 : 0.45,
-                strokeLinecap: "round" as const,
-                strokeDasharray: "1.6 2.2",
-                className: cn(
-                  "transition-opacity duration-500",
-                  active ? "opacity-95 solar-flow" : "opacity-0",
-                ),
-                style: {
-                  filter: active
-                    ? `drop-shadow(0 0 1.4px ${color})`
-                    : undefined,
-                },
-              }
-              return (
-                <line key={key} x1={a.x} y1={a.y} x2={b.x} y2={b.y} {...shared} />
-              )
-            })}
-          </svg>
 
           {/* Hotspots */}
           {hotspots.map((h) => {
@@ -882,14 +782,6 @@ export function SolarExplorer() {
             opacity: 1;
           }
         }
-        .solar-flow {
-          animation: solar-flow-dash 0.55s linear infinite;
-        }
-        @keyframes solar-flow-dash {
-          to {
-            stroke-dashoffset: -3.8;
-          }
-        }
         .solar-timeline::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
@@ -909,11 +801,6 @@ export function SolarExplorer() {
           border: 3px solid var(--primary);
           box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
           cursor: pointer;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .solar-flow {
-            animation: none;
-          }
         }
       `}</style>
     </section>

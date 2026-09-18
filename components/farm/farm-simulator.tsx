@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewCalculatorsButton } from "@/components/view-calculators-button"
 import {
   computeMetrics,
   CROP_BY_ID,
@@ -157,13 +158,16 @@ export function FarmSimulator() {
     >
       {/* Heading */}
       <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Sprout className="size-4" aria-hidden="true" />
-          </span>
-          <h3 className="text-lg font-semibold text-foreground">
-            Interactive Farm Simulator
-          </h3>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Sprout className="size-4" aria-hidden="true" />
+            </span>
+            <h3 className="text-lg font-semibold text-foreground">
+              Interactive Farm Simulator
+            </h3>
+          </div>
+          <ViewCalculatorsButton targetId="agriculture-calculator-tools" />
         </div>
         <p className="text-pretty text-sm text-muted-foreground">
           Watch a clay farm move through the season and see how a diversified
@@ -172,7 +176,7 @@ export function FarmSimulator() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-2">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-2">
         {/* Controls form a left sidebar on desktop (stacked in a single
             column). On tablet they lay out as a row of three below the visual;
             on mobile they stack. `order-last` drops them under the stage until
@@ -363,7 +367,8 @@ export function FarmSimulator() {
             edge line. `order-1` keeps it above the controls on mobile; on
             desktop it becomes the right column beside the control sidebar. */}
         <div className="order-1 flex flex-1 justify-center lg:order-none lg:justify-start">
-          <div className="relative aspect-square w-full max-w-2xl overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+          <div className="relative w-full max-w-2xl lg:flex lg:h-full lg:items-center lg:justify-center">
+          <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7] lg:h-full lg:w-auto">
             <div className="absolute inset-0">
             {/* Sun */}
             {!reducedMotion && (
@@ -458,6 +463,7 @@ export function FarmSimulator() {
               Tap a marker to learn more
             </div>
             </div>
+          </div>
           </div>
         </div>
       </div>

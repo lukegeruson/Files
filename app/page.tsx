@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ArticleSearch } from "@/components/article-search"
+import { HomeQuoteCapture } from "@/components/home-quote-capture"
 import {
   CATEGORIES,
   CATEGORY_HOME_TEASERS,
@@ -47,10 +48,12 @@ export default async function HomePage() {
             Explore the Horizon. <br />
             Make Better Decisions.
           </h1>
-          <p className="mt-4 max-w-3xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            Do you know how much it costs to go solar? Looking to upgrade your home?
-            <br />
-            Explore our tools to make better decisions about your property.
+          {/* text-balance evens out the two wrapped lines so they render at
+              roughly the same width on desktop, instead of a hard break that
+              leaves a long first line over a short second line. */}
+          <p className="mt-4 max-w-2xl text-balance text-lg leading-relaxed text-muted-foreground">
+            Do you know how much it costs to go solar? Looking to upgrade your home? Explore our
+            tools to make better decisions about your property.
           </p>
           {/* Two primary actions, kept directly under the intro so the hero
               stays a single clean block. "Find a Professional" is the primary
@@ -71,6 +74,13 @@ export default async function HomePage() {
               Partner with Evergreen
             </Link>
           </div>
+
+          {/* Lead capture sits directly under the hero description. Visitors
+              pick a category, then run the same multi-step quote form used on
+              the category pages. */}
+          <div className="mt-8">
+            <HomeQuoteCapture />
+          </div>
         </section>
 
         {/* Categories */}
@@ -79,7 +89,7 @@ export default async function HomePage() {
             {CATEGORIES.map((category) => (
               <Link
                 key={category}
-                href={`/category/${category}`}
+                href={`/${category}`}
                 className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary"
               >
                 {/* h2, not h3: these four cards are the top-level sections of

@@ -8,6 +8,7 @@ import { SolarPanelCalculator } from "@/components/solar-panel-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { SolarSceneProvider } from "@/components/solar/solar-scene-context"
 import { SolarExplorer } from "@/components/solar/solar-explorer"
+import { QuoteCapture } from "@/components/quote-capture"
 
 type ToolId = "savings" | "panels"
 
@@ -26,7 +27,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
 
 /**
  * Deep-link targets so articles can point a reader at one specific calculator,
- * e.g. `/category/solar#solar-panel-calculator`.
+ * e.g. `/solar#solar-panel-calculator`.
  *
  * These hashes intentionally do not match a real element id: only one tool is
  * mounted at a time, so the browser cannot scroll to the inactive one. The
@@ -68,8 +69,14 @@ export function SolarTools() {
           results once completed. */}
       <SolarExplorer />
 
+      {/* Lead capture sits directly beneath the Visual Explorer. */}
+      <QuoteCapture category="solar" />
+
       {/* Tool switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div
+        id="solar-calculator-tools"
+        className="flex scroll-mt-24 flex-wrap items-center justify-between gap-x-4 gap-y-2"
+      >
         <div
           role="tablist"
           aria-label="Solar calculators"
