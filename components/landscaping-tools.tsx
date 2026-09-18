@@ -7,6 +7,7 @@ import { LandscapeCostCalculator } from "@/components/landscape-cost-calculator"
 import { LandscapeMaterialsCalculator } from "@/components/landscape-materials-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { LandscapeExplorer } from "@/components/landscape/landscape-explorer"
+import { QuoteCapture } from "@/components/quote-capture"
 
 type ToolId = "cost" | "materials"
 
@@ -65,6 +66,9 @@ export function LandscapingTools() {
       {/* Interactive clay-model yard sits above the calculators, the landscaping
           counterpart to the solar explorer. */}
       <LandscapeExplorer />
+
+      {/* Lead capture sits directly beneath the Visual Explorer. */}
+      <QuoteCapture category="landscaping" />
 
       {/* Tool switcher — additional landscaping calculators slot in here. */}
       <div

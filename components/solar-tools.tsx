@@ -8,6 +8,7 @@ import { SolarPanelCalculator } from "@/components/solar-panel-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { SolarSceneProvider } from "@/components/solar/solar-scene-context"
 import { SolarExplorer } from "@/components/solar/solar-explorer"
+import { QuoteCapture } from "@/components/quote-capture"
 
 type ToolId = "savings" | "panels"
 
@@ -67,6 +68,9 @@ export function SolarTools() {
       {/* Interactive 3D diagram sits above the calculators and reflects their
           results once completed. */}
       <SolarExplorer />
+
+      {/* Lead capture sits directly beneath the Visual Explorer. */}
+      <QuoteCapture category="solar" />
 
       {/* Tool switcher */}
       <div

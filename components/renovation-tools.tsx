@@ -7,6 +7,7 @@ import { RemodelCostCalculator } from "@/components/remodel-cost-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { HomeUpgradeAdvisor } from "@/components/home-upgrade-advisor"
 import { RenovationExplorer } from "@/components/renovation/renovation-explorer"
+import { QuoteCapture } from "@/components/quote-capture"
 
 type ToolId = "advisor" | "remodel"
 
@@ -65,6 +66,9 @@ export function RenovationTools() {
       {/* Interactive clay cutaway house sits above the calculators, the
           renovation counterpart to the solar and landscape explorers. */}
       <RenovationExplorer />
+
+      {/* Lead capture sits directly beneath the Visual Explorer. */}
+      <QuoteCapture category="home-improvement" />
 
       {/* Tool switcher — additional renovation calculators slot in here. */}
       <div

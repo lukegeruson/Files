@@ -7,6 +7,7 @@ import { CropSelectionTool } from "@/components/crop-selection-tool"
 import { FarmProfitCalculator } from "@/components/farm-profit-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
 import { FarmSimulator } from "@/components/farm/farm-simulator"
+import { QuoteCapture } from "@/components/quote-capture"
 import { type ProfitabilityHandoff } from "@/lib/crops"
 import { inputsFromHandoff, type ProfitInputs } from "@/lib/farm-profit"
 
@@ -77,6 +78,9 @@ export function AgricultureTools() {
       {/* Interactive clay farm sits above the calculators, the agriculture
           counterpart to the solar, landscape, and renovation explorers. */}
       <FarmSimulator />
+
+      {/* Lead capture sits directly beneath the Visual Explorer. */}
+      <QuoteCapture category="agriculture" />
 
       <div
         id="agriculture-calculator-tools"
