@@ -183,10 +183,10 @@ export function LandscapeExplorer() {
       </div>
 
       {/* Desktop: controls column on the left, visual stage on the right. */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         {/* Stage — matched clay renders crossfade on the slider */}
         <div
-          className="relative aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2] lg:order-last lg:min-w-0 lg:flex-1 lg:self-start"
+          className="relative aspect-square w-full max-w-2xl self-center overflow-hidden rounded-3xl border border-[#e4d9c2] lg:order-last lg:aspect-auto lg:min-w-0 lg:flex-1 lg:self-auto"
           style={{
             background:
               "radial-gradient(120% 100% at 50% 22%, #f7efdf 0%, #f4ecda 60%, #f1e7d3 100%)",
