@@ -67,7 +67,10 @@ export function RenovationTools() {
       <RenovationExplorer />
 
       {/* Tool switcher — additional renovation calculators slot in here. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        id="renovation-calculator-tools"
+        className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
+      >
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div
           role="tablist"

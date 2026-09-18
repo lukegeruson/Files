@@ -69,7 +69,10 @@ export function SolarTools() {
       <SolarExplorer />
 
       {/* Tool switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div
+        id="solar-calculator-tools"
+        className="flex scroll-mt-24 flex-wrap items-center justify-between gap-x-4 gap-y-2"
+      >
         <div
           role="tablist"
           aria-label="Solar calculators"

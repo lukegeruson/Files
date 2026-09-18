@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewCalculatorsButton } from "@/components/view-calculators-button"
 import {
   elementCard,
   formatArea,
@@ -172,9 +173,12 @@ export function LandscapeExplorer() {
           <Sparkles className="size-3" aria-hidden="true" />
           Interactive model
         </span>
-        <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
-          Landscape Planner Explorer
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
+            Landscape Planner Explorer
+          </h2>
+          <ViewCalculatorsButton targetId="landscaping-calculator-tools" />
+        </div>
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
           Slide through three stages — a bare lot, a water-wise yard, and a
           traditional lawn — and watch the clay model transform. Tap any area to

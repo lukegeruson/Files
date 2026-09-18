@@ -78,7 +78,10 @@ export function AgricultureTools() {
           counterpart to the solar, landscape, and renovation explorers. */}
       <FarmSimulator />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        id="agriculture-calculator-tools"
+        className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
+      >
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div role="tablist" aria-label="Agriculture calculators" className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
           {TOOLS.map((tool) => {

@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewCalculatorsButton } from "@/components/view-calculators-button"
 import { useSolarScene } from "@/components/solar/solar-scene-context"
 import {
   COMPONENT_INFO,
@@ -550,9 +551,12 @@ export function SolarExplorer() {
           <Sparkles className="size-3" aria-hidden="true" />
           Interactive diagram
         </span>
-        <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
-          Solar Energy Explorer
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
+            Solar Energy Explorer
+          </h2>
+          <ViewCalculatorsButton targetId="solar-calculator-tools" />
+        </div>
         <p className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
           Tap any part and run a day to see how home solar works.
         </p>

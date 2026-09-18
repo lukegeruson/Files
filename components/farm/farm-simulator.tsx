@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewCalculatorsButton } from "@/components/view-calculators-button"
 import {
   computeMetrics,
   CROP_BY_ID,
@@ -157,13 +158,16 @@ export function FarmSimulator() {
     >
       {/* Heading */}
       <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Sprout className="size-4" aria-hidden="true" />
-          </span>
-          <h3 className="text-lg font-semibold text-foreground">
-            Interactive Farm Simulator
-          </h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Sprout className="size-4" aria-hidden="true" />
+            </span>
+            <h3 className="text-lg font-semibold text-foreground">
+              Interactive Farm Simulator
+            </h3>
+          </div>
+          <ViewCalculatorsButton targetId="agriculture-calculator-tools" />
         </div>
         <p className="text-pretty text-sm text-muted-foreground">
           Watch a clay farm move through the season and see how a diversified

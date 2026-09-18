@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewCalculatorsButton } from "@/components/view-calculators-button"
 import {
   computePlan,
   GROUP_LABELS,
@@ -123,13 +124,16 @@ export function RenovationExplorer() {
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Home className="size-4" aria-hidden="true" />
-          </span>
-          <h3 className="text-lg font-semibold text-foreground">
-            Interactive Home Upgrade Explorer
-          </h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Home className="size-4" aria-hidden="true" />
+            </span>
+            <h3 className="text-lg font-semibold text-foreground">
+              Interactive Home Upgrade Explorer
+            </h3>
+          </div>
+          <ViewCalculatorsButton targetId="renovation-calculator-tools" />
         </div>
         <p className="text-pretty text-sm text-muted-foreground">
           Tap the house to see inside, then tap an upgrade to build a plan and
