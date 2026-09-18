@@ -172,7 +172,7 @@ export function FarmSimulator() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-2">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-2">
         {/* Controls form a left sidebar on desktop (stacked in a single
             column). On tablet they lay out as a row of three below the visual;
             on mobile they stack. `order-last` drops them under the stage until
@@ -363,7 +363,8 @@ export function FarmSimulator() {
             edge line. `order-1` keeps it above the controls on mobile; on
             desktop it becomes the right column beside the control sidebar. */}
         <div className="order-1 flex flex-1 justify-center lg:order-none lg:justify-start">
-          <div className="relative aspect-square w-full max-w-2xl overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7]">
+          <div className="relative w-full max-w-2xl lg:flex lg:h-full lg:items-center lg:justify-center">
+          <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7] lg:h-full lg:w-auto">
             <div className="absolute inset-0">
             {/* Sun */}
             {!reducedMotion && (
