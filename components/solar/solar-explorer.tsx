@@ -594,7 +594,7 @@ export function SolarExplorer() {
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
             so the whole scene runs through sunrise, day, sunset and night as the
             time of day changes. */}
-        <div className="relative aspect-square w-full max-w-2xl overflow-hidden rounded-3xl">
+        <div className="relative aspect-square w-full max-w-lg overflow-hidden rounded-3xl">
         {/* Sky gradient (dawn -> day -> dusk -> night) */}
         <div
           className="absolute inset-0 transition-[background] duration-700 ease-linear"
