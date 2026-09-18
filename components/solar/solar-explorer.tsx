@@ -395,11 +395,11 @@ export function SolarExplorer() {
             </button>
           ) : null}
         </div>
-        <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-          {info
-            ? `${info.blurb} ${info.detail}`
-            : "Tap any marker on the diagram to see what that part does."}
-        </p>
+          <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+            {info
+              ? info.blurb
+              : "Tap any marker on the diagram to see what that part does."}
+          </p>
       </>
     )
   }
@@ -576,8 +576,8 @@ export function SolarExplorer() {
             playback buttons at the bottom — beside a thin, full-height "Time of
             day" box whose slider runs down its right edge (closest to the
             stage). */}
-        <div className="hidden shrink-0 items-stretch gap-3 sm:flex">
-          <div className="flex w-44 flex-col gap-3">
+        <div className="hidden min-h-0 shrink-0 items-stretch gap-3 sm:flex">
+          <div className="flex min-h-0 w-44 flex-col gap-3">
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm ring-1 ring-black/5">
               {renderPartInfo()}
             </div>
@@ -594,7 +594,7 @@ export function SolarExplorer() {
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
             so the whole scene runs through sunrise, day, sunset and night as the
             time of day changes. */}
-        <div className="relative aspect-square w-full max-w-lg overflow-hidden rounded-3xl">
+        <div className="relative aspect-square w-full max-w-xl overflow-hidden rounded-3xl sm:self-start">
         {/* Sky gradient (dawn -> day -> dusk -> night) */}
         <div
           className="absolute inset-0 transition-[background] duration-700 ease-linear"
