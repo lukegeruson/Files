@@ -158,7 +158,7 @@ export function FarmSimulator() {
     >
       {/* Heading */}
       <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <Sprout className="size-4" aria-hidden="true" />

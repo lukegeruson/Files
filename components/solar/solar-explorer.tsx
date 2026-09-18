@@ -551,7 +551,7 @@ export function SolarExplorer() {
           <Sparkles className="size-3" aria-hidden="true" />
           Interactive diagram
         </span>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h2 className="font-serif text-2xl font-semibold tracking-tight text-balance md:text-3xl">
             Solar Energy Explorer
           </h2>
