@@ -146,6 +146,20 @@ export function LandscapeExplorer() {
     setPos(0)
   }
 
+  // When the user lets go of the slider, glide to the nearest phase anchor
+  // (Before / Water-wise / Lawn) so the thumb never rests between stages.
+  function snapToNearestPhase() {
+    const idx = Math.round(posRef.current * (PHASE_COUNT - 1))
+    const anchor = ANCHORS[idx]
+    if (posRef.current === anchor) return
+    if (reducedMotion) {
+      setPos(anchor)
+      return
+    }
+    target.current = anchor
+    setPlaying(true)
+  }
+
   function handleMorph() {
     const nextAnchor = ANCHORS[(activeIndex + 1) % PHASE_COUNT]
     if (reducedMotion) {
@@ -318,6 +332,10 @@ export function LandscapeExplorer() {
                 setPlaying(false)
                 setPos(Number.parseFloat(e.target.value))
               }}
+              onPointerUp={snapToNearestPhase}
+              onTouchEnd={snapToNearestPhase}
+              onKeyUp={snapToNearestPhase}
+              onBlur={snapToNearestPhase}
               className="landscape-slider h-3 w-full cursor-pointer appearance-none rounded-full"
               style={{
                 background:
