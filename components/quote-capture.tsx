@@ -38,15 +38,32 @@ type Props = {
    * without it; it also surfaces the built lead so wiring later is trivial.
    */
   onSubmit?: (lead: QuoteLead) => void
+  /**
+   * Start already in the form (skipping the collapsed intro card). Used by the
+   * homepage flow where a category picker is the entry point instead.
+   */
+  defaultOpen?: boolean
+  /**
+   * When provided, the form shows a "Change category" affordance on the first
+   * step and after submission, letting the homepage picker take over again.
+   */
+  onBack?: () => void
   className?: string
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export function QuoteCapture({ category, context = {}, onSubmit, className }: Props) {
+export function QuoteCapture({
+  category,
+  context = {},
+  onSubmit,
+  defaultOpen = false,
+  onBack,
+  className,
+}: Props) {
   const config = QUOTE_CATEGORIES[category]
 
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const [submitted, setSubmitted] = useState<QuoteLead | null>(null)
 
   // Primary project — seeded from whatever the page already knows.
@@ -172,7 +189,14 @@ export function QuoteCapture({ category, context = {}, onSubmit, className }: Pr
 
           <ProjectSummary lead={submitted} />
 
-          <Button variant="outline" onClick={resetAll} className="mt-1 h-9 px-4">
+          <Button
+            variant="outline"
+            onClick={() => {
+              resetAll()
+              onBack?.()
+            }}
+            className="mt-1 h-9 px-4"
+          >
             Explore Another Project
           </Button>
         </div>
@@ -375,6 +399,11 @@ export function QuoteCapture({ category, context = {}, onSubmit, className }: Pr
               <ArrowLeft className="size-4" aria-hidden="true" />
               Back
             </Button>
+          ) : onBack ? (
+            <Button variant="ghost" onClick={onBack} className="h-10 gap-1.5 px-3 text-sm">
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              Change category
+            </Button>
           ) : (
             <span />
           )}
@@ -402,8 +431,10 @@ export function QuoteCapture({ category, context = {}, onSubmit, className }: Pr
 
 // ---------------------------------------------------------------------------
 
-const sectionShell =
+export const quoteSectionShell =
   "rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-sm md:p-8"
+
+const sectionShell = quoteSectionShell
 
 function chip(active: boolean) {
   return cn(

@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ArticleSearch } from "@/components/article-search"
+import { HomeQuoteCapture } from "@/components/home-quote-capture"
 import {
   CATEGORIES,
   CATEGORY_HOME_TEASERS,
@@ -72,6 +73,13 @@ export default async function HomePage() {
             >
               Partner with Evergreen
             </Link>
+          </div>
+
+          {/* Lead capture sits directly under the hero description. Visitors
+              pick a category, then run the same multi-step quote form used on
+              the category pages. */}
+          <div className="mt-8">
+            <HomeQuoteCapture />
           </div>
         </section>
 
