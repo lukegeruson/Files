@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CircleAlert, Info, LayoutGrid, Ruler, Zap } from "lucide-react"
+import { Info, LayoutGrid, Ruler, Zap } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
@@ -394,76 +394,6 @@ export function SolarPanelCalculator() {
                   </div>
                 </Panel>
               </div>
-
-              {/* Monthly production */}
-              <Panel title="Estimated monthly production">
-                <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-                  Output swings with the seasons. Summer months overproduce and winter months fall
-                  short, which is what annual net metering is designed to smooth out.
-                </p>
-                <div className="flex items-end gap-1.5" aria-hidden="true">
-                  {result.monthlyProfile.map((m) => {
-                    const peak = Math.max(...result.monthlyProfile.map((x) => x.kwh)) || 1
-                    return (
-                      <div key={m.month} className="flex flex-1 flex-col items-center gap-1.5">
-                        <div
-                          className="w-full rounded-t-sm bg-primary/70"
-                          style={{ height: `${Math.max(4, (m.kwh / peak) * 96)}px` }}
-                        />
-                        <span className="text-[10px] text-muted-foreground">{m.month}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-                <table className="sr-only">
-                  <caption>Estimated monthly production in kilowatt-hours</caption>
-                  <tbody>
-                    {result.monthlyProfile.map((m) => (
-                      <tr key={m.month}>
-                        <th scope="row">{m.month}</th>
-                        <td>{Math.round(m.kwh)} kWh</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Panel>
-
-              {/* Transparent math */}
-              <Panel title="How this was calculated">
-                <ol className="flex flex-col gap-3">
-                  {result.steps.map((s, i) => (
-                    <li key={s.label} className="flex flex-col gap-0.5 border-t border-border pt-3">
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                        <span className="text-sm font-medium">
-                          {i + 1}. {s.label}
-                        </span>
-                        <span className="font-serif text-base tabular-nums">{s.value}</span>
-                      </div>
-                      <span className="text-xs leading-relaxed text-muted-foreground">
-                        {s.detail}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </Panel>
-
-              {/* Caveats */}
-              <Panel
-                title="What this estimate cannot see"
-                icon={<CircleAlert className="size-4" aria-hidden="true" />}
-              >
-                <ul className="flex flex-col gap-2">
-                  {result.notes.map((note) => (
-                    <li
-                      key={note}
-                      className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"
-                    >
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-                      {note}
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
             </>
           )}
         </div>
