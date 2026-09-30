@@ -215,24 +215,22 @@ export function SolarPanelCalculator() {
               </Field>
             </div>
 
-            <Field
-              label="Panel wattage"
-              htmlFor="panel-watts"
-              hint="Higher-wattage panels mean fewer panels and less roof space."
-            >
-              <select
-                id="panel-watts"
-                className={selectClass}
-                value={panelWatts}
-                onChange={(e) => setPanelWatts(Number(e.target.value))}
-              >
-                {PANEL_OPTIONS.map((w) => (
-                  <option key={w} value={w}>
-                    {w} W
-                  </option>
-                ))}
-              </select>
-            </Field>
+  <div className="w-full sm:w-1/3">
+  <Field label="Panel wattage" htmlFor="panel-watts">
+  <select
+  id="panel-watts"
+  className={selectClass}
+  value={panelWatts}
+  onChange={(e) => setPanelWatts(Number(e.target.value))}
+  >
+  {PANEL_OPTIONS.map((w) => (
+  <option key={w} value={w}>
+  {w} W
+  </option>
+  ))}
+  </select>
+  </Field>
+  </div>
 
             {advanced ? (
               <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
