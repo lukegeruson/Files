@@ -79,6 +79,42 @@ export function SolarPanelCalculator() {
     if (patch.monthlyKwh !== undefined) setMonthlyKwh(String(patch.monthlyKwh))
   }
 
+  const offsetField = (
+    <Field
+      label={`Bill covered by solar — ${offsetPercent}%`}
+      htmlFor="panel-offset"
+      hint="100% = solar covers your whole bill."
+    >
+      <input
+        id="panel-offset"
+        type="range"
+        min={10}
+        max={120}
+        step={5}
+        value={offsetPercent}
+        onChange={(e) => setOffsetPercent(Number(e.target.value))}
+        className="h-9 w-full accent-primary"
+      />
+    </Field>
+  )
+
+  const shadingField = (
+    <Field label="Shading" htmlFor="panel-shade">
+      <select
+        id="panel-shade"
+        className={selectClass}
+        value={shade}
+        onChange={(e) => setShade(e.target.value as Shade)}
+      >
+        {Object.entries(SHADE_LABELS).map(([v, label]) => (
+          <option key={v} value={v}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </Field>
+  )
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -197,57 +233,29 @@ export function SolarPanelCalculator() {
                 />
               </Field>
 
-              <Field
-                label={`Target offset — ${offsetPercent}%`}
-                htmlFor="panel-offset"
-                hint="How much of your bill solar covers."
-              >
-                <input
-                  id="panel-offset"
-                  type="range"
-                  min={10}
-                  max={120}
-                  step={5}
-                  value={offsetPercent}
-                  onChange={(e) => setOffsetPercent(Number(e.target.value))}
-                  className="h-9 w-full accent-primary"
-                />
+              {advanced ? shadingField : offsetField}
+            </div>
+
+            <div className="w-full sm:w-1/3">
+              <Field label="Panel wattage" htmlFor="panel-watts">
+                <select
+                  id="panel-watts"
+                  className={selectClass}
+                  value={panelWatts}
+                  onChange={(e) => setPanelWatts(Number(e.target.value))}
+                >
+                  {PANEL_OPTIONS.map((w) => (
+                    <option key={w} value={w}>
+                      {w} W
+                    </option>
+                  ))}
+                </select>
               </Field>
             </div>
 
-  <div className="w-full sm:w-1/3">
-  <Field label="Panel wattage" htmlFor="panel-watts">
-  <select
-  id="panel-watts"
-  className={selectClass}
-  value={panelWatts}
-  onChange={(e) => setPanelWatts(Number(e.target.value))}
-  >
-  {PANEL_OPTIONS.map((w) => (
-  <option key={w} value={w}>
-  {w} W
-  </option>
-  ))}
-  </select>
-  </Field>
-  </div>
-
             {advanced ? (
               <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-                <Field label="Shading" htmlFor="panel-shade">
-                  <select
-                    id="panel-shade"
-                    className={selectClass}
-                    value={shade}
-                    onChange={(e) => setShade(e.target.value as Shade)}
-                  >
-                    {Object.entries(SHADE_LABELS).map(([v, label]) => (
-                      <option key={v} value={v}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                {offsetField}
                 <Field
                   label={`System losses — ${derate}% delivered`}
                   htmlFor="panel-derate"
