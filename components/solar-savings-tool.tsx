@@ -388,6 +388,49 @@ export function SolarSavingsTool() {
                   </dl>
                 </div>
 
+                  <Panel title="Cash vs. financing vs. lease">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <caption className="sr-only">
+                          Comparison of paying cash, financing with a loan, and leasing
+                        </caption>
+                        <thead>
+                          <tr className="border-b border-border text-left">
+                            <th scope="col" className="py-2 pr-3 font-medium">Option</th>
+                            <th scope="col" className="py-2 pr-3 font-medium">Upfront</th>
+                            <th scope="col" className="py-2 font-medium">Monthly effect</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-muted-foreground">
+                          <tr className="border-b border-border">
+                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Cash</th>
+                            <td className="py-2.5 pr-3 tabular-nums">{money(result.netCost)}</td>
+                            <td className="py-2.5 tabular-nums">+{money(result.monthlySavings)} saved</td>
+                          </tr>
+                          <tr className="border-b border-border">
+                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Loan</th>
+                            <td className="py-2.5 pr-3 tabular-nums">{money(0)}</td>
+                            <td className="py-2.5 tabular-nums">
+                              {result.loanMonthlyDelta >= 0 ? "+" : "−"}
+                              {money(Math.abs(result.loanMonthlyDelta))} net
+                            </td>
+                          </tr>
+                          <tr>
+                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Lease / PPA</th>
+                            <td className="py-2.5 pr-3 tabular-nums">{money(0)}</td>
+                            <td className="py-2.5 tabular-nums">+{money(result.leaseMonthlySavings)} saved</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                      Loan assumes {(assumptions.loanApr * 100).toFixed(2)}% APR over{" "}
+                      {assumptions.loanTermYears} years on {money(result.grossCost + result.batteryGrossCost)}, with the
+                      tax credit returned to you. A lease or PPA has no upfront cost, but the installer keeps
+                      the tax credit and your savings are smaller.
+                    </p>
+                  </Panel>
+
                 <div className="rounded-lg border border-border bg-card p-5">
                   <h3 className="font-serif text-lg font-semibold">Your estimate</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -448,201 +491,154 @@ export function SolarSavingsTool() {
                     100% still comes from the grid.
                   </p>
                 </div>
+
+                <div className="flex flex-col gap-4">
+                  <Panel title="Why this recommendation" icon={<CircleCheck className="size-4 text-primary" aria-hidden="true" />}>
+                    {result.reasons.length ? (
+                      <ul className="flex flex-col gap-2.5">
+                        {result.reasons.map((r) => (
+                          <li key={r} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
+                            <CircleCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No strong positive factors stand out at these inputs.
+                      </p>
+                    )}
+                  </Panel>
+                  <Panel title="What to watch out for" icon={<CircleAlert className="size-4 text-primary" aria-hidden="true" />}>
+                    {result.cautions.length ? (
+                      <ul className="flex flex-col gap-2.5">
+                        {result.cautions.map((c) => (
+                          <li key={c} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
+                            <CircleAlert className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                            <span>{c}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Nothing significant is working against solar at these inputs.
+                      </p>
+                    )}
+                  </Panel>
+                </div>
+
+                  <Panel title="Cumulative savings over time" icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}>
+                    <div className="flex h-40 items-end gap-3">
+                      {milestones.map((y) => {
+                        const row = result.savingsByYear[y - 1]
+                        const value = row?.cumulative ?? 0
+                        const pct = Math.max(4, (value / maxCumulative) * 100)
+                        return (
+                          <div key={y} className="flex flex-1 flex-col items-center justify-end gap-2">
+                            <span className="font-serif text-xs tabular-nums text-muted-foreground">
+                              {money(value)}
+                            </span>
+                            <div
+                              className="w-full rounded-t bg-primary/70"
+                              style={{ height: `${pct}%` }}
+                              role="img"
+                              aria-label={`By year ${y}, about ${money(value)} saved`}
+                            />
+                            <span className="text-xs tabular-nums text-muted-foreground">Yr {y}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                      Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
+                      panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
+                    </p>
+                  </Panel>
+
+                {/* Sensitivity */}
+                <Panel title="What if the assumptions are wrong?">
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Payback depends heavily on utility rates, install price, and real production. These
+                    scenarios re-run the math with one variable changed at a time. Net gain is lifetime
+                    bill savings minus what the system costs you after incentives.
+                  </p>
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <caption className="sr-only">Sensitivity of payback and savings to key assumptions</caption>
+                      <thead>
+                        <tr className="border-b border-border text-left">
+                          <th scope="col" className="py-2 pr-3 font-medium">Scenario</th>
+                          <th scope="col" className="py-2 pr-3 font-medium">Change</th>
+                          <th scope="col" className="py-2 pr-3 font-medium">Payback</th>
+                          <th scope="col" className="py-2 font-medium">
+                            {assumptions.horizonYears}-yr net gain
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.scenarios.map((s) => (
+                          <tr key={s.label} className="border-b border-border last:border-0">
+                            <th scope="row" className="py-2.5 pr-3 text-left font-normal">{s.label}</th>
+                            <td className="py-2.5 pr-3 text-muted-foreground">{s.detail}</td>
+                            <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">
+                              {fmtYears(s.paybackYears)}
+                            </td>
+                            <td className="py-2.5 tabular-nums text-muted-foreground">
+                              {money(s.netSavings)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Panel>
+
+                {/* Battery */}
+                <Panel title="Should you add a battery?" icon={<BatteryCharging className="size-4 text-primary" aria-hidden="true" />}>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide",
+                        result.batteryVerdict === "recommended"
+                          ? "bg-primary/15 text-foreground"
+                          : result.batteryVerdict === "optional"
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {result.batteryVerdict === "recommended"
+                        ? "A battery likely makes sense"
+                        : result.batteryVerdict === "optional"
+                          ? "A battery is optional here"
+                          : "A battery is hard to justify financially"}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      Storage adds about {money(assumptions.batteryCost)} before the tax credit, or{" "}
+                      {money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after.
+                    </span>
+                  </div>
+                  <ul className="mt-4 flex flex-col gap-2.5">
+                    {result.batteryReasons.map((r) => (
+                      <li key={r} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
+                        <BatteryCharging className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                    On bill savings alone a battery typically takes{" "}
+                    {result.batteryPaybackYears ? `${result.batteryPaybackYears.toFixed(0)} years or more` : "many years"}{" "}
+                    to pay back, so most homeowners buy one for backup power and resilience rather than pure return.
+                  </p>
+                </Panel>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {ready ? (
+      {showResults ? (
         <>
-          {/* Why this recommendation */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <Panel title="Why this recommendation" icon={<CircleCheck className="size-4 text-primary" aria-hidden="true" />}>
-              {result.reasons.length ? (
-                <ul className="flex flex-col gap-2.5">
-                  {result.reasons.map((r) => (
-                    <li key={r} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
-                      <CircleCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                      <span>{r}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No strong positive factors stand out at these inputs.
-                </p>
-              )}
-            </Panel>
-            <Panel title="What to watch out for" icon={<CircleAlert className="size-4 text-primary" aria-hidden="true" />}>
-              {result.cautions.length ? (
-                <ul className="flex flex-col gap-2.5">
-                  {result.cautions.map((c) => (
-                    <li key={c} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
-                      <CircleAlert className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                      <span>{c}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Nothing significant is working against solar at these inputs.
-                </p>
-              )}
-            </Panel>
-          </div>
-
-          {/* Cumulative savings + cash vs finance */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <Panel title="Cumulative savings over time" icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}>
-              <div className="flex h-40 items-end gap-3">
-                {milestones.map((y) => {
-                  const row = result.savingsByYear[y - 1]
-                  const value = row?.cumulative ?? 0
-                  const pct = Math.max(4, (value / maxCumulative) * 100)
-                  return (
-                    <div key={y} className="flex flex-1 flex-col items-center justify-end gap-2">
-                      <span className="font-serif text-xs tabular-nums text-muted-foreground">
-                        {money(value)}
-                      </span>
-                      <div
-                        className="w-full rounded-t bg-primary/70"
-                        style={{ height: `${pct}%` }}
-                        role="img"
-                        aria-label={`By year ${y}, about ${money(value)} saved`}
-                      />
-                      <span className="text-xs tabular-nums text-muted-foreground">Yr {y}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
-                panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
-              </p>
-            </Panel>
-
-            <Panel title="Cash vs. financing vs. lease">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <caption className="sr-only">
-                    Comparison of paying cash, financing with a loan, and leasing
-                  </caption>
-                  <thead>
-                    <tr className="border-b border-border text-left">
-                      <th scope="col" className="py-2 pr-3 font-medium">Option</th>
-                      <th scope="col" className="py-2 pr-3 font-medium">Upfront</th>
-                      <th scope="col" className="py-2 font-medium">Monthly effect</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-muted-foreground">
-                    <tr className="border-b border-border">
-                      <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Cash</th>
-                      <td className="py-2.5 pr-3 tabular-nums">{money(result.netCost)}</td>
-                      <td className="py-2.5 tabular-nums">+{money(result.monthlySavings)} saved</td>
-                    </tr>
-                    <tr className="border-b border-border">
-                      <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Loan</th>
-                      <td className="py-2.5 pr-3 tabular-nums">{money(0)}</td>
-                      <td className="py-2.5 tabular-nums">
-                        {result.loanMonthlyDelta >= 0 ? "+" : "−"}
-                        {money(Math.abs(result.loanMonthlyDelta))} net
-                      </td>
-                    </tr>
-                    <tr>
-                      <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Lease / PPA</th>
-                      <td className="py-2.5 pr-3 tabular-nums">{money(0)}</td>
-                      <td className="py-2.5 tabular-nums">+{money(result.leaseMonthlySavings)} saved</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Loan assumes {(assumptions.loanApr * 100).toFixed(2)}% APR over{" "}
-                {assumptions.loanTermYears} years on {money(result.grossCost + result.batteryGrossCost)}, with the
-                tax credit returned to you. A lease or PPA has no upfront cost, but the installer keeps
-                the tax credit and your savings are smaller.
-              </p>
-            </Panel>
-          </div>
-
-          {/* Sensitivity */}
-          <Panel title="What if the assumptions are wrong?">
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Payback depends heavily on utility rates, install price, and real production. These
-              scenarios re-run the math with one variable changed at a time. Net gain is lifetime
-              bill savings minus what the system costs you after incentives.
-            </p>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                <caption className="sr-only">Sensitivity of payback and savings to key assumptions</caption>
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <th scope="col" className="py-2 pr-3 font-medium">Scenario</th>
-                    <th scope="col" className="py-2 pr-3 font-medium">Change</th>
-                    <th scope="col" className="py-2 pr-3 font-medium">Payback</th>
-                    <th scope="col" className="py-2 font-medium">
-                      {assumptions.horizonYears}-yr net gain
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.scenarios.map((s) => (
-                    <tr key={s.label} className="border-b border-border last:border-0">
-                      <th scope="row" className="py-2.5 pr-3 text-left font-normal">{s.label}</th>
-                      <td className="py-2.5 pr-3 text-muted-foreground">{s.detail}</td>
-                      <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">
-                        {fmtYears(s.paybackYears)}
-                      </td>
-                      <td className="py-2.5 tabular-nums text-muted-foreground">
-                        {money(s.netSavings)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
-
-          {/* Battery */}
-          <Panel title="Should you add a battery?" icon={<BatteryCharging className="size-4 text-primary" aria-hidden="true" />}>
-            <div className="flex flex-wrap items-center gap-3">
-              <span
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide",
-                  result.batteryVerdict === "recommended"
-                    ? "bg-primary/15 text-foreground"
-                    : result.batteryVerdict === "optional"
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-muted text-muted-foreground",
-                )}
-              >
-                {result.batteryVerdict === "recommended"
-                  ? "A battery likely makes sense"
-                  : result.batteryVerdict === "optional"
-                    ? "A battery is optional here"
-                    : "A battery is hard to justify financially"}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                Storage adds about {money(assumptions.batteryCost)} before the tax credit, or{" "}
-                {money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after.
-              </span>
-            </div>
-            <ul className="mt-4 flex flex-col gap-2.5">
-              {result.batteryReasons.map((r) => (
-                <li key={r} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
-                  <BatteryCharging className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                  <span>{r}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              On bill savings alone a battery typically takes{" "}
-              {result.batteryPaybackYears ? `${result.batteryPaybackYears.toFixed(0)} years or more` : "many years"}{" "}
-              to pay back, so most homeowners buy one for backup power and resilience rather than pure return.
-            </p>
-          </Panel>
-
           {/* Assumptions */}
           <Panel title="Assumptions behind every number" icon={<Info className="size-4 text-primary" aria-hidden="true" />}>
             <p className="text-sm leading-relaxed text-muted-foreground">
