@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CircleAlert, Grid2x2, Info, LayoutGrid, Ruler, Zap } from "lucide-react"
+import { CircleAlert, Info, LayoutGrid, Ruler, Zap } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
@@ -26,54 +26,6 @@ import {
   type UsageBasis,
 } from "@/lib/solar-panels"
 
-/** Visual approximation of the array on a roof face. */
-function LayoutPreview({
-  panelCount,
-  perRow,
-  rows,
-}: {
-  panelCount: number
-  perRow: number
-  rows: number
-}) {
-  // Keep the preview readable: cap drawn rows and note the overflow.
-  const maxRows = 8
-  const drawnRows = Math.min(rows, maxRows)
-  const cells: number[] = []
-  for (let r = 0; r < drawnRows; r++) {
-    const remaining = panelCount - r * perRow
-    cells.push(Math.max(0, Math.min(perRow, remaining)))
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div
-        className="flex flex-col gap-1 rounded-md border border-dashed border-border bg-muted/40 p-3"
-        role="img"
-        aria-label={`Approximate layout: ${rows} rows of up to ${perRow} panels`}
-      >
-        {cells.map((count, r) => (
-          <div key={r} className="flex gap-1">
-            {Array.from({ length: count }).map((_, c) => (
-              <div
-                key={c}
-                className="h-5 flex-1 rounded-sm border border-primary/40 bg-primary/25"
-                style={{ maxWidth: `${100 / perRow}%` }}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        {rows > maxRows
-          ? `Showing ${maxRows} of ${rows} rows. `
-          : ""}
-        About {rows} {rows === 1 ? "row" : "rows"} of up to {perRow} panels across, based on your
-        usable roof width. Real layouts shift around vents, chimneys and setbacks.
-      </p>
-    </div>
-  )
-}
 
 export function SolarPanelCalculator() {
   const [zip, setZip] = useState("")
@@ -440,18 +392,6 @@ export function SolarPanelCalculator() {
                       sub="Per kW of capacity, per year"
                     />
                   </div>
-                </Panel>
-
-                <Panel
-                  className="sm:col-span-2"
-                  title="Approximate layout"
-                  icon={<Grid2x2 className="size-4" aria-hidden="true" />}
-                >
-                  <LayoutPreview
-                    panelCount={result.panelCount}
-                    perRow={result.layout.perRow}
-                    rows={result.layout.rows}
-                  />
                 </Panel>
               </div>
 
