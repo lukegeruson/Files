@@ -596,7 +596,16 @@ export function SolarExplorer() {
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
             so the whole scene runs through sunrise, day, sunset and night as the
             time of day changes. */}
-        <div className="relative aspect-square w-full max-w-xl overflow-hidden rounded-3xl sm:self-start">
+        <div
+          className="relative aspect-square w-full max-w-xl overflow-hidden rounded-3xl sm:self-start"
+          onClick={(e) => {
+            // Clicking anywhere in the scene except a hotspot or popup falls
+            // back to the default "Solar panels" description.
+            const target = e.target as HTMLElement
+            if (target.closest("button, [data-stage-popup]")) return
+            setSelected(null)
+          }}
+        >
         {/* Sky gradient (dawn -> day -> dusk -> night) */}
         <div
           className="absolute inset-0 transition-[background] duration-700 ease-linear"
@@ -701,7 +710,7 @@ export function SolarExplorer() {
           {/* Selected component popup — mobile only. On desktop the same
               description is shown in the left column (renderPartInfo). */}
           {selected ? (
-            <div className="sm:hidden">
+            <div className="sm:hidden" data-stage-popup>
               <SelectedCard
                 id={selected}
                 pos={posOf[selected]}
