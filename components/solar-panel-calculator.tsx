@@ -155,7 +155,9 @@ export function SolarPanelCalculator() {
                 <Field
                   label="Average monthly bill"
                   htmlFor="panel-bill"
-                  hint={`Converted at ${money(result.rate, 3)}/kWh for ${result.location.stateName}.`}
+                  hint={`At ${money(result.rate, 3)}/kWh (${
+                    result.location.stateName === "National average" ? "US avg." : result.location.stateName
+                  })`}
                 >
                   <Input
                     id="panel-bill"
@@ -217,7 +219,7 @@ export function SolarPanelCalculator() {
               <Field
                 label={`Target offset — ${offsetPercent}%`}
                 htmlFor="panel-offset"
-                hint="How much of your yearly electricity the array should cover."
+                hint="% of yearly usage solar covers."
               >
                 <input
                   id="panel-offset"
@@ -260,7 +262,7 @@ export function SolarPanelCalculator() {
                 <Field
                   label={`System losses — ${derate}% delivered`}
                   htmlFor="panel-derate"
-                  hint="Inverter, wiring, soiling and heat losses. 85% is typical."
+                  hint="Output left after wiring/heat loss."
                 >
                   <input
                     id="panel-derate"
