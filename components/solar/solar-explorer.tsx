@@ -6,14 +6,11 @@ import {
   BatteryCharging,
   ChevronDown,
   Home,
-  Moon,
   Pause,
   Play,
   RotateCcw,
   Sparkles,
   Sun,
-  Sunrise,
-  Sunset,
   X,
   Zap,
 } from "lucide-react"
@@ -38,9 +35,9 @@ const DIORAMA_SRC = "/solar-styles/claymation-cutout.png"
 // real object. The stage is square and the image is square, so x/y map 1:1.
 type Hotspot = { id: ComponentId; x: number; y: number }
 
+// The sun and solar panels have no markers; the panels are the default
+// description shown when nothing is selected.
 const HOTSPOTS: Hotspot[] = [
-  { id: "sun", x: 50, y: 14 }, // sits on the sun's high-noon apex
-  { id: "panels", x: 55, y: 36 }, // nudged up/right so flow lines don't overlap
   { id: "inverter", x: 25, y: 52 },
   // The battery marker doubles as the home: all household energy converges here,
   // so there is no separate "home" point.
@@ -177,26 +174,6 @@ function skyForHour(hour: number) {
     sunUp,
   }
 }
-
-const TICKS: Array<{ label: string; icon: typeof Sun }> = [
-  { label: "Morning", icon: Sunrise },
-  { label: "Midday", icon: Sun },
-  { label: "Evening", icon: Sunset },
-  { label: "Night", icon: Moon },
-]
-
-// Legend for the vertical desktop slider. The axis is a full day rotated so
-// that noon sits at the top and midnight in the middle (see VerticalTimeSlider).
-// Reading top → bottom follows the day forward: noon, evening, midnight,
-// morning, and back to noon. `pos` is the percentage from the bottom of the
-// track where each label sits.
-const VERTICAL_TICKS: Array<{ label: string; icon: typeof Sun; pos: number }> = [
-  { label: "Noon", icon: Sun, pos: 100 },
-  { label: "Evening", icon: Sunset, pos: 75 },
-  { label: "Midnight", icon: Moon, pos: 50 },
-  { label: "Morning", icon: Sunrise, pos: 25 },
-  { label: "Noon", icon: Sun, pos: 0 },
-]
 
 const DAY_SECONDS = 18 // one simulated day plays over ~18s
 
@@ -378,12 +355,12 @@ export function SolarExplorer() {
   // it sits at the top of the left column and swaps its contents as different
   // parts are clicked, falling back to a prompt when nothing is selected.
   const renderPartInfo = () => {
-    const info = selected ? COMPONENT_INFO[selected] : null
+    const info = COMPONENT_INFO[selected ?? "panels"]
     return (
       <>
         <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
           <p className="font-serif text-sm font-semibold text-foreground">
-            {info ? info.title : "Solar parts"}
+            {info.title}
           </p>
           {selected ? (
             <button
@@ -397,110 +374,11 @@ export function SolarExplorer() {
           ) : null}
         </div>
           <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-            {info
-              ? info.blurb
-              : "Tap any marker on the diagram to see what that part does."}
+            {info.blurb}
           </p>
       </>
     )
   }
-
-  // Time-of-day slider. Shown below the "Right now" card in the desktop left
-  // column, and inside the Controls block on mobile. Both copies live in the
-  // DOM (toggled by CSS), so each needs a unique id.
-  const renderTimeline = (id: string) => (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <label
-          htmlFor={id}
-          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-        >
-          Time of day
-        </label>
-        <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs tabular-nums text-foreground">
-          {frame.label}
-        </span>
-      </div>
-      <div className="relative">
-        <input
-          id={id}
-          type="range"
-          min={0}
-          max={24}
-          step={0.25}
-          value={hour}
-          onChange={(e) => {
-            setPlaying(false)
-            setHour(Number.parseFloat(e.target.value))
-          }}
-          className="solar-timeline h-2.5 w-full cursor-pointer appearance-none rounded-full"
-          style={{
-            background:
-              "linear-gradient(90deg, #1e293b 0%, #6b5b95 18%, #f5b445 40%, #ffe6a8 50%, #f5b445 60%, #6b5b95 82%, #1e293b 100%)",
-          }}
-          aria-label="Time of day"
-        />
-      </div>
-      <div className="flex justify-between text-[11px] text-muted-foreground">
-        {TICKS.map((t) => {
-          const Icon = t.icon
-          return (
-            <span key={t.label} className="flex items-center gap-1">
-              <Icon className="size-3" aria-hidden="true" />
-              {t.label}
-            </span>
-          )
-        })}
-      </div>
-    </div>
-  )
-
-  // Vertical variant of the timeline used in the desktop left column. It fills
-  // the height of its card so the two info boxes together match the stage.
-  // Top = noon (brightest), middle = midnight, bottom = noon — a full day
-  // rotated so midday leads at the top.
-  const renderTimelineVertical = () => (
-    <div className="flex h-full flex-col gap-2">
-      {/* Header stacks so it fits the thin box. */}
-      <div className="flex flex-col items-center gap-1 pb-2">
-        <span className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Time of day
-        </span>
-      </div>
-      <div className="flex min-h-0 flex-1 items-stretch gap-2 pt-1">
-        {/* Ticks positioned to match the gradient: noon (bright) at top and
-            bottom, midnight (dark) in the middle. The inner region is inset
-            vertically so the top/bottom labels don't clip into the header.
-            Ticks sit to the left of the slider. */}
-        <div className="relative flex-1 text-[11px] text-muted-foreground">
-          <div className="absolute inset-x-0 inset-y-2">
-            {VERTICAL_TICKS.map((t) => {
-              const Icon = t.icon
-              return (
-                <span
-                  key={`${t.label}-${t.pos}`}
-                  className="absolute flex -translate-y-1/2 items-center gap-1.5"
-                  style={{ bottom: `${t.pos}%` }}
-                >
-                  <Icon className="size-3 shrink-0" aria-hidden="true" />
-                  {t.label}
-                </span>
-              )
-            })}
-          </div>
-        </div>
-        {/* Slider on the right edge of the box (closest to the stage). */}
-        <VerticalTimeSlider
-          value={hour}
-          onChange={(h) => {
-            setPlaying(false)
-            setHour(h)
-          }}
-          ariaLabel="Time of day"
-        />
-      </div>
-    </div>
-  )
 
   // Playback controls (Run day / Savings / Reset). Shown in the desktop left
   // column and inside the Controls block on mobile.
@@ -514,7 +392,7 @@ export function SolarExplorer() {
         className="sm:w-full sm:justify-center"
         title={
           reducedMotion
-            ? "Auto-play is off because your system prefers reduced motion — use the timeline instead."
+            ? "Auto-play is off because your system prefers reduced motion."
             : undefined
         }
       >
@@ -590,15 +468,21 @@ export function SolarExplorer() {
             </div>
             <div>{controlButtons}</div>
           </div>
-          <div className="flex w-28 shrink-0 flex-col rounded-xl border border-border bg-card p-3 shadow-sm">
-            {renderTimelineVertical()}
-          </div>
         </div>
 
         {/* Stage — an animated sky sits behind the transparent-backed diorama,
             so the whole scene runs through sunrise, day, sunset and night as the
             time of day changes. */}
-        <div className="relative aspect-square w-full max-w-xl overflow-hidden rounded-3xl sm:self-start">
+        <div
+          className="relative aspect-square w-full max-w-xl overflow-hidden rounded-3xl sm:self-start"
+          onClick={(e) => {
+            // Clicking anywhere in the scene except a hotspot or popup falls
+            // back to the default "Solar panels" description.
+            const target = e.target as HTMLElement
+            if (target.closest("button, [data-stage-popup]")) return
+            setSelected(null)
+          }}
+        >
         {/* Sky gradient (dawn -> day -> dusk -> night) */}
         <div
           className="absolute inset-0 transition-[background] duration-700 ease-linear"
@@ -668,10 +552,6 @@ export function SolarExplorer() {
 
           {/* Hotspots */}
           {hotspots.map((h) => {
-            // The sun marker only exists while the sun is up; once it sets and
-            // the moon rises, the marker disappears. The solar-panel marker is
-            // likewise hidden at night, since the array isn't generating.
-            if ((h.id === "sun" || h.id === "panels") && !sky.sunUp) return null
             const info = COMPONENT_INFO[h.id]
             const isSel = selected === h.id
             return (
@@ -707,7 +587,7 @@ export function SolarExplorer() {
           {/* Selected component popup — mobile only. On desktop the same
               description is shown in the left column (renderPartInfo). */}
           {selected ? (
-            <div className="sm:hidden">
+            <div className="sm:hidden" data-stage-popup>
               <SelectedCard
                 id={selected}
                 pos={posOf[selected]}
@@ -769,7 +649,6 @@ export function SolarExplorer() {
           the left column beside the simulator. */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:hidden">
         {controlButtons}
-        <div>{renderTimeline("solar-timeline-mobile")}</div>
       </div>
 
       <style jsx>{`
@@ -782,141 +661,8 @@ export function SolarExplorer() {
             opacity: 1;
           }
         }
-        .solar-timeline::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          height: 20px;
-          width: 20px;
-          border-radius: 9999px;
-          background: #ffffff;
-          border: 3px solid var(--primary);
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-          cursor: pointer;
-        }
-        .solar-timeline::-moz-range-thumb {
-          height: 20px;
-          width: 20px;
-          border-radius: 9999px;
-          background: #ffffff;
-          border: 3px solid var(--primary);
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-          cursor: pointer;
-        }
       `}</style>
     </section>
-  )
-}
-
-// Custom vertical time-of-day slider. Native vertical <input type="range"> is
-// unreliable across browsers (the thumb fails to track the value), so this uses
-// pointer + keyboard handling with an absolutely-positioned thumb. The track
-// runs bottom (0:00) to top (24:00).
-function VerticalTimeSlider({
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  value: number
-  onChange: (hour: number) => void
-  ariaLabel: string
-}) {
-  const trackRef = useRef<HTMLDivElement>(null)
-  const dragging = useRef(false)
-
-  // The track is a full day rotated so noon is at the top and bottom while
-  // midnight sits in the middle. Position `p` runs 0 (bottom) → 1 (top):
-  //   top half   [0.5, 1] → hours 24 → 12  (midnight up to noon)
-  //   bottom half [0, 0.5) → hours 12 → 0   (noon down to midnight)
-  const hourToPos = (h: number) => (h >= 12 ? (36 - h) / 24 : (12 - h) / 24)
-  const posToHour = (p: number) => {
-    const clamped = Math.max(0, Math.min(1, p))
-    const h = clamped >= 0.5 ? 36 - 24 * clamped : 12 - 24 * clamped
-    return Math.round(h * 4) / 4 // snap to 0.25h steps
-  }
-
-  const setFromClientY = (clientY: number) => {
-    const el = trackRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    if (rect.height === 0) return
-    const p = 1 - (clientY - rect.top) / rect.height
-    onChange(posToHour(p))
-  }
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    dragging.current = true
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-    setFromClientY(e.clientY)
-  }
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragging.current) setFromClientY(e.clientY)
-  }
-  const endDrag = () => {
-    dragging.current = false
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Operate on position so the thumb always moves in the pressed direction,
-    // regardless of how hours wrap across the rotated axis.
-    let p = hourToPos(value)
-    const small = 0.25 / 24
-    const big = 1 / 24
-    switch (e.key) {
-      case "ArrowUp":
-      case "ArrowRight":
-        p += small
-        break
-      case "ArrowDown":
-      case "ArrowLeft":
-        p -= small
-        break
-      case "PageUp":
-        p += big
-        break
-      case "PageDown":
-        p -= big
-        break
-      case "Home":
-        p = 0
-        break
-      case "End":
-        p = 1
-        break
-      default:
-        return
-    }
-    e.preventDefault()
-    onChange(posToHour(Math.max(0, Math.min(1, p))))
-  }
-
-  const pct = hourToPos(value) * 100
-
-  return (
-    <div
-      ref={trackRef}
-      role="slider"
-      tabIndex={0}
-      aria-label={ariaLabel}
-      aria-valuemin={0}
-      aria-valuemax={24}
-      aria-valuenow={Math.round(value)}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-      onKeyDown={handleKeyDown}
-      className="relative h-full w-2.5 shrink-0 cursor-pointer touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      style={{
-        background:
-          "linear-gradient(to top, #ffe6a8 0%, #f5b445 12%, #6b5b95 34%, #1e293b 50%, #6b5b95 66%, #f5b445 88%, #ffe6a8 100%)",
-      }}
-    >
-      <span
-        className="pointer-events-none absolute left-1/2 size-5 -translate-x-1/2 translate-y-1/2 rounded-full border-[3px] border-primary bg-white shadow-md"
-        style={{ bottom: `${pct}%` }}
-        aria-hidden="true"
-      />
-    </div>
   )
 }
 

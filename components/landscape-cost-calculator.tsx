@@ -89,6 +89,7 @@ export function LandscapeCostCalculator() {
   const [expanded, setExpanded] = useState<ComponentId | null>(null)
 
   const yardAreaNum = Number.parseFloat(yardArea) || 0
+  const step1Complete = /^\d{5}$/.test(zip) && yardAreaNum > 0
 
   const result = useMemo(
     () =>
@@ -172,6 +173,8 @@ export function LandscapeCostCalculator() {
         </p>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+      <div className="flex min-w-0 flex-col gap-6">
       {/* Step 1: the yard */}
       <div className="rounded-lg border border-border bg-card">
         <div className="border-b border-border px-5 py-3">
@@ -295,8 +298,8 @@ export function LandscapeCostCalculator() {
         </div>
       </div>
 
-      {/* Step 2: components */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+      {/* Step 2: components — revealed once step 1 is complete */}
+      {step1Complete ? (
         <div className="rounded-lg border border-border bg-card">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -342,6 +345,12 @@ export function LandscapeCostCalculator() {
             />
           </div>
         </div>
+      ) : (
+        <p className="rounded-lg border border-dashed border-border px-5 py-4 text-sm text-muted-foreground">
+          Enter a 5-digit ZIP code and your yard size above to continue to step 2.
+        </p>
+      )}
+      </div>
 
         {/* Sticky live total — top-20 clears the 4rem sticky navbar with a small buffer */}
         <div className="lg:sticky lg:top-20">
@@ -350,8 +359,9 @@ export function LandscapeCostCalculator() {
               <Sprout className="mx-auto size-5 text-muted-foreground" aria-hidden="true" />
               <h3 className="mt-2 font-serif text-lg font-semibold">Your estimate appears here</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Select the components you want, or pick a common project above, and the total updates
-                as you go.
+                {step1Complete
+                  ? "Select the components you want, or pick a common project, and the total updates as you go."
+                  : "Complete step 1, then choose what you want done and the total updates as you go."}
               </p>
             </div>
           ) : (

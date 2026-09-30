@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CircleAlert, Grid2x2, Info, LayoutGrid, Ruler, Zap } from "lucide-react"
+import { Info, Ruler, Zap } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
@@ -26,54 +26,6 @@ import {
   type UsageBasis,
 } from "@/lib/solar-panels"
 
-/** Visual approximation of the array on a roof face. */
-function LayoutPreview({
-  panelCount,
-  perRow,
-  rows,
-}: {
-  panelCount: number
-  perRow: number
-  rows: number
-}) {
-  // Keep the preview readable: cap drawn rows and note the overflow.
-  const maxRows = 8
-  const drawnRows = Math.min(rows, maxRows)
-  const cells: number[] = []
-  for (let r = 0; r < drawnRows; r++) {
-    const remaining = panelCount - r * perRow
-    cells.push(Math.max(0, Math.min(perRow, remaining)))
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div
-        className="flex flex-col gap-1 rounded-md border border-dashed border-border bg-muted/40 p-3"
-        role="img"
-        aria-label={`Approximate layout: ${rows} rows of up to ${perRow} panels`}
-      >
-        {cells.map((count, r) => (
-          <div key={r} className="flex gap-1">
-            {Array.from({ length: count }).map((_, c) => (
-              <div
-                key={c}
-                className="h-5 flex-1 rounded-sm border border-primary/40 bg-primary/25"
-                style={{ maxWidth: `${100 / perRow}%` }}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        {rows > maxRows
-          ? `Showing ${maxRows} of ${rows} rows. `
-          : ""}
-        About {rows} {rows === 1 ? "row" : "rows"} of up to {perRow} panels across, based on your
-        usable roof width. Real layouts shift around vents, chimneys and setbacks.
-      </p>
-    </div>
-  )
-}
 
 export function SolarPanelCalculator() {
   const [zip, setZip] = useState("")
@@ -91,6 +43,10 @@ export function SolarPanelCalculator() {
   const [pitch, setPitch] = useState<RoofPitch>("typical")
   const [derate, setDerate] = useState(85)
   const [roofWidthFt, setRoofWidthFt] = useState("30")
+  const [started, setStarted] = useState(false)
+  const markStarted = () => {
+    if (!started) setStarted(true)
+  }
 
   const result = useMemo(
     () =>
@@ -120,7 +76,7 @@ export function SolarPanelCalculator() {
   // input to size a real array; otherwise the scene keeps its mock home.
   const publishScene = usePublishSolarScene()
   useEffect(() => {
-    publishScene(result.ready ? snapshotFromPanels(result) : null)
+    publishScene(started && result.ready ? snapshotFromPanels(result) : null)
   }, [result, publishScene])
 
   function applyScenario(id: string) {
@@ -146,9 +102,13 @@ export function SolarPanelCalculator() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-6">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {/* Inputs */}
-        <div className="rounded-lg border border-border bg-card">
+        <div
+          className="rounded-lg border border-border bg-card"
+          onChangeCapture={markStarted}
+          onClickCapture={markStarted}
+        >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Start with a common scenario
@@ -372,14 +332,19 @@ export function SolarPanelCalculator() {
         </div>
 
         {/* Results */}
-        <div className="flex flex-col gap-4">
-          {!result.ready ? (
-            <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
-              <LayoutGrid className="size-5 text-muted-foreground" aria-hidden="true" />
-              <h3 className="font-serif text-lg font-semibold">Your panel count appears here</h3>
-              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-                Enter your monthly bill or usage above, or pick one of the common scenarios, to size
-                a system.
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-4",
+            !(started && result.ready) && "lg:self-stretch",
+          )}
+        >
+          {!(started && result.ready) ? (
+            <div className="flex-1 rounded-lg border border-dashed border-border bg-card p-6">
+              <h3 className="font-serif text-lg font-semibold">Your results will appear here</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Enter your ZIP code and monthly bill or usage, then adjust how much of your
+                electricity you want solar to cover to see how many panels and what size system
+                you need.
               </p>
             </div>
           ) : (
@@ -399,7 +364,7 @@ export function SolarPanelCalculator() {
                 </p>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+              <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
                 <Panel title="System summary" icon={<Zap className="size-4" aria-hidden="true" />}>
                   <div className="flex flex-col gap-3">
                     <Stat
@@ -441,132 +406,7 @@ export function SolarPanelCalculator() {
                     />
                   </div>
                 </Panel>
-
-                <Panel
-                  title="Approximate layout"
-                  icon={<Grid2x2 className="size-4" aria-hidden="true" />}
-                >
-                  <LayoutPreview
-                    panelCount={result.panelCount}
-                    perRow={result.layout.perRow}
-                    rows={result.layout.rows}
-                  />
-                </Panel>
               </div>
-
-              {/* Panel size comparison */}
-              <Panel title="Compare panel wattages">
-                <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-                  Same target production, different module sizes. Higher-wattage panels cut the panel
-                  count and the roof space you need.
-                </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[28rem] text-sm">
-                    <caption className="sr-only">
-                      Panel count and roof area by panel wattage
-                    </caption>
-                    <thead>
-                      <tr className="border-b border-border text-left text-muted-foreground">
-                        <th scope="col" className="py-2 pr-3 font-medium">Panel</th>
-                        <th scope="col" className="py-2 font-medium">Panels needed</th>
-                        <th scope="col" className="py-2 font-medium">System size</th>
-                        <th scope="col" className="py-2 font-medium">Roof area</th>
-                      </tr>
-                    </thead>
-                    <tbody className="tabular-nums">
-                      {result.comparisons.map((c) => (
-                        <tr
-                          key={c.watts}
-                          className={cn(
-                            "border-b border-border last:border-0",
-                            c.selected && "bg-primary/10 font-medium",
-                          )}
-                        >
-                          <th
-                            scope="row"
-                            className="py-2.5 pr-3 text-left font-normal text-foreground"
-                          >
-                            {c.watts} W{c.selected ? " (selected)" : ""}
-                          </th>
-                          <td className="py-2.5">{c.panelCount}</td>
-                          <td className="py-2.5">{fmtNumber(c.systemKw, 2)} kW</td>
-                          <td className="py-2.5">{fmtNumber(c.roofAreaSqFt)} sq ft</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Panel>
-
-              {/* Monthly production */}
-              <Panel title="Estimated monthly production">
-                <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-                  Output swings with the seasons. Summer months overproduce and winter months fall
-                  short, which is what annual net metering is designed to smooth out.
-                </p>
-                <div className="flex items-end gap-1.5" aria-hidden="true">
-                  {result.monthlyProfile.map((m) => {
-                    const peak = Math.max(...result.monthlyProfile.map((x) => x.kwh)) || 1
-                    return (
-                      <div key={m.month} className="flex flex-1 flex-col items-center gap-1.5">
-                        <div
-                          className="w-full rounded-t-sm bg-primary/70"
-                          style={{ height: `${Math.max(4, (m.kwh / peak) * 96)}px` }}
-                        />
-                        <span className="text-[10px] text-muted-foreground">{m.month}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-                <table className="sr-only">
-                  <caption>Estimated monthly production in kilowatt-hours</caption>
-                  <tbody>
-                    {result.monthlyProfile.map((m) => (
-                      <tr key={m.month}>
-                        <th scope="row">{m.month}</th>
-                        <td>{Math.round(m.kwh)} kWh</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Panel>
-
-              {/* Transparent math */}
-              <Panel title="How this was calculated">
-                <ol className="flex flex-col gap-3">
-                  {result.steps.map((s, i) => (
-                    <li key={s.label} className="flex flex-col gap-0.5 border-t border-border pt-3">
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                        <span className="text-sm font-medium">
-                          {i + 1}. {s.label}
-                        </span>
-                        <span className="font-serif text-base tabular-nums">{s.value}</span>
-                      </div>
-                      <span className="text-xs leading-relaxed text-muted-foreground">
-                        {s.detail}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </Panel>
-
-              {/* Caveats */}
-              <Panel
-                title="What this estimate cannot see"
-                icon={<CircleAlert className="size-4" aria-hidden="true" />}
-              >
-                <ul className="flex flex-col gap-2">
-                  {result.notes.map((note) => (
-                    <li
-                      key={note}
-                      className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"
-                    >
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-                      {note}
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
             </>
           )}
         </div>
