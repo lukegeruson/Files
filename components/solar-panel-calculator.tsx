@@ -28,7 +28,6 @@ export function SolarPanelCalculator() {
   const [basis, setBasis] = useState<UsageBasis>("bill")
   const [monthlyBill, setMonthlyBill] = useState("180")
   const [monthlyKwh, setMonthlyKwh] = useState("1000")
-  const [annualKwh, setAnnualKwh] = useState("10800")
   const [offsetPercent, setOffsetPercent] = useState(100)
   const [panelWatts, setPanelWatts] = useState(400)
   const [advanced, setAdvanced] = useState(false)
@@ -49,7 +48,7 @@ export function SolarPanelCalculator() {
         basis,
         monthlyBill: Number.parseFloat(monthlyBill) || 0,
         monthlyKwh: Number.parseFloat(monthlyKwh) || 0,
-        annualKwh: Number.parseFloat(annualKwh) || 0,
+        annualKwh: 0,
         offsetPercent,
         panelWatts,
         // Easy mode keeps the optimistic-but-reasonable defaults.
@@ -59,7 +58,7 @@ export function SolarPanelCalculator() {
         derate: advanced ? derate / 100 : 0.85,
       }),
     [
-      zip, basis, monthlyBill, monthlyKwh, annualKwh, offsetPercent, panelWatts,
+      zip, basis, monthlyBill, monthlyKwh, offsetPercent, panelWatts,
       advanced, shade, derate,
     ],
   )
@@ -78,7 +77,6 @@ export function SolarPanelCalculator() {
     if (patch.basis) setBasis(patch.basis)
     if (patch.monthlyBill !== undefined) setMonthlyBill(String(patch.monthlyBill))
     if (patch.monthlyKwh !== undefined) setMonthlyKwh(String(patch.monthlyKwh))
-    if (patch.annualKwh !== undefined) setAnnualKwh(String(patch.annualKwh))
   }
 
   return (
@@ -141,11 +139,10 @@ export function SolarPanelCalculator() {
                   value={basis}
                   onChange={setBasis}
                   ariaLabel="Usage basis"
-                  options={(
-                    advanced
-                      ? (["bill", "monthly-kwh", "annual-kwh"] as UsageBasis[])
-                      : (["bill", "monthly-kwh"] as UsageBasis[])
-                  ).map((v) => ({ value: v, label: BASIS_LABELS[v] }))}
+                  options={(["bill", "monthly-kwh"] as UsageBasis[]).map((v) => ({
+                    value: v,
+                    label: BASIS_LABELS[v],
+                  }))}
                 />
               </Field>
 
@@ -165,7 +162,7 @@ export function SolarPanelCalculator() {
                     placeholder="180"
                   />
                 </Field>
-              ) : basis === "monthly-kwh" ? (
+              ) : (
                 <Field
                   label="Monthly usage (kWh)"
                   htmlFor="panel-kwh"
@@ -177,20 +174,6 @@ export function SolarPanelCalculator() {
                     value={monthlyKwh}
                     onChange={(e) => setMonthlyKwh(e.target.value)}
                     placeholder="1000"
-                  />
-                </Field>
-              ) : (
-                <Field
-                  label="Annual usage (kWh)"
-                  htmlFor="panel-annual"
-                  hint="Add up 12 months for the most accurate sizing."
-                >
-                  <Input
-                    id="panel-annual"
-                    inputMode="decimal"
-                    value={annualKwh}
-                    onChange={(e) => setAnnualKwh(e.target.value)}
-                    placeholder="10800"
                   />
                 </Field>
               )}
