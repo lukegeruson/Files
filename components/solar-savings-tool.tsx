@@ -476,12 +476,38 @@ export function SolarSavingsTool() {
                         )
                       })}
                     </div>
+                    <dl className="mt-4 flex flex-col gap-3 text-sm leading-relaxed">
+                      {[
+                        {
+                          mode: "cash" as const,
+                          term: "Cash",
+                          description: `You buy the system outright and own it. You pay ${money(result.netCost)} upfront after the ${money(result.itcAmount)} tax credit, then keep every dollar of bill savings. Highest long-term return.`,
+                        },
+                        {
+                          mode: "finance" as const,
+                          term: "Loan",
+                          description: `You own the system but borrow the cost, so nothing is due upfront. You repay it over ${assumptions.loanTermYears} years at ${(assumptions.loanApr * 100).toFixed(2)}% APR and still get the tax credit. Savings grow once the loan is paid off.`,
+                        },
+                        {
+                          mode: "lease" as const,
+                          term: "Lease / PPA",
+                          description:
+                            "An installer owns the panels on your roof. You pay a monthly lease, or a set rate for the power they produce (a power purchase agreement). No upfront cost, but the installer keeps the tax credit, so your savings are smaller.",
+                        },
+                      ].map(({ mode, term, description }) => (
+                        <div
+                          key={mode}
+                          className={cn(
+                            "rounded-md border px-3 py-2.5 transition-colors",
+                            chartMode === mode ? "border-primary/50 bg-primary/5" : "border-border",
+                          )}
+                        >
+                          <dt className="font-medium text-foreground">{term}</dt>
+                          <dd className="mt-0.5 text-muted-foreground">{description}</dd>
+                        </div>
+                      ))}
+                    </dl>
                     <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                      {chartMode === "cash"
-                        ? `Year 0 is what you pay upfront after the ${money(result.itcAmount)} tax credit; bill savings then pay it back.`
-                        : chartMode === "finance"
-                          ? `Nothing down at year 0. Bill savings plus the tax credit, minus ${assumptions.loanTermYears} years of loan payments.`
-                          : "No upfront cost at year 0. Bill savings minus your lease or PPA payments; the installer keeps the tax credit."}{" "}
                       Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
                       panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
                     </p>
@@ -522,12 +548,6 @@ export function SolarSavingsTool() {
                         </tbody>
                       </table>
                     </div>
-                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                      Loan assumes {(assumptions.loanApr * 100).toFixed(2)}% APR over{" "}
-                      {assumptions.loanTermYears} years on {money(result.grossCost + result.batteryGrossCost)}, with the
-                      tax credit returned to you. A lease or PPA has no upfront cost, but the installer keeps
-                      the tax credit and your savings are smaller.
-                    </p>
                     </div>
                   </Panel>
 
