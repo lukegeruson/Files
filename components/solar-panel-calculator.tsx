@@ -36,7 +36,6 @@ export function SolarPanelCalculator() {
   // Advanced-only inputs, pre-filled with the easy-mode assumptions.
   const [shade, setShade] = useState<Shade>("none")
   const [derate, setDerate] = useState(85)
-  const [roofWidthFt, setRoofWidthFt] = useState("30")
   const [started, setStarted] = useState(false)
   const markStarted = () => {
     if (!started) setStarted(true)
@@ -58,11 +57,10 @@ export function SolarPanelCalculator() {
         shade: advanced ? shade : "none",
         pitch: "typical",
         derate: advanced ? derate / 100 : 0.85,
-        roofWidthFt: advanced ? Number.parseFloat(roofWidthFt) || 30 : 30,
       }),
     [
       zip, basis, monthlyBill, monthlyKwh, annualKwh, offsetPercent, panelWatts,
-      advanced, shade, derate, roofWidthFt,
+      advanced, shade, derate,
     ],
   )
 
@@ -273,19 +271,6 @@ export function SolarPanelCalculator() {
                     value={derate}
                     onChange={(e) => setDerate(Number(e.target.value))}
                     className="h-9 w-full accent-primary"
-                  />
-                </Field>
-                <Field
-                  label="Usable roof width (ft)"
-                  htmlFor="panel-width"
-                  hint="Used to approximate how the panels lay out in rows."
-                >
-                  <Input
-                    id="panel-width"
-                    inputMode="decimal"
-                    value={roofWidthFt}
-                    onChange={(e) => setRoofWidthFt(e.target.value)}
-                    placeholder="30"
                   />
                 </Field>
               </div>
