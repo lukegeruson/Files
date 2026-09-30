@@ -153,8 +153,7 @@ export function SolarSavingsTool() {
           Should you go solar? Find out now.
         </h2>
         <p className="text-pretty leading-relaxed text-muted-foreground">
-          This tool estimates system size, cost after incentives, payback period, and 25-year
-          savings.
+          This tool estimates cost after incentives, payback period, and 25-year savings.
         </p>
       </div>
 
@@ -391,7 +390,7 @@ export function SolarSavingsTool() {
                 <h3 className="font-serif text-lg font-semibold">Your estimate appears here</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   Enter a ZIP code and your average monthly bill, then select Refine estimate to see
-                  system size, cost, payback, and savings over time.
+                  cost, payback, and savings over time.
                 </p>
               </div>
             ) : (
@@ -512,20 +511,10 @@ export function SolarSavingsTool() {
                   </p>
                   <div className="mt-4 flex flex-col gap-3">
                     <Stat
-                      label="System size"
-                      value={`${fmtNumber(result.systemSizeKw, 1)} kW`}
-                      sub={`About ${result.panelCount} panels at 400 W each`}
-                      emphasis
-                    />
-                    <Stat
-                      label="Annual production"
-                      value={`${fmtNumber(result.annualProduction)} kWh`}
-                      sub={`Covers about ${Math.round(result.offsetPercent)}% of your ${fmtNumber(result.annualKwh)} kWh usage`}
-                    />
-                    <Stat
                       label="Net cost after incentives"
                       value={money(result.netCost)}
                       sub={`${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit`}
+                      emphasis
                     />
                     <Stat
                       label="Monthly savings, year 1"
