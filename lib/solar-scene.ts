@@ -431,7 +431,7 @@ export function snapshotFromSavings(
   }
 }
 
-/** Map the Solar Panel Calculator result to a scene snapshot. */
+/** Map the Solar Sizing Calculator result to a scene snapshot. */
 export function snapshotFromPanels(r: PanelResult): SolarSnapshot {
   const billWithoutSolar = r.annualKwh * r.rate
   return {

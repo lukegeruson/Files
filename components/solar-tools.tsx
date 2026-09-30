@@ -20,7 +20,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ReactNode }> = [
   },
   {
     id: "panels",
-    label: "Solar Panel Calculator",
+    label: "Solar Sizing Calculator",
     icon: <LayoutGrid className="size-4" aria-hidden="true" />,
   },
 ]
