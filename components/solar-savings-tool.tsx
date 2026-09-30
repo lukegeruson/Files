@@ -36,6 +36,27 @@ import {
 
 const STEPS = ["Your bill", "Roof & sun", "Your plans"] as const
 
+type ChartMode = "cash" | "finance" | "lease"
+
+function cumulativeFor(
+  mode: ChartMode,
+  year: number,
+  result: { savingsByYear: Array<{ cumulative: number }>; itcAmount: number; loanMonthlyPayment: number; leaseMonthlySavings: number },
+  loanTermYears: number,
+): number {
+  const billSavings = result.savingsByYear[year - 1]?.cumulative ?? 0
+  if (mode === "cash") return billSavings
+  if (mode === "finance") {
+    const paymentsSoFar = result.loanMonthlyPayment * 12 * Math.min(year, loanTermYears)
+    return billSavings + result.itcAmount - paymentsSoFar
+  }
+  return result.leaseMonthlySavings * 12 * year
+}
+
+function signedMoney(value: number): string {
+  return value < 0 ? `−${money(Math.abs(value))}` : money(value)
+}
+
 export function SolarSavingsTool() {
   const [step, setStep] = useState(0)
 
@@ -101,8 +122,28 @@ export function SolarSavingsTool() {
   }, [showResults, result, wantsBattery, publishScene])
 
 
+  const [chartMode, setChartMode] = useState<ChartMode>("cash")
   const milestones = [5, 10, 15, 20, 25].filter((y) => y <= assumptions.horizonYears)
-  const maxCumulative = result.savingsByYear[result.savingsByYear.length - 1]?.cumulative || 1
+  const chartSeries = milestones.map((y) => ({
+    year: y,
+    value: cumulativeFor(chartMode, y, result, assumptions.loanTermYears),
+  }))
+  const maxAbs = Math.max(1, ...chartSeries.map((p) => Math.abs(p.value)))
+  const horizonValue = cumulativeFor(
+    chartMode,
+    assumptions.horizonYears,
+    result,
+    assumptions.loanTermYears,
+  )
+  const chartSummary =
+    chartMode === "cash"
+      ? { label: "Payback", value: fmtYears(result.paybackYears) }
+      : chartMode === "finance"
+        ? {
+            label: "Monthly net",
+            value: `${result.loanMonthlyDelta >= 0 ? "+" : "−"}${money(Math.abs(result.loanMonthlyDelta))}`,
+          }
+        : { label: "Monthly saved", value: `+${money(result.leaseMonthlySavings)}` }
 
   return (
     <div className="flex flex-col gap-6">
@@ -356,10 +397,70 @@ export function SolarSavingsTool() {
             ) : (
               <div className="flex flex-col gap-4">
                   <Panel
-                    title="Cash vs. financing vs. lease"
+                    title="Cumulative savings over time"
                     icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}
                   >
-                    <div className="overflow-x-auto">
+                    <Segmented<ChartMode>
+                      value={chartMode}
+                      onChange={setChartMode}
+                      ariaLabel="Show cumulative savings for"
+                      options={[
+                        { value: "cash", label: "Cash" },
+                        { value: "finance", label: "Loan" },
+                        { value: "lease", label: "Lease / PPA" },
+                      ]}
+                    />
+                    <dl className="mt-4 grid grid-cols-2 gap-4">
+                      <div>
+                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {chartSummary.label}
+                        </dt>
+                        <dd className="font-serif text-2xl tabular-nums">{chartSummary.value}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {assumptions.horizonYears}-yr {chartMode === "cash" ? "savings" : "net savings"}
+                        </dt>
+                        <dd className="font-serif text-2xl tabular-nums">{signedMoney(horizonValue)}</dd>
+                      </div>
+                    </dl>
+                    <div className="mt-4 flex h-44 gap-3">
+                      {chartSeries.map(({ year, value }) => {
+                        const pct = Math.max(4, (Math.abs(value) / maxAbs) * 100)
+                        return (
+                          <div key={year} className="flex h-full flex-1 flex-col items-center gap-2">
+                            <span className="font-serif text-xs tabular-nums text-muted-foreground">
+                              {signedMoney(value)}
+                            </span>
+                            <div className="flex min-h-0 w-full flex-1 items-end">
+                              <div
+                                className={cn(
+                                  "w-full rounded-t transition-[height] duration-300",
+                                  value >= 0 ? "bg-primary/70" : "bg-muted-foreground/30",
+                                )}
+                                style={{ height: `${pct}%` }}
+                                role="img"
+                                aria-label={`By year ${year}, about ${signedMoney(value)} ${value >= 0 ? "saved" : "behind"}`}
+                              />
+                            </div>
+                            <span className="text-xs tabular-nums text-muted-foreground">Yr {year}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                      {chartMode === "cash"
+                        ? "Bill savings you keep after paying for the system upfront."
+                        : chartMode === "finance"
+                          ? `Bill savings plus the tax credit, minus ${assumptions.loanTermYears} years of loan payments.`
+                          : "Bill savings minus your lease or PPA payments; the installer keeps the tax credit."}{" "}
+                      Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
+                      panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
+                    </p>
+
+                    <div className="mt-5 border-t border-border pt-4">
+                    <h4 className="text-sm font-medium">Cash vs. financing vs. lease</h4>
+                    <div className="mt-2 overflow-x-auto">
                       <table className="w-full text-sm">
                         <caption className="sr-only">
                           Comparison of paying cash, financing with a loan, and leasing
@@ -399,50 +500,6 @@ export function SolarSavingsTool() {
                       tax credit returned to you. A lease or PPA has no upfront cost, but the installer keeps
                       the tax credit and your savings are smaller.
                     </p>
-
-                    <div className="mt-5 border-t border-border pt-4">
-                      <h4 className="text-sm font-medium">Cumulative savings over time (cash)</h4>
-                      <dl className="mt-3 grid grid-cols-2 gap-4">
-                        <div>
-                          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Payback</dt>
-                          <dd className="font-serif text-2xl tabular-nums">{fmtYears(result.paybackYears)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                            {assumptions.horizonYears}-yr savings
-                          </dt>
-                          <dd className="font-serif text-2xl tabular-nums">
-                            {money(result.cumulativeSavings)}
-                          </dd>
-                        </div>
-                      </dl>
-                      <div className="mt-4 flex h-44 gap-3">
-                        {milestones.map((y) => {
-                          const row = result.savingsByYear[y - 1]
-                          const value = row?.cumulative ?? 0
-                          const pct = Math.max(4, (value / maxCumulative) * 100)
-                          return (
-                            <div key={y} className="flex h-full flex-1 flex-col items-center gap-2">
-                              <span className="font-serif text-xs tabular-nums text-muted-foreground">
-                                {money(value)}
-                              </span>
-                              <div className="flex min-h-0 w-full flex-1 items-end">
-                                <div
-                                  className="w-full rounded-t bg-primary/70"
-                                  style={{ height: `${pct}%` }}
-                                  role="img"
-                                  aria-label={`By year ${y}, about ${money(value)} saved`}
-                                />
-                              </div>
-                              <span className="text-xs tabular-nums text-muted-foreground">Yr {y}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                        Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
-                        panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
-                      </p>
                     </div>
                   </Panel>
 
