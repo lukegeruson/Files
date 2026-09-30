@@ -425,7 +425,8 @@ export function SolarSavingsTool() {
                           <TrendingUp className="size-4 text-primary" aria-hidden="true" />
                           Savings over time
                         </h3>
-                        <Segmented<ChartMode>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Segmented<ChartMode>
                           value={chartMode}
                           onChange={setChartMode}
                           ariaLabel="Show cumulative savings for"
@@ -434,7 +435,28 @@ export function SolarSavingsTool() {
                             { value: "finance", label: "Loan" },
                             { value: "lease", label: "Lease / PPA" },
                           ]}
-                        />
+                          />
+                          <label
+                            htmlFor="solar-add-battery"
+                            title={`+${money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit`}
+                            className={cn(
+                              "flex w-fit shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-2 text-sm transition-colors",
+                              wantsBattery
+                                ? "border-primary/60 bg-primary/5 text-foreground"
+                                : "border-border text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            <input
+                              id="solar-add-battery"
+                              type="checkbox"
+                              checked={wantsBattery}
+                              onChange={(e) => setWantsBattery(e.target.checked)}
+                              className="size-4 accent-primary"
+                            />
+                            <BatteryCharging className="size-4 text-primary" aria-hidden="true" />
+                            Battery
+                          </label>
+                        </div>
                         <dl className="grid grid-cols-2 gap-4">
                           <div>
                             <dt className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -542,31 +564,7 @@ export function SolarSavingsTool() {
                         </div>
                       ))}
                     </dl>
-                    <div className="mt-3 flex flex-col gap-3 rounded-md border border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground sm:flex-row sm:items-start">
-                      <label
-                        htmlFor="solar-add-battery"
-                        className={cn(
-                          "flex w-fit shrink-0 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
-                          wantsBattery
-                            ? "border-primary/60 bg-primary/5 text-foreground"
-                            : "border-border text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <input
-                          id="solar-add-battery"
-                          type="checkbox"
-                          checked={wantsBattery}
-                          onChange={(e) => setWantsBattery(e.target.checked)}
-                          className="size-4 accent-primary"
-                        />
-                        <BatteryCharging className="size-4 text-primary" aria-hidden="true" />
-                        <span className="flex flex-col leading-tight">
-                          Add a home battery
-                          <span className="text-xs text-muted-foreground tabular-nums">
-                            +{money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit
-                          </span>
-                        </span>
-                      </label>
+                    <div className="mt-3 rounded-md border border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
                       <p>
                         <span className="font-medium text-foreground">
                           {result.batteryVerdict === "recommended"
