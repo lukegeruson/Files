@@ -33,7 +33,6 @@ import {
 
 // --- Main tool -------------------------------------------------------------
 
-const STEPS = ["Your bill", "Roof & sun"] as const
 const YEARS_IN_HOME = 15
 
 const SHADE_SHORT_LABELS: Record<Shade, string> = {
@@ -111,7 +110,6 @@ function signedMoney(value: number): string {
 }
 
 export function SolarSavingsTool() {
-  const [step, setStep] = useState(0)
 
   // Step 1 — the fastest path to a number.
   const [zip, setZip] = useState("")
@@ -243,28 +241,11 @@ export function SolarSavingsTool() {
         {/* Form */}
         <div className="lg:col-span-4 lg:col-start-1">
           <div className="rounded-lg border border-border bg-card">
-            {/* Step tabs */}
-            <div className="flex border-b border-border">
-              {STEPS.map((label, i) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setStep(i)}
-                  aria-current={step === i ? "step" : undefined}
-                  className={cn(
-                    "flex-1 px-4 py-3 text-sm transition-colors",
-                    step === i
-                      ? "border-b-2 border-primary font-medium text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <span className="tabular-nums text-muted-foreground">{i + 1}.</span> {label}
-                </button>
-              ))}
+            <div className="border-b border-border px-5 py-3">
+              <h3 className="text-sm font-medium text-foreground">Your bill, roof & sun</h3>
             </div>
 
             <div className="p-5">
-              {step === 0 ? (
                 <div className="flex flex-col gap-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="ZIP code" htmlFor="solar-zip" hint="Sets local sun hours and average rates.">
@@ -321,21 +302,16 @@ export function SolarSavingsTool() {
                       />
                     </Field>
                   </div>
-                </div>
-              ) : null}
-
-              {step === 1 ? (
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Do you have an EV?" hint="Adds home charging load to your usage.">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Field label="Do you have an EV?" hint="Adds home charging load.">
                       <Segmented
                         ariaLabel="Electric vehicle"
                         value={hasEv ? "yes" : "no"}
                         onChange={(v) => setHasEv(v === "yes")}
                         singleRow
                         options={[
-                          { value: "no", label: "No EV" },
-                          { value: "yes", label: "Yes, at home", title: "Yes, I charge at home" },
+                          { value: "no", label: "No" },
+                          { value: "yes", label: "Yes", title: "Yes, I charge at home" },
                         ]}
                       />
                     </Field>
@@ -351,49 +327,35 @@ export function SolarSavingsTool() {
                         ))}
                       </select>
                     </Field>
+                    <Field label="Shade level" htmlFor="solar-shade" hint="Biggest drag on production.">
+                      <select
+                        id="solar-shade"
+                        className={selectClass}
+                        value={shade}
+                        onChange={(e) => setShade(e.target.value as Shade)}
+                      >
+                        {(Object.keys(SHADE_LABELS) as Shade[]).map((v) => (
+                          <option key={v} value={v} title={SHADE_LABELS[v]}>
+                            {SHADE_SHORT_LABELS[v]}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
                   </div>
-                  <Field label="Shade level" hint="Shade is the biggest single drag on production.">
-                    <Segmented
-                      ariaLabel="Shade level"
-                      value={shade}
-                      onChange={setShade}
-                      singleRow
-                      options={(Object.keys(SHADE_LABELS) as Shade[]).map((v) => ({
-                        value: v,
-                        label: SHADE_SHORT_LABELS[v],
-                        title: SHADE_LABELS[v],
-                      }))}
-                    />
-                  </Field>
                 </div>
-              ) : null}
 
-              {/* Step nav */}
-              <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStep((s) => Math.max(0, s - 1))}
-                  disabled={step === 0}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-                >
-                  Back
-                </button>
-                {step < STEPS.length - 1 ? (
+              <div className="mt-5 flex items-center justify-end border-t border-border pt-4">
+                {refined ? (
+                  <span className="text-sm text-muted-foreground">Results update as you edit</span>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      setRefined(true)
-                      setStep((s) => Math.min(STEPS.length - 1, s + 1))
-                    }}
+                    onClick={() => setRefined(true)}
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
                   >
-                    Refine estimate
+                    See my estimate
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </button>
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    All questions answered
-                  </span>
                 )}
               </div>
             </div>
@@ -407,7 +369,7 @@ export function SolarSavingsTool() {
               <div className="h-full rounded-lg border border-dashed border-border bg-card p-6">
                 <h3 className="font-serif text-lg font-semibold">Your estimate appears here</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Enter a ZIP code and your average monthly bill, then select Refine estimate to see
+                  Enter a ZIP code and your average monthly bill, then select See my estimate to see
                   cost, payback, and savings over time.
                 </p>
               </div>
@@ -415,19 +377,19 @@ export function SolarSavingsTool() {
               <div className="flex flex-col gap-4">
                   <section
                     aria-labelledby="savings-over-time-heading"
-                    className="rounded-lg border border-border bg-card p-5"
+                    className="rounded-lg border border-border bg-card px-5 pt-3 pb-5"
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex flex-col gap-4">
-                        <h3
-                          id="savings-over-time-heading"
-                          className="flex items-center gap-2 font-serif text-lg font-semibold"
-                        >
-                          <TrendingUp className="size-4 text-primary" aria-hidden="true" />
-                          Savings over time
-                        </h3>
-                        <div className="grid w-fit grid-cols-[auto_auto] items-center gap-x-2 gap-y-1.5">
-                          <div className="col-start-2">
+                        <div className="grid w-fit grid-cols-[auto_auto] items-end gap-x-2 gap-y-1.5">
+                          <h3
+                            id="savings-over-time-heading"
+                            className="flex items-center gap-2 font-serif text-lg font-semibold leading-tight"
+                          >
+                            <TrendingUp className="size-4 text-primary" aria-hidden="true" />
+                            Savings over time
+                          </h3>
+                          <div>
                             <AddOnToggle
                               id="solar-add-roof"
                               checked={wantsNewRoof}
