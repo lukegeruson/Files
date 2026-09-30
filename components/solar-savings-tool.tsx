@@ -494,13 +494,13 @@ export function SolarSavingsTool() {
                           description:
                             "An installer owns the panels on your roof. You pay a monthly lease, or a set rate for the power they produce (a power purchase agreement). No upfront cost, but the installer keeps the tax credit, so your savings are smaller.",
                         },
-                      ].map(({ mode, term, description }) => (
+                      ]
+                        .filter(({ mode }) => mode === chartMode)
+                        .map(({ mode, term, description }) => (
                         <div
                           key={mode}
-                          className={cn(
-                            "rounded-md border px-3 py-2.5 transition-colors",
-                            chartMode === mode ? "border-primary/50 bg-primary/5" : "border-border",
-                          )}
+                          aria-live="polite"
+                          className="rounded-md border border-primary/50 bg-primary/5 px-3 py-2.5"
                         >
                           <dt className="font-medium text-foreground">{term}</dt>
                           <dd className="mt-0.5 text-muted-foreground">{description}</dd>
@@ -511,44 +511,6 @@ export function SolarSavingsTool() {
                       Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
                       panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
                     </p>
-
-                    <div className="mt-5 border-t border-border pt-4">
-                    <h4 className="text-sm font-medium">Cash vs. financing vs. lease</h4>
-                    <div className="mt-2 overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <caption className="sr-only">
-                          Comparison of paying cash, financing with a loan, and leasing
-                        </caption>
-                        <thead>
-                          <tr className="border-b border-border text-left">
-                            <th scope="col" className="py-2 pr-3 font-medium">Option</th>
-                            <th scope="col" className="py-2 pr-3 font-medium">Upfront</th>
-                            <th scope="col" className="py-2 font-medium">Monthly effect</th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-muted-foreground">
-                          <tr className="border-b border-border">
-                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Cash</th>
-                            <td className="py-2.5 pr-3 tabular-nums">{money(result.netCost)}</td>
-                            <td className="py-2.5 tabular-nums">+{money(result.monthlySavings)} saved</td>
-                          </tr>
-                          <tr className="border-b border-border">
-                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Loan</th>
-                            <td className="py-2.5 pr-3 tabular-nums">{money(0)}</td>
-                            <td className="py-2.5 tabular-nums">
-                              {result.loanMonthlyDelta >= 0 ? "+" : "−"}
-                              {money(Math.abs(result.loanMonthlyDelta))} net
-                            </td>
-                          </tr>
-                          <tr>
-                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Lease / PPA</th>
-                            <td className="py-2.5 pr-3 tabular-nums">{money(0)}</td>
-                            <td className="py-2.5 tabular-nums">+{money(result.leaseMonthlySavings)} saved</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    </div>
                   </Panel>
 
                 <div className="rounded-lg border border-border bg-card p-5">
