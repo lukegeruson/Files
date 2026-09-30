@@ -395,50 +395,6 @@ export function SolarPanelCalculator() {
                 </Panel>
               </div>
 
-              {/* Panel size comparison */}
-              <Panel title="Compare panel wattages">
-                <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
-                  Same target production, different module sizes. Higher-wattage panels cut the panel
-                  count and the roof space you need.
-                </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[28rem] text-sm">
-                    <caption className="sr-only">
-                      Panel count and roof area by panel wattage
-                    </caption>
-                    <thead>
-                      <tr className="border-b border-border text-left text-muted-foreground">
-                        <th scope="col" className="py-2 pr-3 font-medium">Panel</th>
-                        <th scope="col" className="py-2 font-medium">Panels needed</th>
-                        <th scope="col" className="py-2 font-medium">System size</th>
-                        <th scope="col" className="py-2 font-medium">Roof area</th>
-                      </tr>
-                    </thead>
-                    <tbody className="tabular-nums">
-                      {result.comparisons.map((c) => (
-                        <tr
-                          key={c.watts}
-                          className={cn(
-                            "border-b border-border last:border-0",
-                            c.selected && "bg-primary/10 font-medium",
-                          )}
-                        >
-                          <th
-                            scope="row"
-                            className="py-2.5 pr-3 text-left font-normal text-foreground"
-                          >
-                            {c.watts} W{c.selected ? " (selected)" : ""}
-                          </th>
-                          <td className="py-2.5">{c.panelCount}</td>
-                          <td className="py-2.5">{fmtNumber(c.systemKw, 2)} kW</td>
-                          <td className="py-2.5">{fmtNumber(c.roofAreaSqFt)} sq ft</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Panel>
-
               {/* Monthly production */}
               <Panel title="Estimated monthly production">
                 <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
