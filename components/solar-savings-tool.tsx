@@ -36,6 +36,20 @@ import {
 
 const STEPS = ["Your bill", "Roof & sun", "Your plans"] as const
 
+const ORIENTATION_SHORT_LABELS: Record<Orientation, string> = {
+  south: "South",
+  "south-adjacent": "SE / SW",
+  "east-west": "E / W",
+  north: "North",
+}
+
+const SHADE_SHORT_LABELS: Record<Shade, string> = {
+  none: "None",
+  light: "Light",
+  moderate: "Moderate",
+  heavy: "Heavy",
+}
+
 type ChartMode = "cash" | "finance" | "lease"
 
 function cumulativeFor(
@@ -286,9 +300,11 @@ export function SolarSavingsTool() {
                       ariaLabel="Roof orientation"
                       value={orientation}
                       onChange={setOrientation}
+                      singleRow
                       options={(Object.keys(ORIENTATION_LABELS) as Orientation[]).map((v) => ({
                         value: v,
-                        label: ORIENTATION_LABELS[v],
+                        label: ORIENTATION_SHORT_LABELS[v],
+                        title: ORIENTATION_LABELS[v],
                       }))}
                     />
                   </Field>
@@ -297,9 +313,11 @@ export function SolarSavingsTool() {
                       ariaLabel="Shade level"
                       value={shade}
                       onChange={setShade}
+                      singleRow
                       options={(Object.keys(SHADE_LABELS) as Shade[]).map((v) => ({
                         value: v,
-                        label: SHADE_LABELS[v],
+                        label: SHADE_SHORT_LABELS[v],
+                        title: SHADE_LABELS[v],
                       }))}
                     />
                   </Field>
@@ -407,30 +425,6 @@ export function SolarSavingsTool() {
                           <TrendingUp className="size-4 text-primary" aria-hidden="true" />
                           Savings over time
                         </h3>
-                        <label
-                          htmlFor="solar-add-battery"
-                          className={cn(
-                            "flex w-fit cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
-                            wantsBattery
-                              ? "border-primary/60 bg-primary/5 text-foreground"
-                              : "border-border text-muted-foreground hover:text-foreground",
-                          )}
-                        >
-                          <input
-                            id="solar-add-battery"
-                            type="checkbox"
-                            checked={wantsBattery}
-                            onChange={(e) => setWantsBattery(e.target.checked)}
-                            className="size-4 accent-primary"
-                          />
-                          <BatteryCharging className="size-4 text-primary" aria-hidden="true" />
-                          <span>
-                            Add a home battery
-                            <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                              +{money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit
-                            </span>
-                          </span>
-                        </label>
                         <Segmented<ChartMode>
                           value={chartMode}
                           onChange={setChartMode}
@@ -548,8 +542,31 @@ export function SolarSavingsTool() {
                         </div>
                       ))}
                     </dl>
-                    <div className="mt-3 flex gap-2 text-xs leading-relaxed text-muted-foreground">
-                      <BatteryCharging className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                    <div className="mt-3 flex flex-col gap-3 rounded-md border border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground sm:flex-row sm:items-start">
+                      <label
+                        htmlFor="solar-add-battery"
+                        className={cn(
+                          "flex w-fit shrink-0 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
+                          wantsBattery
+                            ? "border-primary/60 bg-primary/5 text-foreground"
+                            : "border-border text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <input
+                          id="solar-add-battery"
+                          type="checkbox"
+                          checked={wantsBattery}
+                          onChange={(e) => setWantsBattery(e.target.checked)}
+                          className="size-4 accent-primary"
+                        />
+                        <BatteryCharging className="size-4 text-primary" aria-hidden="true" />
+                        <span className="flex flex-col leading-tight">
+                          Add a home battery
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            +{money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit
+                          </span>
+                        </span>
+                      </label>
                       <p>
                         <span className="font-medium text-foreground">
                           {result.batteryVerdict === "recommended"
