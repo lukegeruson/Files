@@ -126,9 +126,9 @@ export function SolarSavingsTool() {
       </div>
 
       {/* Form centered at half width; the empty-state placeholder sits to its right, full results stack below */}
-      <div className="grid gap-6 lg:grid-cols-4 lg:items-start">
+      <div className="grid gap-6 lg:grid-cols-8 lg:items-start">
         {/* Form */}
-        <div className="lg:col-span-2 lg:col-start-2">
+        <div className={cn("lg:col-span-4", ready ? "lg:col-start-3" : "lg:col-start-2")}>
           <div className="rounded-lg border border-border bg-card">
             {/* Step tabs */}
             <div className="flex border-b border-border">
@@ -348,7 +348,7 @@ export function SolarSavingsTool() {
         </div>
 
         {/* Live results */}
-        <div className={ready ? "lg:col-span-2 lg:col-start-2" : "lg:col-span-1"}>
+        <div className={ready ? "lg:col-span-4 lg:col-start-3" : "lg:col-span-2"}>
           <div className="flex flex-col gap-4">
             {!ready ? (
               <div className="rounded-lg border border-dashed border-border bg-card p-6">
