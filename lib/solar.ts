@@ -27,6 +27,8 @@ export type SolarInputs = {
   shade: Shade
   hasEv: boolean
   wantsBattery: boolean
+  /** Replace the roof before installing. Adds cost, but not eligible for the tax credit. */
+  wantsNewRoof?: boolean
   yearsInHome: number
   payment: Payment
 }
@@ -186,6 +188,17 @@ export const ROOF_COST_FACTORS: Record<RoofType, number> = {
   flat: 1.06,
 }
 
+/** Typical full replacement cost for an average (~2,000 sq ft) roof. */
+export const ROOF_REPLACEMENT_COSTS: Record<RoofType, number> = {
+  asphalt: 15000,
+  metal: 26000,
+  tile: 30000,
+  flat: 18000,
+}
+
+/** Cost to remove and reinstall an array when an old roof fails later. */
+export const ARRAY_DETACH_RESET_COST = 4500
+
 export const ORIENTATION_LABELS: Record<Orientation, string> = {
   south: "Mostly south-facing",
   "south-adjacent": "Southeast or southwest",
@@ -246,6 +259,7 @@ export type SolarResult = {
 
   grossCost: number
   batteryGrossCost: number
+  roofGrossCost: number
   itcAmount: number
   netCost: number
 
@@ -355,7 +369,9 @@ export function computeSolar(
   const batteryGrossCost = input.wantsBattery ? a.batteryCost : 0
   const totalGross = grossCost + batteryGrossCost
   const itcAmount = totalGross * a.itcPercent
-  const netCost = Math.max(0, totalGross - itcAmount - a.stateRebate)
+  // A standard re-roof is not ITC-eligible, so it is added after the credit.
+  const roofGrossCost = input.wantsNewRoof ? ROOF_REPLACEMENT_COSTS[input.roofType] : 0
+  const netCost = Math.max(0, totalGross - itcAmount - a.stateRebate) + roofGrossCost
 
   const savingsByYear = buildSavings(annualProduction, rate, a, a.horizonYears)
   const year1Savings = savingsByYear[0]?.annual ?? 0
@@ -364,7 +380,7 @@ export function computeSolar(
   const paybackYears = paybackFrom(netCost, savingsByYear)
 
   // Financing comparison.
-  const loanPrincipal = Math.max(0, totalGross - a.stateRebate)
+  const loanPrincipal = Math.max(0, totalGross - a.stateRebate) + roofGrossCost
   const loanMonthlyPayment = loanPayment(loanPrincipal, a.loanApr, a.loanTermYears)
   const loanMonthlyDelta = monthlySavings - loanMonthlyPayment
   const leaseMonthlySavings =
@@ -375,7 +391,7 @@ export function computeSolar(
       ? cumulativeSavings - netCost
       : input.payment === "finance"
         ? cumulativeSavings + itcAmount - loanMonthlyPayment * 12 * a.loanTermYears
-        : leaseMonthlySavings * 12 * a.horizonYears
+        : leaseMonthlySavings * 12 * a.horizonYears - roofGrossCost
   const roiPercent = netCost > 0 ? (netLifetimeGain / netCost) * 100 : 0
 
   // --- Sensitivity scenarios ---
@@ -390,7 +406,8 @@ export function computeSolar(
     const altGross =
       systemSizeKw * 1000 * (alt.pricePerWatt * ROOF_COST_FACTORS[input.roofType] * sizePremium) +
       batteryGrossCost
-    const altNet = Math.max(0, altGross - altGross * alt.itcPercent - alt.stateRebate)
+    const altNet =
+      Math.max(0, altGross - altGross * alt.itcPercent - alt.stateRebate) + roofGrossCost
     const rows = buildSavings(annualProduction * prodFactor, rate, alt, alt.horizonYears)
     scenarios.push({
       label,
@@ -569,6 +586,7 @@ export function computeSolar(
     offsetPercent,
     grossCost,
     batteryGrossCost,
+    roofGrossCost,
     itcAmount,
     netCost,
     year1Savings,

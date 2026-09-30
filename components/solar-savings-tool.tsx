@@ -6,6 +6,7 @@ import {
   BatteryCharging,
   CircleAlert,
   CircleCheck,
+  House,
   TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -14,7 +15,9 @@ import { cn } from "@/lib/utils"
 import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromSavings } from "@/lib/solar-scene"
 import {
+  ARRAY_DETACH_RESET_COST,
   DEFAULT_ASSUMPTIONS,
+  ROOF_REPLACEMENT_COSTS,
   ROOF_TYPE_LABELS,
   SHADE_LABELS,
   computeSolar,
@@ -50,17 +53,58 @@ function cumulativeFor(
     netCost: number
     loanMonthlyPayment: number
     leaseMonthlySavings: number
+    roofGrossCost: number
   },
   loanTermYears: number,
 ): number {
   const billSavings = year > 0 ? (result.savingsByYear[year - 1]?.cumulative ?? 0) : 0
   if (mode === "cash") return billSavings - result.netCost
-  if (year === 0) return 0
   if (mode === "finance") {
+    if (year === 0) return 0
     const paymentsSoFar = result.loanMonthlyPayment * 12 * Math.min(year, loanTermYears)
     return billSavings + result.itcAmount - paymentsSoFar
   }
-  return result.leaseMonthlySavings * 12 * year
+  // A lease covers the panels, but a new roof is still paid for upfront.
+  return result.leaseMonthlySavings * 12 * year - result.roofGrossCost
+}
+
+function AddOnToggle({
+  id,
+  checked,
+  onChange,
+  icon: Icon,
+  label,
+  title,
+}: {
+  id: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  icon: typeof House
+  label: string
+  title: string
+}) {
+  return (
+    <label
+      htmlFor={id}
+      title={title}
+      className={cn(
+        "flex w-full shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm transition-colors",
+        checked
+          ? "border-primary/60 bg-primary/5 text-foreground"
+          : "border-border text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="size-4 accent-primary"
+      />
+      <Icon className="size-4 text-primary" aria-hidden="true" />
+      {label}
+    </label>
+  )
 }
 
 function signedMoney(value: number): string {
@@ -85,6 +129,7 @@ export function SolarSavingsTool() {
 
   const [hasEv, setHasEv] = useState(false)
   const [wantsBattery, setWantsBattery] = useState(false)
+  const [wantsNewRoof, setWantsNewRoof] = useState(false)
   const [payment, setPayment] = useState<Payment>("cash")
 
   const assumptions: Assumptions = DEFAULT_ASSUMPTIONS
@@ -110,6 +155,7 @@ export function SolarSavingsTool() {
           shade,
           hasEv,
           wantsBattery,
+          wantsNewRoof,
           yearsInHome: YEARS_IN_HOME,
           payment,
         },
@@ -117,7 +163,7 @@ export function SolarSavingsTool() {
       ),
     [
       zip, billNum, kwhNum, rate, utility, roofCondition, roofType,
-      orientation, shade, hasEv, wantsBattery, payment, assumptions,
+      orientation, shade, hasEv, wantsBattery, wantsNewRoof, payment, assumptions,
     ],
   )
 
@@ -160,7 +206,7 @@ export function SolarSavingsTool() {
     payment === "cash"
       ? {
           netCost: result.netCost,
-          netCostNote: `${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit`,
+          netCostNote: `${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit${result.roofGrossCost > 0 ? `, plus ${money(result.roofGrossCost)} new roof` : ""}`,
           monthly: result.monthlySavings,
           monthlyNote: `${money(result.year1Savings)} in the first year`,
         }
@@ -172,8 +218,11 @@ export function SolarSavingsTool() {
             monthlyNote: `${money(result.monthlySavings)} bill savings less ${money(result.loanMonthlyPayment)} loan payment`,
           }
         : {
-            netCost: 0,
-            netCostNote: "No purchase; the installer owns the system",
+            netCost: result.roofGrossCost,
+            netCostNote:
+              result.roofGrossCost > 0
+                ? "The installer owns the system; you pay for the new roof"
+                : "No purchase; the installer owns the system",
             monthly: result.leaseMonthlySavings,
             monthlyNote: "Bill savings after your lease or PPA payment",
           }
@@ -389,26 +438,24 @@ export function SolarSavingsTool() {
                             { value: "lease", label: "Lease / PPA" },
                           ]}
                           />
-                          <label
-                            htmlFor="solar-add-battery"
-                            title={`+${money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit`}
-                            className={cn(
-                              "flex w-fit shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-2 text-sm transition-colors",
-                              wantsBattery
-                                ? "border-primary/60 bg-primary/5 text-foreground"
-                                : "border-border text-muted-foreground hover:text-foreground",
-                            )}
-                          >
-                            <input
-                              id="solar-add-battery"
-                              type="checkbox"
-                              checked={wantsBattery}
-                              onChange={(e) => setWantsBattery(e.target.checked)}
-                              className="size-4 accent-primary"
+                          <div className="flex w-fit flex-col gap-1.5">
+                            <AddOnToggle
+                              id="solar-add-roof"
+                              checked={wantsNewRoof}
+                              onChange={setWantsNewRoof}
+                              icon={House}
+                              label="New roof"
+                              title={`+${money(ROOF_REPLACEMENT_COSTS[roofType])}, not eligible for the tax credit`}
                             />
-                            <BatteryCharging className="size-4 text-primary" aria-hidden="true" />
-                            Battery
-                          </label>
+                            <AddOnToggle
+                              id="solar-add-battery"
+                              checked={wantsBattery}
+                              onChange={setWantsBattery}
+                              icon={BatteryCharging}
+                              label="Battery"
+                              title={`+${money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit`}
+                            />
+                          </div>
                         </div>
                         <dl className="grid grid-cols-2 gap-4">
                           <div>
@@ -517,6 +564,22 @@ export function SolarSavingsTool() {
                         </div>
                       ))}
                     </dl>
+                    <div className="mt-3 rounded-md border border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                      <p aria-live="polite">
+                        <span className="font-medium text-foreground">
+                          {wantsNewRoof
+                            ? `New roof adds ${money(ROOF_REPLACEMENT_COSTS[roofType])}.`
+                            : "Should you re-roof first?"}
+                        </span>{" "}
+                        Replacing your {ROOF_TYPE_LABELS[roofType].toLowerCase()} roof runs about{" "}
+                        {money(ROOF_REPLACEMENT_COSTS[roofType])} and is not eligible for the{" "}
+                        {Math.round(assumptions.itcPercent * 100)}% tax credit, so it adds dollar for dollar to
+                        your net cost{payment === "finance" ? " and loan balance" : ""} and lengthens payback.
+                        Monthly bill savings stay the same. If your roof has under about 10 years left,
+                        replacing it now avoids roughly {money(ARRAY_DETACH_RESET_COST)} to remove and
+                        reinstall the panels later.
+                      </p>
+                    </div>
                     <div className="mt-3 rounded-md border border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
                       <p>
                         <span className="font-medium text-foreground">
