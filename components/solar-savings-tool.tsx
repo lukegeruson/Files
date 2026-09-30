@@ -15,7 +15,6 @@ import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromSavings } from "@/lib/solar-scene"
 import {
   DEFAULT_ASSUMPTIONS,
-  ROOF_CONDITION_LABELS,
   ROOF_TYPE_LABELS,
   SHADE_LABELS,
   computeSolar,
@@ -79,7 +78,7 @@ export function SolarSavingsTool() {
   const [utility, setUtility] = useState("")
 
   // Step 2 — roof and sun.
-  const [roofCondition, setRoofCondition] = useState<RoofCondition>("good")
+  const roofCondition: RoofCondition = "good"
   const [roofType, setRoofType] = useState<RoofType>("asphalt")
   const orientation: Orientation = "south"
   const [shade, setShade] = useState<Shade>("light")
@@ -280,17 +279,17 @@ export function SolarSavingsTool() {
               {step === 1 ? (
                 <div className="flex flex-col gap-4">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Roof age & condition" htmlFor="solar-roof-age">
-                      <select
-                        id="solar-roof-age"
-                        className={selectClass}
-                        value={roofCondition}
-                        onChange={(e) => setRoofCondition(e.target.value as RoofCondition)}
-                      >
-                        {Object.entries(ROOF_CONDITION_LABELS).map(([v, l]) => (
-                          <option key={v} value={v}>{l}</option>
-                        ))}
-                      </select>
+                    <Field label="Do you have an EV?" hint="Adds home charging load to your usage.">
+                      <Segmented
+                        ariaLabel="Electric vehicle"
+                        value={hasEv ? "yes" : "no"}
+                        onChange={(v) => setHasEv(v === "yes")}
+                        singleRow
+                        options={[
+                          { value: "no", label: "No EV" },
+                          { value: "yes", label: "Yes, at home", title: "Yes, I charge at home" },
+                        ]}
+                      />
                     </Field>
                     <Field label="Roof type" htmlFor="solar-roof-type" hint="Affects mounting labor cost.">
                       <select
@@ -316,17 +315,6 @@ export function SolarSavingsTool() {
                         label: SHADE_SHORT_LABELS[v],
                         title: SHADE_LABELS[v],
                       }))}
-                    />
-                  </Field>
-                  <Field label="Do you have an EV?" hint="Adds home charging load to your usage.">
-                    <Segmented
-                      ariaLabel="Electric vehicle"
-                      value={hasEv ? "yes" : "no"}
-                      onChange={(v) => setHasEv(v === "yes")}
-                      options={[
-                        { value: "no", label: "No EV" },
-                        { value: "yes", label: "Yes, I charge at home" },
-                      ]}
                     />
                   </Field>
                 </div>
