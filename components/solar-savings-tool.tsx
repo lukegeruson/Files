@@ -9,7 +9,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
+import { Field, Panel, Segmented, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
 import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromSavings } from "@/lib/solar-scene"
@@ -409,30 +409,51 @@ export function SolarSavingsTool() {
                     title="Cumulative savings over time"
                     icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}
                   >
-                    <Segmented<ChartMode>
-                      value={chartMode}
-                      onChange={setChartMode}
-                      ariaLabel="Show cumulative savings for"
-                      options={[
-                        { value: "cash", label: "Cash" },
-                        { value: "finance", label: "Loan" },
-                        { value: "lease", label: "Lease / PPA" },
-                      ]}
-                    />
-                    <dl className="mt-4 grid grid-cols-2 gap-4">
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          {chartSummary.label}
-                        </dt>
-                        <dd className="font-serif text-2xl tabular-nums">{chartSummary.value}</dd>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex flex-col gap-4">
+                        <Segmented<ChartMode>
+                          value={chartMode}
+                          onChange={setChartMode}
+                          ariaLabel="Show cumulative savings for"
+                          options={[
+                            { value: "cash", label: "Cash" },
+                            { value: "finance", label: "Loan" },
+                            { value: "lease", label: "Lease / PPA" },
+                          ]}
+                        />
+                        <dl className="grid grid-cols-2 gap-4">
+                          <div>
+                            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                              {chartSummary.label}
+                            </dt>
+                            <dd className="font-serif text-2xl tabular-nums">{chartSummary.value}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                              {assumptions.horizonYears}-yr net savings
+                            </dt>
+                            <dd className="font-serif text-2xl tabular-nums">{signedMoney(horizonValue)}</dd>
+                          </div>
+                        </dl>
                       </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          {assumptions.horizonYears}-yr net savings
-                        </dt>
-                        <dd className="font-serif text-2xl tabular-nums">{signedMoney(horizonValue)}</dd>
-                      </div>
-                    </dl>
+                      <dl
+                        aria-label="Your estimate"
+                        className="grid grid-cols-3 gap-3 rounded-md border border-border bg-muted/40 px-3 py-2.5 sm:grid-cols-1 sm:gap-2 sm:text-right"
+                      >
+                        <div title={`${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit`}>
+                          <dt className="text-xs text-muted-foreground">Net cost</dt>
+                          <dd className="font-serif text-base font-semibold tabular-nums">{money(result.netCost)}</dd>
+                        </div>
+                        <div title={`${money(result.year1Savings)} in the first year`}>
+                          <dt className="text-xs text-muted-foreground">Monthly savings</dt>
+                          <dd className="font-serif text-base font-semibold tabular-nums">{money(result.monthlySavings)}</dd>
+                        </div>
+                        <div title={`Net gain of ${money(result.netLifetimeGain)} over ${assumptions.horizonYears} years`}>
+                          <dt className="text-xs text-muted-foreground">Estimated ROI</dt>
+                          <dd className="font-serif text-base font-semibold tabular-nums">{fmtNumber(result.roiPercent)}%</dd>
+                        </div>
+                      </dl>
+                    </div>
                     <div className="mt-4 flex h-52 gap-2">
                       {chartSeries.map(({ year, value }) => {
                         const positivePct = value > 0 && maxPositive > 0 ? (value / maxPositive) * 100 : 0
@@ -509,36 +530,12 @@ export function SolarSavingsTool() {
                     </dl>
                     <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                       Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
-                      panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
+                      panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.{" "}
+                      {result.location.isFallback
+                        ? "Using national averages until a valid ZIP is entered."
+                        : `Based on ${result.location.stateName} sun hours (${result.location.sunHours} kWh/m²/day).`}
                     </p>
                   </Panel>
-
-                <div className="rounded-lg border border-border bg-card p-5">
-                  <h3 className="font-serif text-lg font-semibold">Your estimate</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {result.location.isFallback
-                      ? "Using national averages until a valid ZIP is entered."
-                      : `Based on ${result.location.stateName} sun hours (${result.location.sunHours} kWh/m²/day).`}
-                  </p>
-                  <div className="mt-4 flex flex-col gap-3">
-                    <Stat
-                      label="Net cost after incentives"
-                      value={money(result.netCost)}
-                      sub={`${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit`}
-                      emphasis
-                    />
-                    <Stat
-                      label="Monthly savings, year 1"
-                      value={money(result.monthlySavings)}
-                      sub={`${money(result.year1Savings)} in the first year`}
-                    />
-                    <Stat
-                      label="Estimated ROI"
-                      value={`${fmtNumber(result.roiPercent)}%`}
-                      sub={`Net gain of ${money(result.netLifetimeGain)} over ${assumptions.horizonYears} years`}
-                    />
-                  </div>
-                </div>
 
                 {/* Battery */}
                 <Panel title="Should you add a battery?" icon={<BatteryCharging className="size-4 text-primary" aria-hidden="true" />}>
