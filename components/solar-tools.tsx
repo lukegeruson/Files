@@ -41,20 +41,38 @@ const TOOL_HASHES: Record<string, ToolId> = {
   "solar-panel-calculator": "panels",
 }
 
-function SavingsCover({ onStart }: { onStart: () => void }) {
+const COVERS: Record<
+  ToolId,
+  { title: string; description: string; icon: React.ReactNode; firstFieldId: string }
+> = {
+  savings: {
+    title: "Should you go solar?",
+    description:
+      "Answer a few quick questions to see your cost after incentives, payback period, and 25-year savings.",
+    icon: <Sun className="size-6" aria-hidden="true" />,
+    firstFieldId: "solar-zip",
+  },
+  panels: {
+    title: "How many solar panels do you need?",
+    description:
+      "Tell us about your home and energy use to see your system size, panel count, and the roof space it takes.",
+    icon: <LayoutGrid className="size-6" aria-hidden="true" />,
+    firstFieldId: "panel-zip",
+  },
+}
+
+function ToolCover({ tool, onStart }: { tool: ToolId; onStart: () => void }) {
+  const cover = COVERS[tool]
   return (
     <div className="flex flex-col items-center gap-5 rounded-lg border border-border bg-card px-6 py-16 text-center md:py-20">
       <span className="flex size-12 items-center justify-center rounded-full bg-primary/15 text-foreground">
-        <Sun className="size-6" aria-hidden="true" />
+        {cover.icon}
       </span>
       <div className="flex max-w-md flex-col gap-2">
         <h2 className="text-balance font-serif text-3xl font-semibold tracking-tight md:text-4xl">
-          Should you go solar?
+          {cover.title}
         </h2>
-        <p className="text-pretty leading-relaxed text-muted-foreground">
-          Answer a few quick questions to see your cost after incentives, payback period, and
-          25-year savings.
-        </p>
+        <p className="text-pretty leading-relaxed text-muted-foreground">{cover.description}</p>
       </div>
       <Button size="lg" onClick={onStart} className="rounded-full px-8">
         Start
@@ -66,13 +84,16 @@ function SavingsCover({ onStart }: { onStart: () => void }) {
 
 export function SolarTools() {
   const [active, setActive] = useState<ToolId>("savings")
-  const [savingsStarted, setSavingsStarted] = useState(false)
+  const [started, setStarted] = useState<Record<ToolId, boolean>>({
+    savings: false,
+    panels: false,
+  })
   const containerRef = useRef<HTMLDivElement>(null)
 
-  function startSavings() {
-    setSavingsStarted(true)
+  function startTool(tool: ToolId) {
+    setStarted((prev) => ({ ...prev, [tool]: true }))
     // Move focus to the first field once the calculator has mounted.
-    requestAnimationFrame(() => document.getElementById("solar-zip")?.focus())
+    requestAnimationFrame(() => document.getElementById(COVERS[tool].firstFieldId)?.focus())
   }
 
   useEffect(() => {
@@ -81,8 +102,8 @@ export function SolarTools() {
       const tool = TOOL_HASHES[hash]
       if (!tool) return
       setActive(tool)
-      // A direct link to the savings calculator skips the start cover.
-      if (hash === "solar-savings-calculator") setSavingsStarted(true)
+      // A direct link to a specific calculator skips its start cover.
+      if (hash !== "solar-calculators") setStarted((prev) => ({ ...prev, [tool]: true }))
       containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     }
 
@@ -158,12 +179,10 @@ export function SolarTools() {
         aria-labelledby={`solar-tab-${active}`}
         className="w-full"
       >
-        {active === "savings" ? (
-          savingsStarted ? (
-            <SolarSavingsTool />
-          ) : (
-            <SavingsCover onStart={startSavings} />
-          )
+        {!started[active] ? (
+          <ToolCover key={active} tool={active} onStart={() => startTool(active)} />
+        ) : active === "savings" ? (
+          <SolarSavingsTool />
         ) : (
           <SolarPanelCalculator />
         )}
