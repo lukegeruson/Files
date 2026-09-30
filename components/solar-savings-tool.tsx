@@ -468,30 +468,6 @@ export function SolarSavingsTool() {
                   </div>
                 </div>
 
-                {/* Offset bar */}
-                <div className="rounded-lg border border-border bg-card p-5">
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="font-serif text-base font-semibold">Electricity offset</h3>
-                    <span className="font-serif text-xl tabular-nums">
-                      {Math.round(result.offsetPercent)}%
-                    </span>
-                  </div>
-                  <div
-                    className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-muted"
-                    role="img"
-                    aria-label={`Solar covers about ${Math.round(result.offsetPercent)} percent of your electricity use`}
-                  >
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${Math.min(100, result.offsetPercent)}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    The share of your yearly electricity this array would supply. Anything short of
-                    100% still comes from the grid.
-                  </p>
-                </div>
-
                 <div className="flex flex-col gap-4">
                   <Panel title="Why this recommendation" icon={<CircleCheck className="size-4 text-primary" aria-hidden="true" />}>
                     {result.reasons.length ? (
