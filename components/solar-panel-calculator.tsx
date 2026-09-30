@@ -215,13 +215,23 @@ export function SolarPanelCalculator() {
               </Field>
             </div>
 
-            <Field label="Panel wattage" hint="Higher-wattage panels mean fewer panels and less roof space.">
-              <Segmented
-                value={String(panelWatts)}
-                onChange={(v) => setPanelWatts(Number(v))}
-                ariaLabel="Panel wattage"
-                options={PANEL_OPTIONS.map((w) => ({ value: String(w), label: `${w} W` }))}
-              />
+            <Field
+              label="Panel wattage"
+              htmlFor="panel-watts"
+              hint="Higher-wattage panels mean fewer panels and less roof space."
+            >
+              <select
+                id="panel-watts"
+                className={selectClass}
+                value={panelWatts}
+                onChange={(e) => setPanelWatts(Number(e.target.value))}
+              >
+                {PANEL_OPTIONS.map((w) => (
+                  <option key={w} value={w}>
+                    {w} W
+                  </option>
+                ))}
+              </select>
             </Field>
 
             {advanced ? (
@@ -261,7 +271,7 @@ export function SolarPanelCalculator() {
               <p className="flex items-start gap-2 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
                 <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 Easy mode assumes an unshaded, south-facing roof at a typical pitch with 85% system
-                efficiency. Turn on advanced mode to set shading, system losses and roof width.
+                efficiency. Turn on advanced mode to set shading and system losses.
               </p>
             )}
           </div>
