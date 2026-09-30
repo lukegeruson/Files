@@ -6,7 +6,6 @@ import {
   BatteryCharging,
   CircleAlert,
   CircleCheck,
-  Info,
   TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -59,10 +58,7 @@ export function SolarSavingsTool() {
   const [yearsInHome, setYearsInHome] = useState("15")
   const [payment, setPayment] = useState<Payment>("cash")
 
-  // Editable assumptions.
-  const [assumptions, setAssumptions] = useState<Assumptions>(DEFAULT_ASSUMPTIONS)
-  const setAssumption = (key: keyof Assumptions, value: number) =>
-    setAssumptions((prev) => ({ ...prev, [key]: value }))
+  const assumptions: Assumptions = DEFAULT_ASSUMPTIONS
 
   const billNum = Number.parseFloat(bill) || 0
   const kwhNum = Number.parseFloat(kwh) || 0
@@ -388,7 +384,10 @@ export function SolarSavingsTool() {
                   </dl>
                 </div>
 
-                  <Panel title="Cash vs. financing vs. lease">
+                  <Panel
+                    title="Cash vs. financing vs. lease"
+                    icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}
+                  >
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <caption className="sr-only">
@@ -429,6 +428,37 @@ export function SolarSavingsTool() {
                       tax credit returned to you. A lease or PPA has no upfront cost, but the installer keeps
                       the tax credit and your savings are smaller.
                     </p>
+
+                    <div className="mt-5 border-t border-border pt-4">
+                      <h4 className="text-sm font-medium">Cumulative savings over time (cash)</h4>
+                      <div className="mt-3 flex h-44 gap-3">
+                        {milestones.map((y) => {
+                          const row = result.savingsByYear[y - 1]
+                          const value = row?.cumulative ?? 0
+                          const pct = Math.max(4, (value / maxCumulative) * 100)
+                          return (
+                            <div key={y} className="flex h-full flex-1 flex-col items-center gap-2">
+                              <span className="font-serif text-xs tabular-nums text-muted-foreground">
+                                {money(value)}
+                              </span>
+                              <div className="flex min-h-0 w-full flex-1 items-end">
+                                <div
+                                  className="w-full rounded-t bg-primary/70"
+                                  style={{ height: `${pct}%` }}
+                                  role="img"
+                                  aria-label={`By year ${y}, about ${money(value)} saved`}
+                                />
+                              </div>
+                              <span className="text-xs tabular-nums text-muted-foreground">Yr {y}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                        Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
+                        panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
+                      </p>
+                    </div>
                   </Panel>
 
                 <div className="rounded-lg border border-border bg-card p-5">
@@ -467,72 +497,6 @@ export function SolarSavingsTool() {
                     />
                   </div>
                 </div>
-
-                  <Panel title="Cumulative savings over time" icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}>
-                    <div className="flex h-40 items-end gap-3">
-                      {milestones.map((y) => {
-                        const row = result.savingsByYear[y - 1]
-                        const value = row?.cumulative ?? 0
-                        const pct = Math.max(4, (value / maxCumulative) * 100)
-                        return (
-                          <div key={y} className="flex flex-1 flex-col items-center justify-end gap-2">
-                            <span className="font-serif text-xs tabular-nums text-muted-foreground">
-                              {money(value)}
-                            </span>
-                            <div
-                              className="w-full rounded-t bg-primary/70"
-                              style={{ height: `${pct}%` }}
-                              role="img"
-                              aria-label={`By year ${y}, about ${money(value)} saved`}
-                            />
-                            <span className="text-xs tabular-nums text-muted-foreground">Yr {y}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                      Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
-                      panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
-                    </p>
-                  </Panel>
-
-                {/* Sensitivity */}
-                <Panel title="What if the assumptions are wrong?">
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    Payback depends heavily on utility rates, install price, and real production. These
-                    scenarios re-run the math with one variable changed at a time. Net gain is lifetime
-                    bill savings minus what the system costs you after incentives.
-                  </p>
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <caption className="sr-only">Sensitivity of payback and savings to key assumptions</caption>
-                      <thead>
-                        <tr className="border-b border-border text-left">
-                          <th scope="col" className="py-2 pr-3 font-medium">Scenario</th>
-                          <th scope="col" className="py-2 pr-3 font-medium">Change</th>
-                          <th scope="col" className="py-2 pr-3 font-medium">Payback</th>
-                          <th scope="col" className="py-2 font-medium">
-                            {assumptions.horizonYears}-yr net gain
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.scenarios.map((s) => (
-                          <tr key={s.label} className="border-b border-border last:border-0">
-                            <th scope="row" className="py-2.5 pr-3 text-left font-normal">{s.label}</th>
-                            <td className="py-2.5 pr-3 text-muted-foreground">{s.detail}</td>
-                            <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">
-                              {fmtYears(s.paybackYears)}
-                            </td>
-                            <td className="py-2.5 tabular-nums text-muted-foreground">
-                              {money(s.netSavings)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Panel>
 
                 {/* Battery */}
                 <Panel title="Should you add a battery?" icon={<BatteryCharging className="size-4 text-primary" aria-hidden="true" />}>
@@ -577,79 +541,6 @@ export function SolarSavingsTool() {
           </div>
         </div>
       </div>
-
-      {showResults ? (
-        <>
-          {/* Assumptions */}
-          <Panel title="Assumptions behind every number" icon={<Info className="size-4 text-primary" aria-hidden="true" />}>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              These are national averages, not quotes. Change any of them and every figure above
-              updates.
-            </p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Field label="Install price ($/watt)" htmlFor="a-ppw">
-                <Input
-                  id="a-ppw"
-                  inputMode="decimal"
-                  value={assumptions.pricePerWatt}
-                  onChange={(e) => setAssumption("pricePerWatt", Number.parseFloat(e.target.value) || 0)}
-                />
-              </Field>
-              <Field label="Federal credit (%)" htmlFor="a-itc">
-                <Input
-                  id="a-itc"
-                  inputMode="decimal"
-                  value={assumptions.itcPercent * 100}
-                  onChange={(e) =>
-                    setAssumption("itcPercent", (Number.parseFloat(e.target.value) || 0) / 100)
-                  }
-                />
-              </Field>
-              <Field label="Other rebates ($)" htmlFor="a-rebate">
-                <Input
-                  id="a-rebate"
-                  inputMode="decimal"
-                  value={assumptions.stateRebate}
-                  onChange={(e) => setAssumption("stateRebate", Number.parseFloat(e.target.value) || 0)}
-                />
-              </Field>
-              <Field label="Rate increase (%/yr)" htmlFor="a-esc">
-                <Input
-                  id="a-esc"
-                  inputMode="decimal"
-                  value={assumptions.rateEscalation * 100}
-                  onChange={(e) =>
-                    setAssumption("rateEscalation", (Number.parseFloat(e.target.value) || 0) / 100)
-                  }
-                />
-              </Field>
-            </div>
-            <dl className="mt-5 grid gap-x-8 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
-              {[
-                ["Sun hours used", `${result.location.sunHours} kWh/m²/day (${result.location.stateName})`],
-                ["Electricity rate", `${money(result.rate, 2)}/kWh ${result.rateIsAssumed ? "(state average)" : "(you provided)"}`],
-                ["System losses", `${Math.round((1 - assumptions.derate) * 100)}% for inverter, wiring, heat, soiling`],
-                ["Orientation factor", `${ORIENTATION_LABELS[orientation]} — ${Math.round((result.productionPerKw / (result.location.sunHours * 365 * assumptions.derate)) * 100)}% of ideal`],
-                ["Panel degradation", `${(assumptions.degradation * 100).toFixed(1)}% output lost per year`],
-                ["Production per kW", `${fmtNumber(result.productionPerKw)} kWh per kW per year`],
-                ["EV load added", result.evKwh ? `${fmtNumber(result.evKwh)} kWh/yr` : "None"],
-                ["Analysis horizon", `${assumptions.horizonYears} years`],
-              ].map(([term, value]) => (
-                <div key={term} className="flex flex-col gap-0.5">
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">{term}</dt>
-                  <dd className="text-foreground">{value}</dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-4 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-              Estimates only. Actual results depend on your utility&apos;s tariff and net metering
-              rules, roof measurements, equipment, installer pricing, and your tax situation. The
-              federal credit is nonrefundable, so it assumes you owe enough tax to use it. Get at
-              least three quotes before deciding.
-            </p>
-          </Panel>
-        </>
-      ) : null}
     </div>
   )
 }
