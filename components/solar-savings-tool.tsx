@@ -15,7 +15,6 @@ import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromSavings } from "@/lib/solar-scene"
 import {
   DEFAULT_ASSUMPTIONS,
-  ORIENTATION_LABELS,
   ROOF_CONDITION_LABELS,
   ROOF_TYPE_LABELS,
   SHADE_LABELS,
@@ -35,13 +34,6 @@ import {
 
 const STEPS = ["Your bill", "Roof & sun"] as const
 const YEARS_IN_HOME = 15
-
-const ORIENTATION_SHORT_LABELS: Record<Orientation, string> = {
-  south: "South",
-  "south-adjacent": "SE / SW",
-  "east-west": "E / W",
-  north: "North",
-}
 
 const SHADE_SHORT_LABELS: Record<Shade, string> = {
   none: "None",
@@ -89,7 +81,7 @@ export function SolarSavingsTool() {
   // Step 2 — roof and sun.
   const [roofCondition, setRoofCondition] = useState<RoofCondition>("good")
   const [roofType, setRoofType] = useState<RoofType>("asphalt")
-  const [orientation, setOrientation] = useState<Orientation>("south")
+  const orientation: Orientation = "south"
   const [shade, setShade] = useState<Shade>("light")
 
   const [hasEv, setHasEv] = useState(false)
@@ -313,19 +305,6 @@ export function SolarSavingsTool() {
                       </select>
                     </Field>
                   </div>
-                  <Field label="Roof orientation" hint="South-facing pitch produces the most power.">
-                    <Segmented
-                      ariaLabel="Roof orientation"
-                      value={orientation}
-                      onChange={setOrientation}
-                      singleRow
-                      options={(Object.keys(ORIENTATION_LABELS) as Orientation[]).map((v) => ({
-                        value: v,
-                        label: ORIENTATION_SHORT_LABELS[v],
-                        title: ORIENTATION_LABELS[v],
-                      }))}
-                    />
-                  </Field>
                   <Field label="Shade level" hint="Shade is the biggest single drag on production.">
                     <Segmented
                       ariaLabel="Shade level"
