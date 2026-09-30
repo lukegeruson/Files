@@ -100,12 +100,6 @@ export function SolarSavingsTool() {
     publishScene(showResults ? snapshotFromSavings(result, wantsBattery) : null)
   }, [showResults, result, wantsBattery, publishScene])
 
-  const verdictTone =
-    result.verdict === "favorable"
-      ? "border-primary bg-primary/10"
-      : result.verdict === "consider"
-        ? "border-border bg-accent"
-        : "border-destructive/40 bg-destructive/5"
 
   const milestones = [5, 10, 15, 20, 25].filter((y) => y <= assumptions.horizonYears)
   const maxCumulative = result.savingsByYear[result.savingsByYear.length - 1]?.cumulative || 1
@@ -356,34 +350,11 @@ export function SolarSavingsTool() {
                 <h3 className="font-serif text-lg font-semibold">Your estimate appears here</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   Enter a ZIP code and your average monthly bill, then select Refine estimate to see
-                  system size, cost, payback, and a recommendation.
+                  system size, cost, payback, and savings over time.
                 </p>
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                <div className={cn("rounded-lg border p-5", verdictTone)}>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Recommendation
-                  </p>
-                  <p className="mt-2 text-balance font-serif text-xl font-semibold leading-snug">
-                    {result.verdictHeadline}
-                  </p>
-                  <dl className="mt-4 grid grid-cols-2 gap-4">
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-muted-foreground">Payback</dt>
-                      <dd className="font-serif text-2xl tabular-nums">{fmtYears(result.paybackYears)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {assumptions.horizonYears}-yr savings
-                      </dt>
-                      <dd className="font-serif text-2xl tabular-nums">
-                        {money(result.cumulativeSavings)}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-
                   <Panel
                     title="Cash vs. financing vs. lease"
                     icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}
@@ -431,7 +402,21 @@ export function SolarSavingsTool() {
 
                     <div className="mt-5 border-t border-border pt-4">
                       <h4 className="text-sm font-medium">Cumulative savings over time (cash)</h4>
-                      <div className="mt-3 flex h-44 gap-3">
+                      <dl className="mt-3 grid grid-cols-2 gap-4">
+                        <div>
+                          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Payback</dt>
+                          <dd className="font-serif text-2xl tabular-nums">{fmtYears(result.paybackYears)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                            {assumptions.horizonYears}-yr savings
+                          </dt>
+                          <dd className="font-serif text-2xl tabular-nums">
+                            {money(result.cumulativeSavings)}
+                          </dd>
+                        </div>
+                      </dl>
+                      <div className="mt-4 flex h-44 gap-3">
                         {milestones.map((y) => {
                           const row = result.savingsByYear[y - 1]
                           const value = row?.cumulative ?? 0
