@@ -33,7 +33,8 @@ import {
 
 // --- Main tool -------------------------------------------------------------
 
-const STEPS = ["Your bill", "Roof & sun", "Your plans"] as const
+const STEPS = ["Your bill", "Roof & sun"] as const
+const YEARS_IN_HOME = 15
 
 const ORIENTATION_SHORT_LABELS: Record<Orientation, string> = {
   south: "South",
@@ -91,10 +92,8 @@ export function SolarSavingsTool() {
   const [orientation, setOrientation] = useState<Orientation>("south")
   const [shade, setShade] = useState<Shade>("light")
 
-  // Step 3 — plans.
   const [hasEv, setHasEv] = useState(false)
   const [wantsBattery, setWantsBattery] = useState(false)
-  const [yearsInHome, setYearsInHome] = useState("15")
   const [payment, setPayment] = useState<Payment>("cash")
 
   const assumptions: Assumptions = DEFAULT_ASSUMPTIONS
@@ -120,14 +119,14 @@ export function SolarSavingsTool() {
           shade,
           hasEv,
           wantsBattery,
-          yearsInHome: Number.parseFloat(yearsInHome) || 10,
+          yearsInHome: YEARS_IN_HOME,
           payment,
         },
         assumptions,
       ),
     [
       zip, billNum, kwhNum, rate, utility, roofCondition, roofType,
-      orientation, shade, hasEv, wantsBattery, yearsInHome, payment, assumptions,
+      orientation, shade, hasEv, wantsBattery, payment, assumptions,
     ],
   )
 
@@ -340,38 +339,17 @@ export function SolarSavingsTool() {
                       }))}
                     />
                   </Field>
-                </div>
-              ) : null}
-
-              {step === 2 ? (
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Do you have an EV?" hint="Adds home charging load to your usage.">
-                      <Segmented
-                        ariaLabel="Electric vehicle"
-                        value={hasEv ? "yes" : "no"}
-                        onChange={(v) => setHasEv(v === "yes")}
-                        options={[
-                          { value: "no", label: "No EV" },
-                          { value: "yes", label: "Yes, I charge at home" },
-                        ]}
-                      />
-                    </Field>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field
-                      label="Years you expect to stay"
-                      htmlFor="solar-years"
-                      hint="Compared against payback to judge whether you recoup the cost."
-                    >
-                      <Input
-                        id="solar-years"
-                        inputMode="numeric"
-                        value={yearsInHome}
-                        onChange={(e) => setYearsInHome(e.target.value)}
-                      />
-                    </Field>
-                  </div>
+                  <Field label="Do you have an EV?" hint="Adds home charging load to your usage.">
+                    <Segmented
+                      ariaLabel="Electric vehicle"
+                      value={hasEv ? "yes" : "no"}
+                      onChange={(v) => setHasEv(v === "yes")}
+                      options={[
+                        { value: "no", label: "No EV" },
+                        { value: "yes", label: "Yes, I charge at home" },
+                      ]}
+                    />
+                  </Field>
                 </div>
               ) : null}
 
