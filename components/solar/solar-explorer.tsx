@@ -38,9 +38,9 @@ const DIORAMA_SRC = "/solar-styles/claymation-cutout.png"
 // real object. The stage is square and the image is square, so x/y map 1:1.
 type Hotspot = { id: ComponentId; x: number; y: number }
 
+// The sun and solar panels have no markers; the panels are the default
+// description shown when nothing is selected.
 const HOTSPOTS: Hotspot[] = [
-  { id: "sun", x: 50, y: 14 }, // sits on the sun's high-noon apex
-  { id: "panels", x: 55, y: 36 }, // nudged up/right so flow lines don't overlap
   { id: "inverter", x: 25, y: 52 },
   // The battery marker doubles as the home: all household energy converges here,
   // so there is no separate "home" point.
@@ -378,12 +378,12 @@ export function SolarExplorer() {
   // it sits at the top of the left column and swaps its contents as different
   // parts are clicked, falling back to a prompt when nothing is selected.
   const renderPartInfo = () => {
-    const info = selected ? COMPONENT_INFO[selected] : null
+    const info = COMPONENT_INFO[selected ?? "panels"]
     return (
       <>
         <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-gradient-to-r from-primary/12 to-transparent px-3 py-2">
           <p className="font-serif text-sm font-semibold text-foreground">
-            {info ? info.title : "Solar parts"}
+            {info.title}
           </p>
           {selected ? (
             <button
@@ -397,9 +397,7 @@ export function SolarExplorer() {
           ) : null}
         </div>
           <p className="min-h-0 flex-1 overflow-auto px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-            {info
-              ? info.blurb
-              : "Tap any marker on the diagram to see what that part does."}
+            {info.blurb}
           </p>
       </>
     )
@@ -668,10 +666,6 @@ export function SolarExplorer() {
 
           {/* Hotspots */}
           {hotspots.map((h) => {
-            // The sun marker only exists while the sun is up; once it sets and
-            // the moon rises, the marker disappears. The solar-panel marker is
-            // likewise hidden at night, since the array isn't generating.
-            if ((h.id === "sun" || h.id === "panels") && !sky.sunUp) return null
             const info = COMPONENT_INFO[h.id]
             const isSel = selected === h.id
             return (
