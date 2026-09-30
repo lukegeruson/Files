@@ -200,7 +200,7 @@ export function SolarPanelCalculator() {
               <Field
                 label={`Target offset — ${offsetPercent}%`}
                 htmlFor="panel-offset"
-                hint="% of yearly usage solar covers."
+                hint="How much of your bill solar covers."
               >
                 <input
                   id="panel-offset"
@@ -251,7 +251,7 @@ export function SolarPanelCalculator() {
                 <Field
                   label={`System losses — ${derate}% delivered`}
                   htmlFor="panel-derate"
-                  hint="Output left after wiring/heat loss."
+                  hint="Power lost to heat, dust & wiring."
                 >
                   <input
                     id="panel-derate"
