@@ -3,7 +3,6 @@ import {
   doublePrecision,
   index,
   integer,
-  jsonb,
   pgTable,
   text,
   timestamp,
@@ -254,36 +253,3 @@ export const companies = pgTable(
 )
 
 export type CompanyRow = typeof companies.$inferSelect
-
-/**
- * Contact details captured to unlock the solar savings calculator results,
- * stored alongside every calculator input and the headline results.
- *
- * `inputs` holds the full SolarInputs object as submitted. The result columns
- * are recomputed on the server from those inputs, so they never trust numbers
- * sent by the browser. Read them at /admin/solar-estimates.
- */
-export const solarEstimates = pgTable(
-  "solar_estimates",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    name: text("name").notNull(),
-    email: text("email").notNull(),
-    phone: text("phone").notNull(),
-    zip: text("zip").notNull(),
-    inputs: jsonb("inputs").$type<import("@/lib/solar").SolarInputs>().notNull(),
-    systemKw: doublePrecision("system_kw").notNull(),
-    panelCount: integer("panel_count").notNull(),
-    netCost: integer("net_cost").notNull(),
-    monthlySavings: integer("monthly_savings").notNull(),
-    /** Null when the system never pays back within the horizon. */
-    paybackYears: doublePrecision("payback_years"),
-    roiPercent: doublePrecision("roi_percent").notNull(),
-    netLifetimeGain: integer("net_lifetime_gain").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    readAt: timestamp("read_at", { withTimezone: true }),
-  },
-  (table) => [index("solar_estimates_created_idx").on(table.createdAt)],
-)
-
-export type SolarEstimateRow = typeof solarEstimates.$inferSelect
