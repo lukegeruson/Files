@@ -9,7 +9,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Field, Panel, Segmented, selectClass } from "@/components/calculator-ui"
+import { Field, Segmented, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
 import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromSavings } from "@/lib/solar-scene"
@@ -320,17 +320,6 @@ export function SolarSavingsTool() {
                         ]}
                       />
                     </Field>
-                    <Field label="Considering a battery?" hint="Adds storage cost and backup capability.">
-                      <Segmented
-                        ariaLabel="Battery storage"
-                        value={wantsBattery ? "yes" : "no"}
-                        onChange={(v) => setWantsBattery(v === "yes")}
-                        options={[
-                          { value: "no", label: "Panels only" },
-                          { value: "yes", label: "Add a battery" },
-                        ]}
-                      />
-                    </Field>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field
@@ -405,12 +394,43 @@ export function SolarSavingsTool() {
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                  <Panel
-                    title="Cumulative savings over time"
-                    icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}
+                  <section
+                    aria-labelledby="savings-over-time-heading"
+                    className="rounded-lg border border-border bg-card p-5"
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex flex-col gap-4">
+                        <h3
+                          id="savings-over-time-heading"
+                          className="flex items-center gap-2 font-serif text-lg font-semibold"
+                        >
+                          <TrendingUp className="size-4 text-primary" aria-hidden="true" />
+                          Savings over time
+                        </h3>
+                        <label
+                          htmlFor="solar-add-battery"
+                          className={cn(
+                            "flex w-fit cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
+                            wantsBattery
+                              ? "border-primary/60 bg-primary/5 text-foreground"
+                              : "border-border text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <input
+                            id="solar-add-battery"
+                            type="checkbox"
+                            checked={wantsBattery}
+                            onChange={(e) => setWantsBattery(e.target.checked)}
+                            className="size-4 accent-primary"
+                          />
+                          <BatteryCharging className="size-4 text-primary" aria-hidden="true" />
+                          <span>
+                            Add a home battery
+                            <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
+                              +{money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit
+                            </span>
+                          </span>
+                        </label>
                         <Segmented<ChartMode>
                           value={chartMode}
                           onChange={setChartMode}
@@ -528,53 +548,22 @@ export function SolarSavingsTool() {
                         </div>
                       ))}
                     </dl>
-                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                      Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
-                      panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.{" "}
-                      {result.location.isFallback
-                        ? "Using national averages until a valid ZIP is entered."
-                        : `Based on ${result.location.stateName} sun hours (${result.location.sunHours} kWh/m²/day).`}
-                    </p>
-                  </Panel>
-
-                {/* Battery */}
-                <Panel title="Should you add a battery?" icon={<BatteryCharging className="size-4 text-primary" aria-hidden="true" />}>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span
-                      className={cn(
-                        "rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide",
-                        result.batteryVerdict === "recommended"
-                          ? "bg-primary/15 text-foreground"
-                          : result.batteryVerdict === "optional"
-                            ? "bg-accent text-accent-foreground"
-                            : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {result.batteryVerdict === "recommended"
-                        ? "A battery likely makes sense"
-                        : result.batteryVerdict === "optional"
-                          ? "A battery is optional here"
-                          : "A battery is hard to justify financially"}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      Storage adds about {money(assumptions.batteryCost)} before the tax credit, or{" "}
-                      {money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after.
-                    </span>
-                  </div>
-                  <ul className="mt-4 flex flex-col gap-2.5">
-                    {result.batteryReasons.map((r) => (
-                      <li key={r} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
-                        <BatteryCharging className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                        <span>{r}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                    On bill savings alone a battery typically takes{" "}
-                    {result.batteryPaybackYears ? `${result.batteryPaybackYears.toFixed(0)} years or more` : "many years"}{" "}
-                    to pay back, so most homeowners buy one for backup power and resilience rather than pure return.
-                  </p>
-                </Panel>
+                    <div className="mt-3 flex gap-2 text-xs leading-relaxed text-muted-foreground">
+                      <BatteryCharging className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                      <p>
+                        <span className="font-medium text-foreground">
+                          {result.batteryVerdict === "recommended"
+                            ? "A battery likely makes sense."
+                            : result.batteryVerdict === "optional"
+                              ? "A battery is optional here."
+                              : "A battery is hard to justify financially."}
+                        </span>{" "}
+                        {result.batteryReasons.join(" ")} On bill savings alone it takes{" "}
+                        {result.batteryPaybackYears ? `${result.batteryPaybackYears.toFixed(0)}+ years` : "many years"}{" "}
+                        to pay back, so most people add one for backup power rather than return.
+                      </p>
+                    </div>
+                  </section>
               </div>
             )}
           </div>
