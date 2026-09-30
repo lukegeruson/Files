@@ -116,19 +116,19 @@ export function SolarSavingsTool() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-balance font-serif text-3xl font-semibold tracking-tight md:text-4xl">
+        <h2 className="text-pretty font-serif text-3xl font-semibold tracking-tight md:text-4xl">
           Should you go solar? Find out now.
         </h2>
-        <p className="max-w-2xl text-pretty leading-relaxed text-muted-foreground">
+        <p className="text-pretty leading-relaxed text-muted-foreground">
           This tool estimates system size, cost after incentives, payback period, and 25-year
           savings.
         </p>
       </div>
 
-      {/* Form + live results (always stacked: results stay below the form) */}
-      <div className="flex flex-col gap-6">
+      {/* Form centered at half width; the empty-state placeholder sits to its right, full results stack below */}
+      <div className="grid gap-6 lg:grid-cols-4 lg:items-start">
         {/* Form */}
-        <div>
+        <div className="lg:col-span-2 lg:col-start-2">
           <div className="rounded-lg border border-border bg-card">
             {/* Step tabs */}
             <div className="flex border-b border-border">
@@ -348,7 +348,7 @@ export function SolarSavingsTool() {
         </div>
 
         {/* Live results */}
-        <div>
+        <div className={ready ? "lg:col-span-2 lg:col-start-2" : "lg:col-span-1"}>
           <div className="flex flex-col gap-4">
             {!ready ? (
               <div className="rounded-lg border border-dashed border-border bg-card p-6">

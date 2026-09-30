@@ -122,7 +122,7 @@ export function SolarTools() {
         role="tabpanel"
         id={`solar-tool-${active}`}
         aria-labelledby={`solar-tab-${active}`}
-        className="mx-auto w-full lg:w-1/2"
+        className={active === "savings" ? "w-full" : "mx-auto w-full lg:w-1/2"}
       >
         {active === "savings" ? <SolarSavingsTool /> : <SolarPanelCalculator />}
       </div>
