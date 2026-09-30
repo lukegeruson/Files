@@ -67,6 +67,8 @@ export function SolarSavingsTool() {
   const billNum = Number.parseFloat(bill) || 0
   const kwhNum = Number.parseFloat(kwh) || 0
   const ready = zip.replace(/\D/g, "").length >= 3 && (billNum > 0 || kwhNum > 0)
+  const [refined, setRefined] = useState(false)
+  const showResults = ready && refined
 
   const result = useMemo(
     () =>
@@ -99,8 +101,8 @@ export function SolarSavingsTool() {
   // never shows a misleading half-filled house.
   const publishScene = usePublishSolarScene()
   useEffect(() => {
-    publishScene(ready ? snapshotFromSavings(result, wantsBattery) : null)
-  }, [ready, result, wantsBattery, publishScene])
+    publishScene(showResults ? snapshotFromSavings(result, wantsBattery) : null)
+  }, [showResults, result, wantsBattery, publishScene])
 
   const verdictTone =
     result.verdict === "favorable"
@@ -331,7 +333,10 @@ export function SolarSavingsTool() {
                 {step < STEPS.length - 1 ? (
                   <button
                     type="button"
-                    onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+                    onClick={() => {
+                      setRefined(true)
+                      setStep((s) => Math.min(STEPS.length - 1, s + 1))
+                    }}
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
                   >
                     Refine estimate
@@ -348,14 +353,14 @@ export function SolarSavingsTool() {
         </div>
 
         {/* Live results */}
-        <div className={ready ? "lg:col-span-4 lg:col-start-1" : "lg:col-span-2 lg:self-stretch"}>
+        <div className={showResults ? "lg:col-span-4 lg:col-start-1" : "lg:col-span-2 lg:self-stretch"}>
           <div className="flex h-full flex-col gap-4">
-            {!ready ? (
+            {!showResults ? (
               <div className="h-full rounded-lg border border-dashed border-border bg-card p-6">
                 <h3 className="font-serif text-lg font-semibold">Your estimate appears here</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Enter a ZIP code and your average monthly bill to see system size, cost, payback,
-                  and a recommendation. Everything else just refines the result.
+                  Enter a ZIP code and your average monthly bill, then select Refine estimate to see
+                  system size, cost, payback, and a recommendation.
                 </p>
               </div>
             ) : (
