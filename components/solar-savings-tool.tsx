@@ -16,7 +16,6 @@ import { snapshotFromSavings } from "@/lib/solar-scene"
 import {
   DEFAULT_ASSUMPTIONS,
   ORIENTATION_LABELS,
-  PAYMENT_LABELS,
   ROOF_CONDITION_LABELS,
   ROOF_TYPE_LABELS,
   SHADE_LABELS,
@@ -50,10 +49,8 @@ const SHADE_SHORT_LABELS: Record<Shade, string> = {
   heavy: "Heavy",
 }
 
-type ChartMode = "cash" | "finance" | "lease"
-
 function cumulativeFor(
-  mode: ChartMode,
+  mode: Payment,
   year: number,
   result: {
     savingsByYear: Array<{ cumulative: number }>
@@ -143,31 +140,53 @@ export function SolarSavingsTool() {
   }, [showResults, result, wantsBattery, publishScene])
 
 
-  const [chartMode, setChartMode] = useState<ChartMode>("cash")
   const milestones = [0, 5, 10, 15, 20, 25].filter((y) => y <= assumptions.horizonYears)
   const chartSeries = milestones.map((y) => ({
     year: y,
-    value: cumulativeFor(chartMode, y, result, assumptions.loanTermYears),
+    value: cumulativeFor(payment, y, result, assumptions.loanTermYears),
   }))
   const maxPositive = Math.max(0, ...chartSeries.map((p) => p.value))
   const maxNegative = Math.max(0, ...chartSeries.map((p) => -p.value))
   const chartRange = Math.max(1, maxPositive + maxNegative)
   const positiveShare = (maxPositive / chartRange) * 100
   const horizonValue = cumulativeFor(
-    chartMode,
+    payment,
     assumptions.horizonYears,
     result,
     assumptions.loanTermYears,
   )
   const chartSummary =
-    chartMode === "cash"
+    payment === "cash"
       ? { label: "Payback", value: fmtYears(result.paybackYears) }
-      : chartMode === "finance"
+      : payment === "finance"
         ? {
             label: "Monthly net",
             value: `${result.loanMonthlyDelta >= 0 ? "+" : "−"}${money(Math.abs(result.loanMonthlyDelta))}`,
           }
         : { label: "Monthly saved", value: `+${money(result.leaseMonthlySavings)}` }
+
+  const loanTotalPaid = result.loanMonthlyPayment * 12 * assumptions.loanTermYears
+  const metrics =
+    payment === "cash"
+      ? {
+          netCost: result.netCost,
+          netCostNote: `${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit`,
+          monthly: result.monthlySavings,
+          monthlyNote: `${money(result.year1Savings)} in the first year`,
+        }
+      : payment === "finance"
+        ? {
+            netCost: Math.max(0, loanTotalPaid - result.itcAmount),
+            netCostNote: `${money(loanTotalPaid)} in loan payments over ${assumptions.loanTermYears} years less ${money(result.itcAmount)} tax credit`,
+            monthly: result.loanMonthlyDelta,
+            monthlyNote: `${money(result.monthlySavings)} bill savings less ${money(result.loanMonthlyPayment)} loan payment`,
+          }
+        : {
+            netCost: 0,
+            netCostNote: "No purchase; the installer owns the system",
+            monthly: result.leaseMonthlySavings,
+            monthlyNote: "Bill savings after your lease or PPA payment",
+          }
 
   return (
     <div className="flex flex-col gap-6">
@@ -352,17 +371,6 @@ export function SolarSavingsTool() {
                         onChange={(e) => setYearsInHome(e.target.value)}
                       />
                     </Field>
-                    <Field label="How would you pay?" hint="Ownership earns the tax credit; leases do not.">
-                      <Segmented
-                        ariaLabel="Payment method"
-                        value={payment}
-                        onChange={setPayment}
-                        options={(Object.keys(PAYMENT_LABELS) as Payment[]).map((v) => ({
-                          value: v,
-                          label: PAYMENT_LABELS[v],
-                        }))}
-                      />
-                    </Field>
                   </div>
                 </div>
               ) : null}
@@ -426,9 +434,9 @@ export function SolarSavingsTool() {
                           Savings over time
                         </h3>
                         <div className="flex flex-wrap items-center gap-2">
-                          <Segmented<ChartMode>
-                          value={chartMode}
-                          onChange={setChartMode}
+                          <Segmented<Payment>
+                          value={payment}
+                          onChange={setPayment}
                           ariaLabel="Show cumulative savings for"
                           options={[
                             { value: "cash", label: "Cash" },
@@ -476,13 +484,13 @@ export function SolarSavingsTool() {
                         aria-label="Your estimate"
                         className="grid grid-cols-3 gap-3 rounded-md border border-border bg-muted/40 px-3 py-2.5 sm:grid-cols-1 sm:gap-2 sm:text-right"
                       >
-                        <div title={`${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit`}>
-                          <dt className="text-xs text-muted-foreground">Net cost</dt>
-                          <dd className="font-serif text-base font-semibold tabular-nums">{money(result.netCost)}</dd>
-                        </div>
-                        <div title={`${money(result.year1Savings)} in the first year`}>
-                          <dt className="text-xs text-muted-foreground">Monthly savings</dt>
-                          <dd className="font-serif text-base font-semibold tabular-nums">{money(result.monthlySavings)}</dd>
+                      <div title={metrics.netCostNote}>
+                        <dt className="text-xs text-muted-foreground">Net cost</dt>
+                        <dd className="font-serif text-base font-semibold tabular-nums">{money(metrics.netCost)}</dd>
+                      </div>
+                      <div title={metrics.monthlyNote}>
+                        <dt className="text-xs text-muted-foreground">Monthly savings</dt>
+                        <dd className="font-serif text-base font-semibold tabular-nums">{signedMoney(metrics.monthly)}</dd>
                         </div>
                         <div title={`Net gain of ${money(result.netLifetimeGain)} over ${assumptions.horizonYears} years`}>
                           <dt className="text-xs text-muted-foreground">Estimated ROI</dt>
@@ -552,7 +560,7 @@ export function SolarSavingsTool() {
                             "An installer owns the panels on your roof. You pay a monthly lease, or a set rate for the power they produce (a power purchase agreement). No upfront cost, but the installer keeps the tax credit, so your savings are smaller.",
                         },
                       ]
-                        .filter(({ mode }) => mode === chartMode)
+                        .filter(({ mode }) => mode === payment)
                         .map(({ mode, term, description }) => (
                         <div
                           key={mode}
