@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Info, Ruler, Zap } from "lucide-react"
+import { Ruler, Zap } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
@@ -30,9 +30,6 @@ export function SolarPanelCalculator() {
   const [monthlyKwh, setMonthlyKwh] = useState("1000")
   const [offsetPercent, setOffsetPercent] = useState(100)
   const [panelWatts, setPanelWatts] = useState(400)
-  const [advanced, setAdvanced] = useState(false)
-
-  // Advanced-only inputs, pre-filled with the easy-mode assumptions.
   const [shade, setShade] = useState<Shade>("none")
   const [derate, setDerate] = useState(85)
   const [started, setStarted] = useState(false)
@@ -51,16 +48,12 @@ export function SolarPanelCalculator() {
         annualKwh: 0,
         offsetPercent,
         panelWatts,
-        // Easy mode keeps the optimistic-but-reasonable defaults.
         orientation: "south",
-        shade: advanced ? shade : "none",
+        shade,
         pitch: "typical",
-        derate: advanced ? derate / 100 : 0.85,
+        derate: derate / 100,
       }),
-    [
-      zip, basis, monthlyBill, monthlyKwh, offsetPercent, panelWatts,
-      advanced, shade, derate,
-    ],
+    [zip, basis, monthlyBill, monthlyKwh, offsetPercent, panelWatts, shade, derate],
   )
 
   // Feed the 3D explorer above the tabs. Publish only once the tool has enough
@@ -139,19 +132,6 @@ export function SolarPanelCalculator() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Start with a common scenario
             </p>
-            <button
-              type="button"
-              onClick={() => setAdvanced((v) => !v)}
-              aria-pressed={advanced}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-sm transition-colors",
-                advanced
-                  ? "border-primary bg-primary/15 font-medium text-foreground"
-                  : "border-input bg-background text-muted-foreground hover:border-ring hover:text-foreground",
-              )}
-            >
-              {advanced ? "Advanced mode on" : "Advanced mode"}
-            </button>
           </div>
 
           <div className="flex flex-wrap gap-2 border-b border-border px-5 py-4">
@@ -170,17 +150,19 @@ export function SolarPanelCalculator() {
 
           <div className="flex flex-col gap-5 p-5">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="What do you know?">
-                <Segmented
-                  value={basis}
-                  onChange={setBasis}
-                  ariaLabel="Usage basis"
-                  options={(["bill", "monthly-kwh"] as UsageBasis[]).map((v) => ({
-                    value: v,
-                    label: BASIS_LABELS[v],
-                  }))}
-                />
-              </Field>
+              <div className="sm:col-span-2">
+                <Field label="What do you know?">
+                  <Segmented
+                    value={basis}
+                    onChange={setBasis}
+                    ariaLabel="Usage basis"
+                    options={(["bill", "monthly-kwh"] as UsageBasis[]).map((v) => ({
+                      value: v,
+                      label: BASIS_LABELS[v],
+                    }))}
+                  />
+                </Field>
+              </div>
 
               {basis === "bill" ? (
                 <Field
@@ -233,10 +215,6 @@ export function SolarPanelCalculator() {
                 />
               </Field>
 
-              {advanced ? shadingField : offsetField}
-            </div>
-
-            <div className="w-full sm:w-1/3">
               <Field label="Panel wattage" htmlFor="panel-watts">
                 <select
                   id="panel-watts"
@@ -251,35 +229,29 @@ export function SolarPanelCalculator() {
                   ))}
                 </select>
               </Field>
+
+              {shadingField}
             </div>
 
-            {advanced ? (
-              <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-                {offsetField}
-                <Field
-                  label={`System losses — ${derate}% delivered`}
-                  htmlFor="panel-derate"
-                  hint="Power lost to heat, dust & wiring."
-                >
-                  <input
-                    id="panel-derate"
-                    type="range"
-                    min={70}
-                    max={95}
-                    step={1}
-                    value={derate}
-                    onChange={(e) => setDerate(Number(e.target.value))}
-                    className="h-9 w-full accent-primary"
-                  />
-                </Field>
-              </div>
-            ) : (
-              <p className="flex items-start gap-2 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-                <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                Easy mode assumes an unshaded, south-facing roof at a typical pitch with 85% system
-                efficiency. Turn on advanced mode to set shading and system losses.
-              </p>
-            )}
+            <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+              {offsetField}
+              <Field
+                label={`System losses — ${derate}% delivered`}
+                htmlFor="panel-derate"
+                hint="Power lost to heat, dust & wiring."
+              >
+                <input
+                  id="panel-derate"
+                  type="range"
+                  min={70}
+                  max={95}
+                  step={1}
+                  value={derate}
+                  onChange={(e) => setDerate(Number(e.target.value))}
+                  className="h-9 w-full accent-primary"
+                />
+              </Field>
+            </div>
           </div>
         </div>
 
