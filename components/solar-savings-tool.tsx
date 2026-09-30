@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils"
 import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromSavings } from "@/lib/solar-scene"
 import {
-  ARRAY_DETACH_RESET_COST,
   DEFAULT_ASSUMPTIONS,
   ROOF_REPLACEMENT_COSTS,
   ROOF_TYPE_LABELS,
@@ -427,18 +426,8 @@ export function SolarSavingsTool() {
                           <TrendingUp className="size-4 text-primary" aria-hidden="true" />
                           Savings over time
                         </h3>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Segmented<Payment>
-                          value={payment}
-                          onChange={setPayment}
-                          ariaLabel="Show cumulative savings for"
-                          options={[
-                            { value: "cash", label: "Cash" },
-                            { value: "finance", label: "Loan" },
-                            { value: "lease", label: "Lease / PPA" },
-                          ]}
-                          />
-                          <div className="flex w-fit flex-col gap-1.5">
+                        <div className="grid w-fit grid-cols-[auto_auto] items-center gap-x-2 gap-y-1.5">
+                          <div className="col-start-2">
                             <AddOnToggle
                               id="solar-add-roof"
                               checked={wantsNewRoof}
@@ -447,15 +436,25 @@ export function SolarSavingsTool() {
                               label="New roof"
                               title={`+${money(ROOF_REPLACEMENT_COSTS[roofType])}, not eligible for the tax credit`}
                             />
-                            <AddOnToggle
-                              id="solar-add-battery"
-                              checked={wantsBattery}
-                              onChange={setWantsBattery}
-                              icon={BatteryCharging}
-                              label="Battery"
-                              title={`+${money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit`}
-                            />
                           </div>
+                          <Segmented<Payment>
+                            value={payment}
+                            onChange={setPayment}
+                            ariaLabel="Show cumulative savings for"
+                            options={[
+                              { value: "cash", label: "Cash" },
+                              { value: "finance", label: "Loan" },
+                              { value: "lease", label: "Lease / PPA" },
+                            ]}
+                          />
+                          <AddOnToggle
+                            id="solar-add-battery"
+                            checked={wantsBattery}
+                            onChange={setWantsBattery}
+                            icon={BatteryCharging}
+                            label="Battery"
+                            title={`+${money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit`}
+                          />
                         </div>
                         <dl className="grid grid-cols-2 gap-4">
                           <div>
@@ -564,36 +563,6 @@ export function SolarSavingsTool() {
                         </div>
                       ))}
                     </dl>
-                    <div className="mt-3 rounded-md border border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-                      <p aria-live="polite">
-                        <span className="font-medium text-foreground">
-                          {wantsNewRoof
-                            ? `New roof adds ${money(ROOF_REPLACEMENT_COSTS[roofType])}.`
-                            : "Should you re-roof first?"}
-                        </span>{" "}
-                        Replacing your {ROOF_TYPE_LABELS[roofType].toLowerCase()} roof runs about{" "}
-                        {money(ROOF_REPLACEMENT_COSTS[roofType])} and is not eligible for the{" "}
-                        {Math.round(assumptions.itcPercent * 100)}% tax credit, so it adds dollar for dollar to
-                        your net cost{payment === "finance" ? " and loan balance" : ""} and lengthens payback.
-                        Monthly bill savings stay the same. If your roof has under about 10 years left,
-                        replacing it now avoids roughly {money(ARRAY_DETACH_RESET_COST)} to remove and
-                        reinstall the panels later.
-                      </p>
-                    </div>
-                    <div className="mt-3 rounded-md border border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-                      <p>
-                        <span className="font-medium text-foreground">
-                          {result.batteryVerdict === "recommended"
-                            ? "A battery likely makes sense."
-                            : result.batteryVerdict === "optional"
-                              ? "A battery is optional here."
-                              : "A battery is hard to justify financially."}
-                        </span>{" "}
-                        {result.batteryReasons.join(" ")} On bill savings alone it takes{" "}
-                        {result.batteryPaybackYears ? `${result.batteryPaybackYears.toFixed(0)}+ years` : "many years"}{" "}
-                        to pay back, so most people add one for backup power rather than return.
-                      </p>
-                    </div>
                   </section>
               </div>
             )}
