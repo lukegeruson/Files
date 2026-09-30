@@ -353,7 +353,7 @@ export function SolarSavingsTool() {
         </div>
 
         {/* Live results */}
-        <div className={showResults ? "lg:col-span-4 lg:col-start-1" : "lg:col-span-2 lg:self-stretch"}>
+        <div className={showResults ? "lg:col-span-4" : "lg:col-span-2 lg:self-stretch"}>
           <div className="flex h-full flex-col gap-4">
             {!showResults ? (
               <div className="h-full rounded-lg border border-dashed border-border bg-card p-6">
@@ -364,7 +364,7 @@ export function SolarSavingsTool() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+              <div className="flex flex-col gap-4">
                 <div className={cn("rounded-lg border p-5", verdictTone)}>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Recommendation
