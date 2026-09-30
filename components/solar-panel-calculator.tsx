@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Info, LayoutGrid, Ruler, Zap } from "lucide-react"
+import { Info, Ruler, Zap } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
@@ -43,6 +43,10 @@ export function SolarPanelCalculator() {
   const [pitch, setPitch] = useState<RoofPitch>("typical")
   const [derate, setDerate] = useState(85)
   const [roofWidthFt, setRoofWidthFt] = useState("30")
+  const [started, setStarted] = useState(false)
+  const markStarted = () => {
+    if (!started) setStarted(true)
+  }
 
   const result = useMemo(
     () =>
@@ -72,7 +76,7 @@ export function SolarPanelCalculator() {
   // input to size a real array; otherwise the scene keeps its mock home.
   const publishScene = usePublishSolarScene()
   useEffect(() => {
-    publishScene(result.ready ? snapshotFromPanels(result) : null)
+    publishScene(started && result.ready ? snapshotFromPanels(result) : null)
   }, [result, publishScene])
 
   function applyScenario(id: string) {
@@ -100,7 +104,11 @@ export function SolarPanelCalculator() {
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {/* Inputs */}
-        <div className="rounded-lg border border-border bg-card">
+        <div
+          className="rounded-lg border border-border bg-card"
+          onChangeCapture={markStarted}
+          onClickCapture={markStarted}
+        >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Start with a common scenario
@@ -324,14 +332,19 @@ export function SolarPanelCalculator() {
         </div>
 
         {/* Results */}
-        <div className={cn("flex min-w-0 flex-col gap-4", !result.ready && "lg:self-stretch")}>
-          {!result.ready ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
-              <LayoutGrid className="size-5 text-muted-foreground" aria-hidden="true" />
-              <h3 className="font-serif text-lg font-semibold">Your panel count appears here</h3>
-              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-                Enter your monthly bill or usage above, or pick one of the common scenarios, to size
-                a system.
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-4",
+            !(started && result.ready) && "lg:self-stretch",
+          )}
+        >
+          {!(started && result.ready) ? (
+            <div className="flex-1 rounded-lg border border-dashed border-border bg-card p-6">
+              <h3 className="font-serif text-lg font-semibold">Your results will appear here</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Enter your ZIP code and monthly bill or usage, then adjust how much of your
+                electricity you want solar to cover to see how many panels and what size system
+                you need.
               </p>
             </div>
           ) : (
