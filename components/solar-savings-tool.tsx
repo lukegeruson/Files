@@ -125,10 +125,10 @@ export function SolarSavingsTool() {
         </p>
       </div>
 
-      {/* Form centered at half width; the empty-state placeholder sits to its right, full results stack below */}
+      {/* Form aligned with the heading at half width; the empty-state placeholder sits to its right, full results stack below */}
       <div className="grid gap-6 lg:grid-cols-8 lg:items-start">
         {/* Form */}
-        <div className={cn("lg:col-span-4", ready ? "lg:col-start-3" : "lg:col-start-2")}>
+        <div className="lg:col-span-4 lg:col-start-1">
           <div className="rounded-lg border border-border bg-card">
             {/* Step tabs */}
             <div className="flex border-b border-border">
@@ -348,10 +348,10 @@ export function SolarSavingsTool() {
         </div>
 
         {/* Live results */}
-        <div className={ready ? "lg:col-span-4 lg:col-start-3" : "lg:col-span-2"}>
-          <div className="flex flex-col gap-4">
+        <div className={ready ? "lg:col-span-4 lg:col-start-1" : "lg:col-span-2 lg:self-stretch"}>
+          <div className="flex h-full flex-col gap-4">
             {!ready ? (
-              <div className="rounded-lg border border-dashed border-border bg-card p-6">
+              <div className="h-full rounded-lg border border-dashed border-border bg-card p-6">
                 <h3 className="font-serif text-lg font-semibold">Your estimate appears here</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   Enter a ZIP code and your average monthly bill to see system size, cost, payback,
