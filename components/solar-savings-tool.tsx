@@ -468,41 +468,6 @@ export function SolarSavingsTool() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-4">
-                  <Panel title="Why this recommendation" icon={<CircleCheck className="size-4 text-primary" aria-hidden="true" />}>
-                    {result.reasons.length ? (
-                      <ul className="flex flex-col gap-2.5">
-                        {result.reasons.map((r) => (
-                          <li key={r} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
-                            <CircleCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                            <span>{r}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No strong positive factors stand out at these inputs.
-                      </p>
-                    )}
-                  </Panel>
-                  <Panel title="What to watch out for" icon={<CircleAlert className="size-4 text-primary" aria-hidden="true" />}>
-                    {result.cautions.length ? (
-                      <ul className="flex flex-col gap-2.5">
-                        {result.cautions.map((c) => (
-                          <li key={c} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
-                            <CircleAlert className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                            <span>{c}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Nothing significant is working against solar at these inputs.
-                      </p>
-                    )}
-                  </Panel>
-                </div>
-
                   <Panel title="Cumulative savings over time" icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}>
                     <div className="flex h-40 items-end gap-3">
                       {milestones.map((y) => {
