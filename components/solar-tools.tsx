@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { LayoutGrid, Sun } from "lucide-react"
+import { ArrowRight, LayoutGrid, Sun } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { SolarSavingsTool } from "@/components/solar-savings-tool"
 import { SolarPanelCalculator } from "@/components/solar-panel-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
@@ -40,15 +41,48 @@ const TOOL_HASHES: Record<string, ToolId> = {
   "solar-panel-calculator": "panels",
 }
 
+function SavingsCover({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-5 rounded-lg border border-border bg-card px-6 py-16 text-center md:py-20">
+      <span className="flex size-12 items-center justify-center rounded-full bg-primary/15 text-foreground">
+        <Sun className="size-6" aria-hidden="true" />
+      </span>
+      <div className="flex max-w-md flex-col gap-2">
+        <h2 className="text-balance font-serif text-3xl font-semibold tracking-tight md:text-4xl">
+          Should you go solar?
+        </h2>
+        <p className="text-pretty leading-relaxed text-muted-foreground">
+          Answer a few quick questions to see your cost after incentives, payback period, and
+          25-year savings.
+        </p>
+      </div>
+      <Button size="lg" onClick={onStart} className="rounded-full px-8">
+        Start
+        <ArrowRight className="size-4" aria-hidden="true" />
+      </Button>
+    </div>
+  )
+}
+
 export function SolarTools() {
   const [active, setActive] = useState<ToolId>("savings")
+  const [savingsStarted, setSavingsStarted] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  function startSavings() {
+    setSavingsStarted(true)
+    // Move focus to the first field once the calculator has mounted.
+    requestAnimationFrame(() => document.getElementById("solar-zip")?.focus())
+  }
 
   useEffect(() => {
     function applyHash() {
-      const tool = TOOL_HASHES[window.location.hash.replace(/^#/, "")]
+      const hash = window.location.hash.replace(/^#/, "")
+      const tool = TOOL_HASHES[hash]
       if (!tool) return
       setActive(tool)
+      // A direct link to the savings calculator skips the start cover.
+      if (hash === "solar-savings-calculator") setSavingsStarted(true)
       containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     }
 
@@ -124,7 +158,15 @@ export function SolarTools() {
         aria-labelledby={`solar-tab-${active}`}
         className="w-full"
       >
-        {active === "savings" ? <SolarSavingsTool /> : <SolarPanelCalculator />}
+        {active === "savings" ? (
+          savingsStarted ? (
+            <SolarSavingsTool />
+          ) : (
+            <SavingsCover onStart={startSavings} />
+          )
+        ) : (
+          <SolarPanelCalculator />
+        )}
       </div>
     </div>
     </SolarSceneProvider>
