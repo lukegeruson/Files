@@ -41,11 +41,18 @@ type ChartMode = "cash" | "finance" | "lease"
 function cumulativeFor(
   mode: ChartMode,
   year: number,
-  result: { savingsByYear: Array<{ cumulative: number }>; itcAmount: number; loanMonthlyPayment: number; leaseMonthlySavings: number },
+  result: {
+    savingsByYear: Array<{ cumulative: number }>
+    itcAmount: number
+    netCost: number
+    loanMonthlyPayment: number
+    leaseMonthlySavings: number
+  },
   loanTermYears: number,
 ): number {
-  const billSavings = result.savingsByYear[year - 1]?.cumulative ?? 0
-  if (mode === "cash") return billSavings
+  const billSavings = year > 0 ? (result.savingsByYear[year - 1]?.cumulative ?? 0) : 0
+  if (mode === "cash") return billSavings - result.netCost
+  if (year === 0) return 0
   if (mode === "finance") {
     const paymentsSoFar = result.loanMonthlyPayment * 12 * Math.min(year, loanTermYears)
     return billSavings + result.itcAmount - paymentsSoFar
@@ -123,12 +130,15 @@ export function SolarSavingsTool() {
 
 
   const [chartMode, setChartMode] = useState<ChartMode>("cash")
-  const milestones = [5, 10, 15, 20, 25].filter((y) => y <= assumptions.horizonYears)
+  const milestones = [0, 5, 10, 15, 20, 25].filter((y) => y <= assumptions.horizonYears)
   const chartSeries = milestones.map((y) => ({
     year: y,
     value: cumulativeFor(chartMode, y, result, assumptions.loanTermYears),
   }))
-  const maxAbs = Math.max(1, ...chartSeries.map((p) => Math.abs(p.value)))
+  const maxPositive = Math.max(0, ...chartSeries.map((p) => p.value))
+  const maxNegative = Math.max(0, ...chartSeries.map((p) => -p.value))
+  const chartRange = Math.max(1, maxPositive + maxNegative)
+  const positiveShare = (maxPositive / chartRange) * 100
   const horizonValue = cumulativeFor(
     chartMode,
     assumptions.horizonYears,
@@ -418,29 +428,48 @@ export function SolarSavingsTool() {
                       </div>
                       <div>
                         <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          {assumptions.horizonYears}-yr {chartMode === "cash" ? "savings" : "net savings"}
+                          {assumptions.horizonYears}-yr net savings
                         </dt>
                         <dd className="font-serif text-2xl tabular-nums">{signedMoney(horizonValue)}</dd>
                       </div>
                     </dl>
-                    <div className="mt-4 flex h-44 gap-3">
+                    <div className="mt-4 flex h-52 gap-2">
                       {chartSeries.map(({ year, value }) => {
-                        const pct = Math.max(4, (Math.abs(value) / maxAbs) * 100)
+                        const positivePct = value > 0 && maxPositive > 0 ? (value / maxPositive) * 100 : 0
+                        const negativePct = value < 0 && maxNegative > 0 ? (-value / maxNegative) * 100 : 0
                         return (
                           <div key={year} className="flex h-full flex-1 flex-col items-center gap-2">
-                            <span className="font-serif text-xs tabular-nums text-muted-foreground">
+                            <span
+                              className={cn(
+                                "font-serif text-xs tabular-nums",
+                                value < 0 ? "text-foreground" : "text-muted-foreground",
+                              )}
+                            >
                               {signedMoney(value)}
                             </span>
-                            <div className="flex min-h-0 w-full flex-1 items-end">
+                            <div
+                              className="flex min-h-0 w-full flex-1 flex-col"
+                              role="img"
+                              aria-label={
+                                year === 0
+                                  ? `Year 0, upfront: ${signedMoney(value)}`
+                                  : `By year ${year}, about ${signedMoney(value)} ${value >= 0 ? "ahead" : "behind"}`
+                              }
+                            >
+                              <div className="flex w-full items-end" style={{ height: `${positiveShare}%` }}>
+                                <div
+                                  className="w-full rounded-t bg-primary/70 transition-[height] duration-300"
+                                  style={{ height: `${positivePct}%` }}
+                                />
+                              </div>
                               <div
-                                className={cn(
-                                  "w-full rounded-t transition-[height] duration-300",
-                                  value >= 0 ? "bg-primary/70" : "bg-muted-foreground/30",
-                                )}
-                                style={{ height: `${pct}%` }}
-                                role="img"
-                                aria-label={`By year ${year}, about ${signedMoney(value)} ${value >= 0 ? "saved" : "behind"}`}
-                              />
+                                className="flex w-full flex-1 items-start border-t border-foreground/40"
+                              >
+                                <div
+                                  className="w-full rounded-b bg-muted-foreground/40 transition-[height] duration-300"
+                                  style={{ height: `${negativePct}%` }}
+                                />
+                              </div>
                             </div>
                             <span className="text-xs tabular-nums text-muted-foreground">Yr {year}</span>
                           </div>
@@ -449,10 +478,10 @@ export function SolarSavingsTool() {
                     </div>
                     <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                       {chartMode === "cash"
-                        ? "Bill savings you keep after paying for the system upfront."
+                        ? `Year 0 is what you pay upfront after the ${money(result.itcAmount)} tax credit; bill savings then pay it back.`
                         : chartMode === "finance"
-                          ? `Bill savings plus the tax credit, minus ${assumptions.loanTermYears} years of loan payments.`
-                          : "Bill savings minus your lease or PPA payments; the installer keeps the tax credit."}{" "}
+                          ? `Nothing down at year 0. Bill savings plus the tax credit, minus ${assumptions.loanTermYears} years of loan payments.`
+                          : "No upfront cost at year 0. Bill savings minus your lease or PPA payments; the installer keeps the tax credit."}{" "}
                       Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
                       panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
                     </p>
