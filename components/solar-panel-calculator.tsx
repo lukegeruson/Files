@@ -74,14 +74,14 @@ export function SolarPanelCalculator() {
 
   const offsetField = (
     <Field
-      label={`Power from solar — ${offsetPercent}%`}
+      label={`Solar share of power — ${offsetPercent}%`}
       htmlFor="panel-offset"
       hint={
         offsetPercent < 100
-          ? `Grid supplies the other ${100 - offsetPercent}%.`
+          ? `Your utility supplies the other ${100 - offsetPercent}%.`
           : offsetPercent === 100
             ? "Panels make all the power you use."
-            : `Panels make ${offsetPercent - 100}% extra power.`
+            : `Panels make ${offsetPercent - 100}% more than you use.`
       }
     >
       <input
