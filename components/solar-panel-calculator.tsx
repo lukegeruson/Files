@@ -8,11 +8,9 @@ import { cn } from "@/lib/utils"
 import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromPanels } from "@/lib/solar-scene"
 import {
-  ORIENTATION_LABELS,
   SHADE_LABELS,
   number as fmtNumber,
   money,
-  type Orientation,
   type Shade,
 } from "@/lib/solar"
 import {
@@ -20,9 +18,7 @@ import {
   DEFAULT_PANEL_INPUTS,
   PANEL_OPTIONS,
   PANEL_SCENARIOS,
-  PITCH_LABELS,
   computePanels,
-  type RoofPitch,
   type UsageBasis,
 } from "@/lib/solar-panels"
 
@@ -38,9 +34,7 @@ export function SolarPanelCalculator() {
   const [advanced, setAdvanced] = useState(false)
 
   // Advanced-only inputs, pre-filled with the easy-mode assumptions.
-  const [orientation, setOrientation] = useState<Orientation>("south")
   const [shade, setShade] = useState<Shade>("none")
-  const [pitch, setPitch] = useState<RoofPitch>("typical")
   const [derate, setDerate] = useState(85)
   const [roofWidthFt, setRoofWidthFt] = useState("30")
   const [started, setStarted] = useState(false)
@@ -60,15 +54,15 @@ export function SolarPanelCalculator() {
         offsetPercent,
         panelWatts,
         // Easy mode keeps the optimistic-but-reasonable defaults.
-        orientation: advanced ? orientation : "south",
+        orientation: "south",
         shade: advanced ? shade : "none",
-        pitch: advanced ? pitch : "typical",
+        pitch: "typical",
         derate: advanced ? derate / 100 : 0.85,
         roofWidthFt: advanced ? Number.parseFloat(roofWidthFt) || 30 : 30,
       }),
     [
       zip, basis, monthlyBill, monthlyKwh, annualKwh, offsetPercent, panelWatts,
-      advanced, orientation, shade, pitch, derate, roofWidthFt,
+      advanced, shade, derate, roofWidthFt,
     ],
   )
 
@@ -249,34 +243,6 @@ export function SolarPanelCalculator() {
 
             {advanced ? (
               <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-                <Field label="Roof orientation" htmlFor="panel-orientation">
-                  <select
-                    id="panel-orientation"
-                    className={selectClass}
-                    value={orientation}
-                    onChange={(e) => setOrientation(e.target.value as Orientation)}
-                  >
-                    {Object.entries(ORIENTATION_LABELS).map(([v, label]) => (
-                      <option key={v} value={v}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Roof pitch" htmlFor="panel-pitch">
-                  <select
-                    id="panel-pitch"
-                    className={selectClass}
-                    value={pitch}
-                    onChange={(e) => setPitch(e.target.value as RoofPitch)}
-                  >
-                    {Object.entries(PITCH_LABELS).map(([v, label]) => (
-                      <option key={v} value={v}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
                 <Field label="Shading" htmlFor="panel-shade">
                   <select
                     id="panel-shade"
@@ -325,7 +291,7 @@ export function SolarPanelCalculator() {
               <p className="flex items-start gap-2 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
                 <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 Easy mode assumes an unshaded, south-facing roof at a typical pitch with 85% system
-                efficiency. Turn on advanced mode to set orientation, pitch, shade and losses.
+                efficiency. Turn on advanced mode to set shading, system losses and roof width.
               </p>
             )}
           </div>
