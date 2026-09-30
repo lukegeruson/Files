@@ -146,7 +146,7 @@ export function SolarPanelCalculator() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-6">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {/* Inputs */}
         <div className="rounded-lg border border-border bg-card">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
@@ -372,9 +372,9 @@ export function SolarPanelCalculator() {
         </div>
 
         {/* Results */}
-        <div className="flex flex-col gap-4">
+        <div className={cn("flex min-w-0 flex-col gap-4", !result.ready && "lg:self-stretch")}>
           {!result.ready ? (
-            <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
               <LayoutGrid className="size-5 text-muted-foreground" aria-hidden="true" />
               <h3 className="font-serif text-lg font-semibold">Your panel count appears here</h3>
               <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
@@ -399,7 +399,7 @@ export function SolarPanelCalculator() {
                 </p>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+              <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
                 <Panel title="System summary" icon={<Zap className="size-4" aria-hidden="true" />}>
                   <div className="flex flex-col gap-3">
                     <Stat
@@ -443,6 +443,7 @@ export function SolarPanelCalculator() {
                 </Panel>
 
                 <Panel
+                  className="sm:col-span-2"
                   title="Approximate layout"
                   icon={<Grid2x2 className="size-4" aria-hidden="true" />}
                 >
