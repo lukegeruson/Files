@@ -54,7 +54,6 @@ export const QUOTE_CATEGORIES: Record<QuoteCategory, CategoryConfig> = {
       { id: "solar-battery", label: "Solar + battery" },
       { id: "battery-storage", label: "Battery storage" },
       { id: "panel-replacement", label: "Panel replacement" },
-      { id: "other", label: "Other" },
     ],
     sizeQuestion: {
       label: "Estimated system size",
@@ -73,7 +72,6 @@ export const QUOTE_CATEGORIES: Record<QuoteCategory, CategoryConfig> = {
       { id: "irrigation", label: "Irrigation" },
       { id: "hardscape", label: "Hardscape" },
       { id: "maintenance", label: "Maintenance" },
-      { id: "other", label: "Other" },
     ],
     sizeQuestion: {
       label: "Project size or budget",
@@ -92,7 +90,6 @@ export const QUOTE_CATEGORIES: Record<QuoteCategory, CategoryConfig> = {
       { id: "hvac", label: "HVAC" },
       { id: "flooring", label: "Flooring" },
       { id: "exterior", label: "Exterior" },
-      { id: "other", label: "Other" },
     ],
     sizeQuestion: {
       label: "Budget range",
@@ -110,7 +107,6 @@ export const QUOTE_CATEGORIES: Record<QuoteCategory, CategoryConfig> = {
       { id: "structures", label: "Structures" },
       { id: "land-improvement", label: "Land improvement" },
       { id: "agricultural-project", label: "Agricultural project" },
-      { id: "other", label: "Other" },
     ],
     sizeQuestion: {
       label: "Project size or budget",

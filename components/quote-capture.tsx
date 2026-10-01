@@ -379,19 +379,18 @@ export function QuoteCapture({
                   className="h-10"
                 />
               </div>
+              <AddAnotherProject
+                primaryCategory={category}
+                defaultZip={zipCode}
+                projects={additionalProjects}
+                onChange={setAdditionalProjects}
+              />
             </div>
             {triedContact && !contactValid ? (
               <p className="text-xs text-destructive">
                 Please add your name and a valid email so a professional can reach you.
               </p>
             ) : null}
-
-            <AddAnotherProject
-              primaryCategory={category}
-              defaultZip={zipCode}
-              projects={additionalProjects}
-              onChange={setAdditionalProjects}
-            />
           </div>
         ) : null}
 
@@ -574,7 +573,9 @@ function AddAnotherProject({
   }
 
   return (
-    <div className="rounded-2xl border border-dashed border-border/80 p-3.5">
+    <div
+      className={`self-end rounded-2xl border border-dashed border-border/80 p-3 ${drafting ? "sm:col-span-2" : ""}`}
+    >
       {projects.length > 0 ? (
         <ul className="mb-3 flex flex-wrap gap-2">
           {projects.map((p, i) => (
