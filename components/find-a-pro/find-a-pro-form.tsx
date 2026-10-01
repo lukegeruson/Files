@@ -179,7 +179,8 @@ export function FindAProForm() {
             Tell us about the project
           </legend>
           <div className="mt-4 flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
+            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <label htmlFor="fp-zip" className={FIELD_LABEL}>
                 ZIP code
               </label>
@@ -192,25 +193,10 @@ export function FindAProForm() {
                 placeholder="e.g. 94103"
                 value={zip}
                 onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
-                className="h-10 max-w-40"
+                className="h-10"
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="fp-description" className={FIELD_LABEL}>
-                Project description
-              </label>
-              <Textarea
-                id="fp-description"
-                name="description"
-                maxLength={4000}
-                rows={5}
-                placeholder="Describe what you're planning, any details that help, and what you're hoping to achieve."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="min-h-28 resize-y leading-relaxed"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <label htmlFor="fp-budget" className={FIELD_LABEL}>
                 Approximate budget <span className="normal-case">(optional)</span>
               </label>
@@ -228,7 +214,7 @@ export function FindAProForm() {
                 ))}
               </select>
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5">
               <label htmlFor="fp-timeframe" className={FIELD_LABEL}>
                 Project timeframe
               </label>
@@ -246,6 +232,22 @@ export function FindAProForm() {
                   </option>
                 ))}
               </select>
+            </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="fp-description" className={FIELD_LABEL}>
+                Project description
+              </label>
+              <Textarea
+                id="fp-description"
+                name="description"
+                maxLength={4000}
+                rows={5}
+                placeholder="Describe what you're planning, any details that help, and what you're hoping to achieve."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="min-h-28 resize-y leading-relaxed"
+              />
             </div>
           </div>
         </fieldset>
