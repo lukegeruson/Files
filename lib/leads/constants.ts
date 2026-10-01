@@ -29,9 +29,9 @@ export const SERVICES_BY_CATEGORY: Record<Category, string[]> = {
   ],
   renovation: [
     "Kitchen & bathroom remodel",
-    "Whole-home renovation",
+    "Electrical & plumbing",
     "Roofing & exterior",
-    "Electrical, plumbing & HVAC",
+    "HVAC",
   ],
   agriculture: [
     "Land clearing, fencing & livestock",
