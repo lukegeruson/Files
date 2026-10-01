@@ -17,7 +17,6 @@ import { snapshotFromSavings } from "@/lib/solar-scene"
 import {
   DEFAULT_ASSUMPTIONS,
   ROOF_REPLACEMENT_COSTS,
-  ROOF_TYPE_LABELS,
   SHADE_LABELS,
   computeSolar,
   money,
@@ -119,7 +118,7 @@ export function SolarSavingsTool() {
 
   // Step 2 — roof and sun.
   const roofCondition: RoofCondition = "good"
-  const [roofType, setRoofType] = useState<RoofType>("asphalt")
+  const roofType: RoofType = "asphalt"
   const orientation: Orientation = "south"
   const [shade, setShade] = useState<Shade>("light")
 
@@ -293,7 +292,7 @@ export function SolarSavingsTool() {
                       />
                     </Field>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Do you have an EV?" hint="Adds home charging load.">
                       <Segmented
                         ariaLabel="Electric vehicle"
@@ -305,18 +304,6 @@ export function SolarSavingsTool() {
                           { value: "yes", label: "Yes", title: "Yes, I charge at home" },
                         ]}
                       />
-                    </Field>
-                    <Field label="Roof type" htmlFor="solar-roof-type" hint="Affects mounting labor cost.">
-                      <select
-                        id="solar-roof-type"
-                        className={selectClass}
-                        value={roofType}
-                        onChange={(e) => setRoofType(e.target.value as RoofType)}
-                      >
-                        {Object.entries(ROOF_TYPE_LABELS).map(([v, l]) => (
-                          <option key={v} value={v}>{l}</option>
-                        ))}
-                      </select>
                     </Field>
                     <Field label="Shade level" htmlFor="solar-shade" hint="Biggest drag on production.">
                       <select
