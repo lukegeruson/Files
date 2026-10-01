@@ -74,12 +74,6 @@ export const PARTNERSHIP_OPTIONS = [
     fields: "leadPartner",
   },
   {
-    id: "listing",
-    label: "List my company",
-    description: "Add a company profile to the Evergreen directory.",
-    fields: "none",
-  },
-  {
     id: "hiring",
     label: "Hire workers / post jobs",
     description: "Reach skilled trade workers across all four industries.",
@@ -95,12 +89,6 @@ export const PARTNERSHIP_OPTIONS = [
     id: "referral",
     label: "Referral partnership",
     description: "Refer customers to and from Evergreen.",
-    fields: "none",
-  },
-  {
-    id: "sponsorship",
-    label: "Sponsorship",
-    description: "Sponsor tools, guides, or industry sections.",
     fields: "none",
   },
 ] as const

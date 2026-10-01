@@ -6,7 +6,7 @@ import { pageMetadata } from "@/lib/seo"
 export const metadata = pageMetadata({
   title: "Partner With Evergreen",
   description:
-    "Connect your company with Evergreen through customer leads, company listings, hiring, expert contributions, referrals, research, sponsorships, and other partnerships.",
+    "Connect your company with Evergreen through customer leads, hiring, expert contributions, and referrals.",
   path: "/partners",
 })
 
@@ -23,9 +23,8 @@ export default function PartnersPage() {
             Partner With Evergreen
           </h1>
           <p className="mt-4 text-pretty text-lg leading-relaxed text-muted-foreground">
-            Connect your company with Evergreen through customer leads, company
-            listings, hiring, expert contributions, referrals, research,
-            sponsorships, and other partnerships.
+            Connect your company with Evergreen through customer leads, hiring,
+            expert contributions, and referrals.
           </p>
 
           <div className="mt-8">
