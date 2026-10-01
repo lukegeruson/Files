@@ -18,7 +18,7 @@ export const SERVICES_BY_CATEGORY: Record<Category, string[]> = {
   solar: [
     "Solar panel installation",
     "Battery & energy storage",
-    "Design, permits & energy audit",
+    "Design and energy audit",
     "Maintenance & repair",
   ],
   landscaping: [
