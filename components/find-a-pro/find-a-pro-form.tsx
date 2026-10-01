@@ -16,6 +16,13 @@ import { submitLead, type LeadState } from "@/app/actions/leads"
 
 const TOTAL_STEPS = 4
 
+const CATEGORY_EMOJI: Record<Category, string> = {
+  solar: "☀️",
+  renovation: "🔨",
+  landscaping: "🌳",
+  agriculture: "🌾",
+}
+
 const FIELD_LABEL =
   "text-xs font-medium uppercase tracking-wide text-muted-foreground"
 
@@ -103,7 +110,12 @@ export function FindAProForm() {
                     : "border-border hover:border-primary"
                 }`}
               >
-                {CATEGORY_LABELS[c]}
+                <span className="flex items-center gap-3">
+                  <span aria-hidden="true" className="text-xl leading-none">
+                    {CATEGORY_EMOJI[c]}
+                  </span>
+                  {CATEGORY_LABELS[c]}
+                </span>
                 <ArrowRight className="size-4 text-primary" aria-hidden="true" />
               </button>
             ))}
