@@ -47,6 +47,12 @@ const PROJECT_ICON: Record<ProjectId, React.ReactNode> = {
 }
 
 const CONDITIONS: Condition[] = ["good", "dated", "worn", "damaged"]
+const CONDITION_SHORT: Record<Condition, string> = {
+  good: "Solid",
+  dated: "Dated",
+  worn: "Worn out",
+  damaged: "Water damage",
+}
 const FINISHES: Finish[] = ["basic", "mid", "premium"]
 const LABOR_MODES: LaborMode[] = ["diy", "trades", "gc"]
 
@@ -200,11 +206,13 @@ export function RemodelCostCalculator() {
               <Field label="Or start from a typical size">
                 <Segmented
                   ariaLabel="Size preset"
+                  singleRow
                   value={size}
                   onChange={setSize}
                   options={def.sizePresets.map((p) => ({
                     value: String(p.value),
-                    label: `${p.label} · ${p.value} ${def.sizeUnit}`,
+                    label: `${p.value} ${def.sizeUnit}`,
+                    title: `${p.label} · ${p.value} ${def.sizeUnit}`,
                   }))}
                 />
               </Field>
@@ -215,6 +223,7 @@ export function RemodelCostCalculator() {
               >
                 <Segmented
                   ariaLabel="Scope of work"
+                  singleRow
                   value={scope}
                   onChange={chooseScope}
                   options={def.scopes.map((s) => ({ value: s.id, label: s.label }))}
@@ -227,9 +236,14 @@ export function RemodelCostCalculator() {
               >
                 <Segmented
                   ariaLabel="Current condition"
+                  singleRow
                   value={condition}
                   onChange={setCondition}
-                  options={CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABELS[c] }))}
+                  options={CONDITIONS.map((c) => ({
+                    value: c,
+                    label: CONDITION_SHORT[c],
+                    title: CONDITION_LABELS[c],
+                  }))}
                 />
               </Field>
 
@@ -408,85 +422,6 @@ export function RemodelCostCalculator() {
           ) : null}
         </div>
       </div>
-
-      {/* ---------------- Drivers & line items ---------------- */}
-      {!result.isEmpty ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Panel
-            title="Your biggest cost drivers"
-            icon={<TrendingUp className="size-4" aria-hidden="true" />}
-          >
-            <ul className="flex flex-col">
-              {result.drivers.map((d) => (
-                <li key={d.label} className="flex flex-col gap-1 border-t border-border py-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm font-medium">{d.label}</span>
-                    <span className="text-sm tabular-nums">
-                      {formatMoney(d.amount)} · {Math.round(d.share * 100)}%
-                    </span>
-                  </div>
-                  <p className="text-xs leading-relaxed text-muted-foreground">{d.note}</p>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-
-          <Panel
-            title="Itemized breakdown"
-            icon={<ListTree className="size-4" aria-hidden="true" />}
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <caption className="sr-only">
-                  Materials and labor for each included line item
-                </caption>
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th scope="col" className="pb-2 font-medium">
-                      Item
-                    </th>
-                    <th scope="col" className="pb-2 text-right font-medium">
-                      Materials
-                    </th>
-                    <th scope="col" className="pb-2 text-right font-medium">
-                      Labor
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.lines.map((l) => (
-                    <tr key={l.id} className="border-t border-border">
-                      <td className="py-2 pr-3">
-                        <span className="block">{l.label}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {l.qty} {l.unit}
-                          {l.optionLabel ? ` · ${l.optionLabel}` : ""}
-                        </span>
-                      </td>
-                      <td className="py-2 text-right tabular-nums">{formatMoney(l.materials)}</td>
-                      <td className="py-2 text-right tabular-nums">
-                        {l.labor > 0 ? formatMoney(l.labor) : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-border font-medium">
-                    <td className="py-2">Materials + labor</td>
-                    <td className="py-2 text-right tabular-nums" colSpan={2}>
-                      {formatMoney(result.subtotal)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Demolition, permits, overhead and contingency are listed separately in &ldquo;Where
-              the money goes&rdquo; so nothing is buried inside a line item.
-            </p>
-          </Panel>
-        </div>
-      ) : null}
 
       <p className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-4 text-xs leading-relaxed text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />

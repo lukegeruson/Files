@@ -7,22 +7,12 @@
 // because the question this tool answers is ordering, not price.
 
 import { useMemo, useState } from "react"
-import {
-  AlertTriangle,
-  ClipboardList,
-  Info,
-  ListChecks,
-  Route,
-  Wallet,
-} from "lucide-react"
+import { AlertTriangle, ClipboardList, Info, ListChecks, Route } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
+import { Field, Panel, Stat } from "@/components/calculator-ui"
 import { HomeAdvisorChecklist } from "@/components/home-advisor-checklist"
 import { cn } from "@/lib/utils"
 import {
-  COMPONENT_BY_ID,
-  PRIORITY_LABELS,
-  PRIORITY_NOTES,
   VERDICT_META,
   VERDICT_ORDER,
   computeAdvice,
@@ -31,19 +21,13 @@ import {
   type ComponentId,
   type Condition,
   type Priority,
-  type ScenarioId,
   type Verdict,
 } from "@/lib/home-advisor"
 
-const PRIORITY_ORDER: Priority[] = [
-  "balanced",
-  "safety",
-  "repairs",
-  "energy",
-  "comfort",
-  "appearance",
-  "resale",
-]
+const DEFAULT_HOME_SIZE = 1800
+const DEFAULT_STORIES = 1
+const DEFAULT_YEARS_STAYING = 10
+const DEFAULT_PRIORITY: Priority = "balanced"
 
 /** Tone -> theme token. Keeps verdict colors inside the design system. */
 const TONE_CLASS: Record<string, string> = {
@@ -71,28 +55,23 @@ function range(low: number, high: number): string {
 export function HomeUpgradeAdvisor() {
   const [zip, setZip] = useState("")
   const [yearBuilt, setYearBuilt] = useState("1995")
-  const [homeSize, setHomeSize] = useState("1800")
-  const [stories, setStories] = useState("1")
-  const [yearsStaying, setYearsStaying] = useState("10")
   const [budget, setBudget] = useState("")
-  const [priority, setPriority] = useState<Priority>("balanced")
   const [components, setComponents] = useState(initialComponentState)
   const [expanded, setExpanded] = useState<ComponentId | null>(null)
-  const [scenario, setScenario] = useState<ScenarioId>("protect")
 
   const result = useMemo(
     () =>
       computeAdvice({
         zip,
         yearBuilt: Number.parseInt(yearBuilt, 10) || 0,
-        homeSize: Number.parseFloat(homeSize) || 0,
-        stories: Number.parseInt(stories, 10) || 1,
-        yearsStaying: Number.parseInt(yearsStaying, 10) || 10,
+        homeSize: DEFAULT_HOME_SIZE,
+        stories: DEFAULT_STORIES,
+        yearsStaying: DEFAULT_YEARS_STAYING,
         budget: Number.parseFloat(budget) || 0,
-        priority,
+        priority: DEFAULT_PRIORITY,
         components,
       }),
-    [zip, yearBuilt, homeSize, stories, yearsStaying, budget, priority, components],
+    [zip, yearBuilt, budget, components],
   )
 
   const verdicts = useMemo(
@@ -112,7 +91,7 @@ export function HomeUpgradeAdvisor() {
     [],
   )
 
-  const active = result.scenarios.find((s) => s.id === scenario) ?? result.scenarios[0]
+  const budgetValue = Number.parseFloat(budget) || 0
 
   function toggleAssessed(id: ComponentId) {
     setComponents((prev) => {
@@ -130,9 +109,8 @@ export function HomeUpgradeAdvisor() {
           Home Upgrade Advisor
         </h2>
         <p className="max-w-3xl text-pretty leading-relaxed text-muted-foreground">
-          Tell us about your home and which systems concern you, and this ranks what to
-          fix first by urgency, risk of waiting, payback and resale impact — then builds a
-          plan around your budget.
+          Check the systems that concern you and we&apos;ll tell you what to fix first and
+          roughly what it costs.
         </p>
       </header>
 
@@ -140,7 +118,7 @@ export function HomeUpgradeAdvisor() {
         {/* ---------------- Inputs ---------------- */}
         <div className="flex flex-col gap-6">
           <Panel title="Your home" icon={<ClipboardList className="size-4" aria-hidden="true" />}>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <Field
                 label="ZIP code"
                 htmlFor="advisor-zip"
@@ -169,60 +147,13 @@ export function HomeUpgradeAdvisor() {
                   onChange={(e) => setYearBuilt(e.target.value.replace(/\D/g, "").slice(0, 4))}
                 />
               </Field>
-              <Field label="Finished size (sq ft)" htmlFor="advisor-size">
-                <Input
-                  id="advisor-size"
-                  inputMode="numeric"
-                  value={homeSize}
-                  onChange={(e) => setHomeSize(e.target.value.replace(/[^\d.]/g, ""))}
-                />
-              </Field>
-              <Field label="Stories" htmlFor="advisor-stories">
-                <select
-                  id="advisor-stories"
-                  className={selectClass}
-                  value={stories}
-                  onChange={(e) => setStories(e.target.value)}
-                >
-                  <option value="1">1 story</option>
-                  <option value="2">2 stories</option>
-                  <option value="3">3 stories</option>
-                </select>
-              </Field>
-              <Field
-                label="Years you plan to stay"
-                htmlFor="advisor-stay"
-                hint="Used to judge whether an upgrade pays back before you move."
-              >
-                <Input
-                  id="advisor-stay"
-                  inputMode="numeric"
-                  value={yearsStaying}
-                  onChange={(e) => setYearsStaying(e.target.value.replace(/\D/g, "").slice(0, 2))}
-                />
-              </Field>
-              <Field
-                label="Budget (optional)"
-                htmlFor="advisor-budget"
-                hint="Leave blank to see every plan regardless of cost."
-              >
+              <Field label="Budget (optional)" htmlFor="advisor-budget">
                 <Input
                   id="advisor-budget"
                   inputMode="numeric"
                   placeholder="e.g. 15000"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value.replace(/[^\d.]/g, ""))}
-                />
-              </Field>
-            </div>
-
-            <div className="mt-4">
-              <Field label="What matters most to you" hint={PRIORITY_NOTES[priority]}>
-                <Segmented
-                  ariaLabel="Homeowner priority"
-                  value={priority}
-                  onChange={setPriority}
-                  options={PRIORITY_ORDER.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))}
                 />
               </Field>
             </div>
@@ -276,87 +207,31 @@ export function HomeUpgradeAdvisor() {
           {result.isEmpty ? (
             <Panel title="Your action plan" icon={<Route className="size-4" aria-hidden="true" />}>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Check a system on the left to see what to fix first, what it costs, and how
-                the work should be sequenced.
+                Check a system on the left to see what to fix first and what it costs.
               </p>
             </Panel>
           ) : (
-            <>
-              <Panel title="Your action plan" icon={<Route className="size-4" aria-hidden="true" />}>
-                <div className="flex flex-col gap-3">
-                  <Stat
-                    label="Urgent work"
-                    value={range(result.totals.immediate.low, result.totals.immediate.high)}
-                    sub={`${result.byVerdict["repair-now"].length} item(s) causing damage now`}
-                    emphasis
-                  />
-                  <Stat
-                    label="Everything assessed"
-                    value={range(result.totals.all.low, result.totals.all.high)}
-                    sub={`Across ${result.assessedCount} system(s)`}
-                  />
-                  {result.totals.annualSavings > 0 ? (
-                    <Stat
-                      label="Est. annual energy savings"
-                      value={`${formatMoney(result.totals.annualSavings)}/yr`}
-                    />
-                  ) : null}
-                  {result.totals.valueAdd > 0 ? (
-                    <Stat
-                      label="Est. resale value added"
-                      value={formatMoney(result.totals.valueAdd)}
-                    />
-                  ) : null}
-                </div>
-              </Panel>
-
-              <Panel title="Compare plans" icon={<Wallet className="size-4" aria-hidden="true" />}>
-                <Segmented
-                  ariaLabel="Scenario"
-                  value={scenario}
-                  onChange={setScenario}
-                  options={result.scenarios.map((s) => ({ value: s.id, label: s.label }))}
+            <Panel title="Your action plan" icon={<Route className="size-4" aria-hidden="true" />}>
+              <div className="flex flex-col gap-3">
+                <Stat
+                  label="Urgent work"
+                  value={range(result.totals.immediate.low, result.totals.immediate.high)}
+                  sub={`${result.byVerdict["repair-now"].length} item(s) causing damage now`}
+                  emphasis
                 />
-                {active ? (
-                  <div className="mt-4 flex flex-col gap-3">
-                    <p className="text-sm font-medium">{active.question}</p>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{active.blurb}</p>
-                    <Stat
-                      label="Plan cost"
-                      value={range(active.cost.low, active.cost.high)}
-                      sub={
-                        active.fitsBudget === null
-                          ? undefined
-                          : active.fitsBudget
-                            ? "Fits the budget you entered"
-                            : "Over the budget you entered"
-                      }
-                      emphasis
-                    />
-                    {active.phases && active.phases.length > 0 ? (
-                      <ul className="flex flex-col gap-2 border-t border-border pt-3">
-                        {active.phases.map((phase) => (
-                          <li key={phase.label} className="flex items-baseline justify-between gap-3">
-                            <span className="text-sm text-muted-foreground">{phase.label}</span>
-                            <span className="text-sm font-medium tabular-nums">
-                              {range(phase.cost.low, phase.cost.high)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : active.ids.length > 0 ? (
-                      <ul className="flex flex-col gap-1.5 border-t border-border pt-3">
-                        {active.ids.map((id) => (
-                          <li key={id} className="text-sm text-muted-foreground">
-                            {COMPONENT_BY_ID[id].label}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                ) : null}
-              </Panel>
-            </>
+                <Stat
+                  label="Everything assessed"
+                  value={range(result.totals.all.low, result.totals.all.high)}
+                  sub={
+                    budgetValue > 0
+                      ? result.totals.all.low <= budgetValue
+                        ? `Across ${result.assessedCount} system(s) · fits your budget`
+                        : `Across ${result.assessedCount} system(s) · over your budget`
+                      : `Across ${result.assessedCount} system(s)`
+                  }
+                />
+              </div>
+            </Panel>
           )}
         </div>
       </div>
@@ -398,30 +273,6 @@ export function HomeUpgradeAdvisor() {
                       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                         {a.risk.text}
                       </p>
-                      {a.why.length > 0 ? (
-                        <ul className="mt-2 flex flex-col gap-1">
-                          {a.why.map((w, i) => (
-                            <li key={i} className="text-sm leading-relaxed text-muted-foreground">
-                              — {w}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        {a.remainingLife !== null ? (
-                          <span>~{a.remainingLife} yr of life left</span>
-                        ) : null}
-                        {a.paybackYears !== null ? (
-                          <span>{a.paybackYears} yr payback</span>
-                        ) : null}
-                        {a.annualSavings > 0 ? (
-                          <span>{formatMoney(a.annualSavings)}/yr saved</span>
-                        ) : null}
-                        {a.resaleValueAdd > 0 ? (
-                          <span>{formatMoney(a.resaleValueAdd)} at resale</span>
-                        ) : null}
-                        {a.ageInferred ? <span>Age assumed from year built</span> : null}
-                      </div>
                       {a.inspection ? (
                         <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-foreground">
                           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
