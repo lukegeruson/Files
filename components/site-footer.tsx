@@ -23,20 +23,6 @@ export function SiteFooter() {
               </Link>
             ))}
           </nav>
-          <nav aria-label="Get involved" className="flex flex-wrap gap-x-6 gap-y-2">
-            <Link
-              href="/find-a-pro"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Find a Professional
-            </Link>
-            <Link
-              href="/partners"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Partner with Evergreen
-            </Link>
-          </nav>
         </div>
       </div>
       <div className="border-t border-border">
