@@ -87,8 +87,7 @@ export function QuoteCapture({
   // Only include steps that still have something to ask.
   const steps = useMemo<StepKey[]>(() => {
     const list: StepKey[] = []
-    if (!knownType) list.push("project")
-    if (!knownZip || !knownTimeline) list.push("qualify")
+    if (!knownType || !knownZip || !knownTimeline) list.push("qualify")
     list.push("contact")
     return list
   }, [knownType, knownZip, knownTimeline])
@@ -109,7 +108,7 @@ export function QuoteCapture({
 
   function canAdvance(step: StepKey): boolean {
     if (step === "project") return Boolean(projectType)
-    if (step === "qualify") return (knownZip || zipCode.trim().length > 0) && (knownTimeline || Boolean(timeline))
+    if (step === "qualify") return (knownType || Boolean(projectType)) && (knownZip || zipCode.trim().length > 0) && (knownTimeline || Boolean(timeline))
     return contactValid
   }
 
@@ -247,48 +246,69 @@ export function QuoteCapture({
 
         {hasKnownInfo ? <KnownInfo config={config.projectTitle} context={context} category={category} /> : null}
 
-        {currentStep === "project" ? (
-          <fieldset className="space-y-3">
-            <legend className="text-sm font-medium text-foreground">
-              What kind of project is this?
-            </legend>
-            <div className="flex flex-wrap gap-2">
-              {config.projectTypes.map((t) => {
-                const active = t.id === projectType
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setProjectType(t.id)}
-                    aria-pressed={active}
-                    className={chip(active)}
-                  >
-                    {t.label}
-                  </button>
-                )
-              })}
-            </div>
-          </fieldset>
-        ) : null}
-
         {currentStep === "qualify" ? (
           <div className="space-y-4">
-            {!knownZip ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="quote-zip" className="flex items-center gap-1.5">
-                  <MapPin className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                  ZIP code / project location
-                </Label>
-                <Input
-                  id="quote-zip"
-                  inputMode="numeric"
-                  autoComplete="postal-code"
-                  placeholder="e.g. 95050"
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
-                  className="h-10 max-w-[12rem]"
-                />
+            {!knownZip || config.sizeQuestion ? (
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                {!knownZip ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quote-zip" className="flex items-center gap-1.5">
+                      <MapPin className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                      ZIP code / project location
+                    </Label>
+                    <Input
+                      id="quote-zip"
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      placeholder="e.g. 95050"
+                      value={zipCode}
+                      onChange={(e) => setZipCode(e.target.value)}
+                      className="h-10 sm:w-48"
+                    />
+                  </div>
+                ) : null}
+
+                {config.sizeQuestion ? (
+                  <div className="space-y-1.5 sm:w-80">
+                    <Label htmlFor="quote-size" className="flex items-center gap-1.5">
+                      <Ruler className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                      {config.sizeQuestion.label}{" "}
+                      <span className="font-normal text-muted-foreground">(optional)</span>
+                    </Label>
+                    <Input
+                      id="quote-size"
+                      placeholder={config.sizeQuestion.placeholder}
+                      value={projectSize}
+                      onChange={(e) => setProjectSize(e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+                ) : null}
               </div>
+            ) : null}
+
+            {!knownType ? (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-foreground">
+                  What kind of project is this?
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {config.projectTypes.map((t) => {
+                    const active = t.id === projectType
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setProjectType(t.id)}
+                        aria-pressed={active}
+                        className={chip(active)}
+                      >
+                        {t.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
             ) : null}
 
             {!knownTimeline ? (
@@ -310,23 +330,6 @@ export function QuoteCapture({
                   ))}
                 </div>
               </fieldset>
-            ) : null}
-
-            {config.sizeQuestion ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="quote-size" className="flex items-center gap-1.5">
-                  <Ruler className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                  {config.sizeQuestion.label}{" "}
-                  <span className="font-normal text-muted-foreground">(optional)</span>
-                </Label>
-                <Input
-                  id="quote-size"
-                  placeholder={config.sizeQuestion.placeholder}
-                  value={projectSize}
-                  onChange={(e) => setProjectSize(e.target.value)}
-                  className="h-10 max-w-xs"
-                />
-              </div>
             ) : null}
           </div>
         ) : null}
