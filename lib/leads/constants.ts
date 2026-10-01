@@ -34,12 +34,10 @@ export const SERVICES_BY_CATEGORY: Record<Category, string[]> = {
     "Electrical, plumbing & HVAC",
   ],
   agriculture: [
-    "Land preparation & clearing",
+    "Land clearing, fencing & livestock",
     "Irrigation systems",
     "Crop planning & agronomy",
-    "Equipment & mechanics",
-    "Livestock & fencing",
-    "Farm technology",
+    "Equipment & farm technology",
   ],
 }
 
