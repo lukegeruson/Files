@@ -23,6 +23,25 @@ const CATEGORY_EMOJI: Record<Category, string> = {
   agriculture: "🌾",
 }
 
+const SERVICE_EMOJI: Record<string, string> = {
+  "Solar panel installation": "🔆",
+  "Battery & energy storage": "🔋",
+  "Design and energy audit": "📐",
+  "Maintenance & repair": "🔧",
+  "Lawn care & maintenance": "🌱",
+  "Landscape design": "🏡",
+  "Hardscaping & patios": "🧱",
+  "Irrigation & sprinklers": "💦",
+  "Kitchen & bathroom remodel": "🛁",
+  "Whole-home renovation": "🏠",
+  "Roofing & exterior": "🪜",
+  "Electrical, plumbing & HVAC": "⚡",
+  "Land clearing, fencing & livestock": "🐄",
+  "Irrigation systems": "💧",
+  "Crop planning & agronomy": "🌽",
+  "Equipment & farm technology": "🚜",
+}
+
 const FIELD_LABEL =
   "text-xs font-medium uppercase tracking-wide text-muted-foreground"
 
@@ -137,12 +156,17 @@ export function FindAProForm() {
                   setStepError("")
                   setStep(3)
                 }}
-                className={`flex min-h-14 items-center rounded-xl border px-5 text-left text-sm font-medium transition-colors ${
+                className={`flex min-h-14 items-center gap-3 rounded-xl border px-5 text-left text-sm font-medium transition-colors ${
                   service === s
                     ? "border-primary bg-primary/10"
                     : "border-border hover:border-primary"
                 }`}
               >
+                {SERVICE_EMOJI[s] && (
+                  <span aria-hidden="true" className="text-xl leading-none">
+                    {SERVICE_EMOJI[s]}
+                  </span>
+                )}
                 {s}
               </button>
             ))}
