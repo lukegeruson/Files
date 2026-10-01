@@ -3,6 +3,7 @@ import {
   doublePrecision,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -143,18 +144,29 @@ export const leads = pgTable(
   "leads",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Which form produced the lead. See LEAD_SOURCES. */
+    source: text("source").notNull().default("find-a-pro"),
     /** One of the four trades, mirrors CATEGORIES. Drives matching. */
     category: text("category").notNull(),
     /** Consumer-facing service picked in step 2, scoped to the category. */
     service: text("service").notNull(),
     zip: text("zip").notNull(),
-    description: text("description").notNull(),
+    description: text("description").notNull().default(""),
     /** Optional at the form level, so stored as "" rather than null. */
     budget: text("budget").notNull().default(""),
     timeframe: text("timeframe").notNull(),
+    /** Quote forms only: estimated system size / area / budget figure. */
+    projectSize: text("project_size").notNull().default(""),
+    /** Quote forms only: optional free-text notes. */
+    notes: text("notes").notNull().default(""),
+    /** Quote forms only: extra projects added alongside the primary one. */
+    additionalProjects: jsonb("additional_projects")
+      .$type<LeadExtraProject[]>()
+      .notNull()
+      .default([]),
     name: text("name").notNull(),
     email: text("email").notNull(),
-    phone: text("phone").notNull(),
+    phone: text("phone").notNull().default(""),
     /** Set when a lead is routed to a company. Null means unrouted. */
     matchedCompanyId: uuid("matched_company_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -164,8 +176,17 @@ export const leads = pgTable(
     index("leads_created_idx").on(table.createdAt),
     // Backs the "which companies serve this trade + area" matching lookup.
     index("leads_category_zip_idx").on(table.category, table.zip),
+    index("leads_source_created_idx").on(table.source, table.createdAt),
   ],
 )
+
+export type LeadExtraProject = {
+  category: string
+  service: string
+  zip: string
+  timeframe: string
+  projectSize: string
+}
 
 export type LeadRow = typeof leads.$inferSelect
 

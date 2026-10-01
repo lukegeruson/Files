@@ -11,6 +11,32 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number]
 
+/**
+ * Where a lead came from: the homepage Find a Professional flow, or the
+ * "Get a Professional Quote" form on one of the four category pages.
+ */
+export const LEAD_SOURCES = [
+  "find-a-pro",
+  "quote-solar",
+  "quote-landscaping",
+  "quote-renovation",
+  "quote-agriculture",
+] as const
+
+export type LeadSource = (typeof LEAD_SOURCES)[number]
+
+export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
+  "find-a-pro": "Find a Professional",
+  "quote-solar": "Solar quote",
+  "quote-landscaping": "Landscaping quote",
+  "quote-renovation": "Renovation quote",
+  "quote-agriculture": "Agriculture quote",
+}
+
+export function isLeadSource(value: string): value is LeadSource {
+  return (LEAD_SOURCES as readonly string[]).includes(value)
+}
+
 export const CATEGORY_LABELS: Record<Category, string> = {
   solar: "Solar",
   landscaping: "Landscaping",

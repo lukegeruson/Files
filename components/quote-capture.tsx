@@ -27,6 +27,7 @@ import {
   type QuoteLead,
   type QuoteProject,
 } from "@/lib/quote-capture"
+import { submitQuoteLead } from "@/app/actions/leads"
 
 type StepKey = "project" | "qualify" | "contact"
 
@@ -78,6 +79,8 @@ export function QuoteCapture({
   const [phone, setPhone] = useState("")
   const [notes, setNotes] = useState("")
   const [triedContact, setTriedContact] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
 
   const [additionalProjects, setAdditionalProjects] = useState<QuoteProject[]>([])
 
@@ -134,9 +137,9 @@ export function QuoteCapture({
     }
   }
 
-  function submit() {
+  async function submit() {
     setTriedContact(true)
-    if (!contactValid) return
+    if (!contactValid || sending) return
     const lead: QuoteLead = {
       primary: buildProject(),
       additionalProjects,
@@ -150,6 +153,20 @@ export function QuoteCapture({
       sourceCategory: category,
       sourcePage: typeof window !== "undefined" ? window.location.pathname : `/${category}`,
       submittedAt: new Date().toISOString(),
+    }
+    setSending(true)
+    setSendError(null)
+    try {
+      const result = await submitQuoteLead(lead)
+      if (result.status === "error") {
+        setSendError(result.message)
+        return
+      }
+    } catch {
+      setSendError("We could not send your request. Please try again in a moment.")
+      return
+    } finally {
+      setSending(false)
     }
     onSubmit?.(lead)
     setSubmitted(lead)
@@ -429,10 +446,22 @@ export function QuoteCapture({
           )}
 
           {currentStep === "contact" ? (
-            <Button onClick={submit} disabled={!contactValid} className="h-11 gap-2 px-5 text-sm">
-              Get My Professional Quote
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              {sendError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {sendError}
+                </p>
+              ) : null}
+              <Button
+                onClick={submit}
+                disabled={!contactValid || sending}
+                aria-busy={sending}
+                className="h-11 gap-2 px-5 text-sm"
+              >
+                {sending ? "Sending…" : "Get My Professional Quote"}
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
           ) : (
             <Button
               onClick={next}
