@@ -306,8 +306,6 @@ export function SolarSavingsTool() {
                         ]}
                       />
                     </Field>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Roof type" htmlFor="solar-roof-type" hint="Affects mounting labor cost.">
                       <select
                         id="solar-roof-type"
