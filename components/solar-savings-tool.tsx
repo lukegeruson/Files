@@ -116,7 +116,6 @@ export function SolarSavingsTool() {
   const [bill, setBill] = useState("180")
   const [kwh, setKwh] = useState("")
   const [rate, setRate] = useState("")
-  const [utility, setUtility] = useState("")
 
   // Step 2 — roof and sun.
   const roofCondition: RoofCondition = "good"
@@ -145,7 +144,7 @@ export function SolarSavingsTool() {
           monthlyBill: billNum,
           monthlyKwh: kwhNum > 0 ? kwhNum : null,
           rate: Number.parseFloat(rate) > 0 ? Number.parseFloat(rate) : null,
-          utility,
+          utility: "",
           roofCondition,
           roofType,
           orientation,
@@ -159,7 +158,7 @@ export function SolarSavingsTool() {
         assumptions,
       ),
     [
-      zip, billNum, kwhNum, rate, utility, roofCondition, roofType,
+      zip, billNum, kwhNum, rate, roofCondition, roofType,
       orientation, shade, hasEv, wantsBattery, wantsNewRoof, payment, assumptions,
     ],
   )
@@ -237,7 +236,7 @@ export function SolarSavingsTool() {
       </div>
 
       {/* Form aligned with the heading at half width; the empty-state placeholder sits to its right, full results stack below */}
-      <div className="grid gap-6 lg:grid-cols-8 lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-8 lg:items-start">
         {/* Form */}
         <div className="lg:col-span-4 lg:col-start-1">
           <div className="rounded-lg border border-border bg-card">
@@ -274,7 +273,7 @@ export function SolarSavingsTool() {
                       </div>
                     </Field>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Monthly kWh" htmlFor="solar-kwh" hint="Optional. Overrides the bill.">
                       <Input
                         id="solar-kwh"
@@ -293,14 +292,6 @@ export function SolarSavingsTool() {
                         onChange={(e) => setRate(e.target.value)}
                       />
                     </Field>
-                    <Field label="Utility" htmlFor="solar-utility" hint="Optional, for your notes.">
-                      <Input
-                        id="solar-utility"
-                        placeholder="Optional"
-                        value={utility}
-                        onChange={(e) => setUtility(e.target.value)}
-                      />
-                    </Field>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-3">
                     <Field label="Do you have an EV?" hint="Adds home charging load.">
@@ -315,6 +306,8 @@ export function SolarSavingsTool() {
                         ]}
                       />
                     </Field>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Roof type" htmlFor="solar-roof-type" hint="Affects mounting labor cost.">
                       <select
                         id="solar-roof-type"
@@ -381,7 +374,7 @@ export function SolarSavingsTool() {
                   >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex flex-col gap-4">
-                        <div className="grid w-fit grid-cols-[auto_auto] items-end gap-x-2 gap-y-1.5">
+                        <div className="grid w-fit grid-cols-[auto_auto] items-end gap-x-2 gap-y-1.5 [&_label]:whitespace-nowrap max-sm:gap-x-1.5 max-sm:[&_label]:px-2">
                           <h3
                             id="savings-over-time-heading"
                             className="flex items-center gap-2 font-serif text-lg font-semibold leading-tight"
@@ -399,16 +392,18 @@ export function SolarSavingsTool() {
                               title={`+${money(ROOF_REPLACEMENT_COSTS[roofType])}, not eligible for the tax credit`}
                             />
                           </div>
-                          <Segmented<Payment>
-                            value={payment}
-                            onChange={setPayment}
-                            ariaLabel="Show cumulative savings for"
-                            options={[
-                              { value: "cash", label: "Cash" },
-                              { value: "finance", label: "Loan" },
-                              { value: "lease", label: "Lease / PPA" },
-                            ]}
-                          />
+                          <div className="[&>div]:flex-nowrap [&_button]:whitespace-nowrap max-sm:[&_button]:px-2">
+                            <Segmented<Payment>
+                              value={payment}
+                              onChange={setPayment}
+                              ariaLabel="Show cumulative savings for"
+                              options={[
+                                { value: "cash", label: "Cash" },
+                                { value: "finance", label: "Loan" },
+                                { value: "lease", label: "Lease / PPA" },
+                              ]}
+                            />
+                          </div>
                           <AddOnToggle
                             id="solar-add-battery"
                             checked={wantsBattery}
