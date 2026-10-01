@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Calculator, Sprout } from "lucide-react"
+import { ArrowRight, Calculator, Sprout } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { CropSelectionTool } from "@/components/crop-selection-tool"
 import { FarmProfitCalculator } from "@/components/farm-profit-calculator"
 import { JumpToPostsLink } from "@/components/jump-to-posts-link"
@@ -41,8 +42,58 @@ const TOOL_HASHES: Record<string, ToolId> = {
   "farm-profit-calculator": "profit",
 }
 
+const COVERS: Record<
+  ToolId,
+  { title: string; description: string; icon: React.ReactNode; firstFieldId: string }
+> = {
+  crop: {
+    title: "What should you grow?",
+    description:
+      "Enter your location, acreage, and soil to see which crops fit your land and season best.",
+    icon: <Sprout className="size-6" aria-hidden="true" />,
+    firstFieldId: "crop-zip",
+  },
+  profit: {
+    title: "Will your farm turn a profit?",
+    description:
+      "Enter your crop, yield, price, and costs to see expected revenue, profit, and break-even.",
+    icon: <Calculator className="size-6" aria-hidden="true" />,
+    firstFieldId: "fp-crop",
+  },
+}
+
+function ToolCover({ tool, onStart }: { tool: ToolId; onStart: () => void }) {
+  const cover = COVERS[tool]
+  return (
+    <div className="flex flex-col items-center gap-5 rounded-lg border border-border bg-card px-6 py-16 text-center md:py-20">
+      <span className="flex size-12 items-center justify-center rounded-full bg-primary/15 text-foreground">
+        {cover.icon}
+      </span>
+      <div className="flex max-w-md flex-col gap-2">
+        <h2 className="text-balance font-serif text-3xl font-semibold tracking-tight md:text-4xl">
+          {cover.title}
+        </h2>
+        <p className="text-pretty leading-relaxed text-muted-foreground">{cover.description}</p>
+      </div>
+      <Button size="lg" onClick={onStart} className="rounded-full px-8">
+        Start
+        <ArrowRight className="size-4" aria-hidden="true" />
+      </Button>
+    </div>
+  )
+}
+
 export function AgricultureTools() {
   const [active, setActive] = useState<ToolId>("crop")
+  const [started, setStarted] = useState<Record<ToolId, boolean>>({
+    crop: false,
+    profit: false,
+  })
+
+  function startTool(tool: ToolId) {
+    setStarted((prev) => ({ ...prev, [tool]: true }))
+    requestAnimationFrame(() => document.getElementById(COVERS[tool].firstFieldId)?.focus())
+  }
   const [seed, setSeed] = useState<ProfitInputs | null>(null)
   // Bumped on every handoff so the calculator remounts with fresh inputs even
   // when the same crop is sent across twice.
@@ -51,9 +102,12 @@ export function AgricultureTools() {
 
   useEffect(() => {
     function applyHash() {
-      const tool = TOOL_HASHES[window.location.hash.replace(/^#/, "")]
+      const hash = window.location.hash.replace(/^#/, "")
+      const tool = TOOL_HASHES[hash]
       if (!tool) return
       setActive(tool)
+      // A direct link to a specific calculator skips its start cover.
+      if (hash !== "agriculture-calculators") setStarted((prev) => ({ ...prev, [tool]: true }))
       containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     }
 
@@ -66,6 +120,7 @@ export function AgricultureTools() {
   const onSendToProfit = (handoff: ProfitabilityHandoff) => {
     setSeed(inputsFromHandoff(handoff))
     setSeedKey((k) => k + 1)
+    setStarted((prev) => ({ ...prev, profit: true }))
     setActive("profit")
   }
 
@@ -126,7 +181,11 @@ export function AgricultureTools() {
         aria-labelledby="agriculture-tab-crop"
         hidden={active !== "crop"}
       >
-        <CropSelectionTool onSendToProfit={onSendToProfit} />
+        {started.crop ? (
+          <CropSelectionTool onSendToProfit={onSendToProfit} />
+        ) : (
+          <ToolCover tool="crop" onStart={() => startTool("crop")} />
+        )}
       </div>
 
       <div
@@ -135,7 +194,11 @@ export function AgricultureTools() {
         aria-labelledby="agriculture-tab-profit"
         hidden={active !== "profit"}
       >
-        <FarmProfitCalculator key={seedKey} initialInputs={seed ?? undefined} />
+        {started.profit ? (
+          <FarmProfitCalculator key={seedKey} initialInputs={seed ?? undefined} />
+        ) : (
+          <ToolCover tool="profit" onStart={() => startTool("profit")} />
+        )}
       </div>
     </div>
   )

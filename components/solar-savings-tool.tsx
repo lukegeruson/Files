@@ -6,18 +6,17 @@ import {
   BatteryCharging,
   CircleAlert,
   CircleCheck,
+  House,
   TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
+import { Field, Segmented, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
 import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromSavings } from "@/lib/solar-scene"
 import {
   DEFAULT_ASSUMPTIONS,
-  ORIENTATION_LABELS,
-  PAYMENT_LABELS,
-  ROOF_CONDITION_LABELS,
+  ROOF_REPLACEMENT_COSTS,
   ROOF_TYPE_LABELS,
   SHADE_LABELS,
   computeSolar,
@@ -34,12 +33,17 @@ import {
 
 // --- Main tool -------------------------------------------------------------
 
-const STEPS = ["Your bill", "Roof & sun", "Your plans"] as const
+const YEARS_IN_HOME = 15
 
-type ChartMode = "cash" | "finance" | "lease"
+const SHADE_SHORT_LABELS: Record<Shade, string> = {
+  none: "None",
+  light: "Light",
+  moderate: "Moderate",
+  heavy: "Heavy",
+}
 
 function cumulativeFor(
-  mode: ChartMode,
+  mode: Payment,
   year: number,
   result: {
     savingsByYear: Array<{ cumulative: number }>
@@ -47,17 +51,58 @@ function cumulativeFor(
     netCost: number
     loanMonthlyPayment: number
     leaseMonthlySavings: number
+    roofGrossCost: number
   },
   loanTermYears: number,
 ): number {
   const billSavings = year > 0 ? (result.savingsByYear[year - 1]?.cumulative ?? 0) : 0
   if (mode === "cash") return billSavings - result.netCost
-  if (year === 0) return 0
   if (mode === "finance") {
+    if (year === 0) return 0
     const paymentsSoFar = result.loanMonthlyPayment * 12 * Math.min(year, loanTermYears)
     return billSavings + result.itcAmount - paymentsSoFar
   }
-  return result.leaseMonthlySavings * 12 * year
+  // A lease covers the panels, but a new roof is still paid for upfront.
+  return result.leaseMonthlySavings * 12 * year - result.roofGrossCost
+}
+
+function AddOnToggle({
+  id,
+  checked,
+  onChange,
+  icon: Icon,
+  label,
+  title,
+}: {
+  id: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  icon: typeof House
+  label: string
+  title: string
+}) {
+  return (
+    <label
+      htmlFor={id}
+      title={title}
+      className={cn(
+        "flex w-full shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm transition-colors",
+        checked
+          ? "border-primary/60 bg-primary/5 text-foreground"
+          : "border-border text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="size-4 accent-primary"
+      />
+      <Icon className="size-4 text-primary" aria-hidden="true" />
+      {label}
+    </label>
+  )
 }
 
 function signedMoney(value: number): string {
@@ -65,7 +110,6 @@ function signedMoney(value: number): string {
 }
 
 export function SolarSavingsTool() {
-  const [step, setStep] = useState(0)
 
   // Step 1 — the fastest path to a number.
   const [zip, setZip] = useState("")
@@ -75,15 +119,14 @@ export function SolarSavingsTool() {
   const [utility, setUtility] = useState("")
 
   // Step 2 — roof and sun.
-  const [roofCondition, setRoofCondition] = useState<RoofCondition>("good")
+  const roofCondition: RoofCondition = "good"
   const [roofType, setRoofType] = useState<RoofType>("asphalt")
-  const [orientation, setOrientation] = useState<Orientation>("south")
+  const orientation: Orientation = "south"
   const [shade, setShade] = useState<Shade>("light")
 
-  // Step 3 — plans.
   const [hasEv, setHasEv] = useState(false)
   const [wantsBattery, setWantsBattery] = useState(false)
-  const [yearsInHome, setYearsInHome] = useState("15")
+  const [wantsNewRoof, setWantsNewRoof] = useState(false)
   const [payment, setPayment] = useState<Payment>("cash")
 
   const assumptions: Assumptions = DEFAULT_ASSUMPTIONS
@@ -109,14 +152,15 @@ export function SolarSavingsTool() {
           shade,
           hasEv,
           wantsBattery,
-          yearsInHome: Number.parseFloat(yearsInHome) || 10,
+          wantsNewRoof,
+          yearsInHome: YEARS_IN_HOME,
           payment,
         },
         assumptions,
       ),
     [
       zip, billNum, kwhNum, rate, utility, roofCondition, roofType,
-      orientation, shade, hasEv, wantsBattery, yearsInHome, payment, assumptions,
+      orientation, shade, hasEv, wantsBattery, wantsNewRoof, payment, assumptions,
     ],
   )
 
@@ -129,31 +173,56 @@ export function SolarSavingsTool() {
   }, [showResults, result, wantsBattery, publishScene])
 
 
-  const [chartMode, setChartMode] = useState<ChartMode>("cash")
   const milestones = [0, 5, 10, 15, 20, 25].filter((y) => y <= assumptions.horizonYears)
   const chartSeries = milestones.map((y) => ({
     year: y,
-    value: cumulativeFor(chartMode, y, result, assumptions.loanTermYears),
+    value: cumulativeFor(payment, y, result, assumptions.loanTermYears),
   }))
   const maxPositive = Math.max(0, ...chartSeries.map((p) => p.value))
   const maxNegative = Math.max(0, ...chartSeries.map((p) => -p.value))
   const chartRange = Math.max(1, maxPositive + maxNegative)
   const positiveShare = (maxPositive / chartRange) * 100
   const horizonValue = cumulativeFor(
-    chartMode,
+    payment,
     assumptions.horizonYears,
     result,
     assumptions.loanTermYears,
   )
   const chartSummary =
-    chartMode === "cash"
+    payment === "cash"
       ? { label: "Payback", value: fmtYears(result.paybackYears) }
-      : chartMode === "finance"
+      : payment === "finance"
         ? {
             label: "Monthly net",
             value: `${result.loanMonthlyDelta >= 0 ? "+" : "−"}${money(Math.abs(result.loanMonthlyDelta))}`,
           }
         : { label: "Monthly saved", value: `+${money(result.leaseMonthlySavings)}` }
+
+  const loanTotalPaid = result.loanMonthlyPayment * 12 * assumptions.loanTermYears
+  const metrics =
+    payment === "cash"
+      ? {
+          netCost: result.netCost,
+          netCostNote: `${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit${result.roofGrossCost > 0 ? `, plus ${money(result.roofGrossCost)} new roof` : ""}`,
+          monthly: result.monthlySavings,
+          monthlyNote: `${money(result.year1Savings)} in the first year`,
+        }
+      : payment === "finance"
+        ? {
+            netCost: Math.max(0, loanTotalPaid - result.itcAmount),
+            netCostNote: `${money(loanTotalPaid)} in loan payments over ${assumptions.loanTermYears} years less ${money(result.itcAmount)} tax credit`,
+            monthly: result.loanMonthlyDelta,
+            monthlyNote: `${money(result.monthlySavings)} bill savings less ${money(result.loanMonthlyPayment)} loan payment`,
+          }
+        : {
+            netCost: result.roofGrossCost,
+            netCostNote:
+              result.roofGrossCost > 0
+                ? "The installer owns the system; you pay for the new roof"
+                : "No purchase; the installer owns the system",
+            monthly: result.leaseMonthlySavings,
+            monthlyNote: "Bill savings after your lease or PPA payment",
+          }
 
   return (
     <div className="flex flex-col gap-6">
@@ -172,28 +241,11 @@ export function SolarSavingsTool() {
         {/* Form */}
         <div className="lg:col-span-4 lg:col-start-1">
           <div className="rounded-lg border border-border bg-card">
-            {/* Step tabs */}
-            <div className="flex border-b border-border">
-              {STEPS.map((label, i) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setStep(i)}
-                  aria-current={step === i ? "step" : undefined}
-                  className={cn(
-                    "flex-1 px-4 py-3 text-sm transition-colors",
-                    step === i
-                      ? "border-b-2 border-primary font-medium text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <span className="tabular-nums text-muted-foreground">{i + 1}.</span> {label}
-                </button>
-              ))}
+            <div className="border-b border-border px-5 py-3">
+              <h3 className="text-sm font-medium text-foreground">Your bill, roof & sun</h3>
             </div>
 
             <div className="p-5">
-              {step === 0 ? (
                 <div className="flex flex-col gap-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="ZIP code" htmlFor="solar-zip" hint="Sets local sun hours and average rates.">
@@ -250,23 +302,18 @@ export function SolarSavingsTool() {
                       />
                     </Field>
                   </div>
-                </div>
-              ) : null}
-
-              {step === 1 ? (
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Roof age & condition" htmlFor="solar-roof-age">
-                      <select
-                        id="solar-roof-age"
-                        className={selectClass}
-                        value={roofCondition}
-                        onChange={(e) => setRoofCondition(e.target.value as RoofCondition)}
-                      >
-                        {Object.entries(ROOF_CONDITION_LABELS).map(([v, l]) => (
-                          <option key={v} value={v}>{l}</option>
-                        ))}
-                      </select>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Field label="Do you have an EV?" hint="Adds home charging load.">
+                      <Segmented
+                        ariaLabel="Electric vehicle"
+                        value={hasEv ? "yes" : "no"}
+                        onChange={(v) => setHasEv(v === "yes")}
+                        singleRow
+                        options={[
+                          { value: "no", label: "No" },
+                          { value: "yes", label: "Yes", title: "Yes, I charge at home" },
+                        ]}
+                      />
                     </Field>
                     <Field label="Roof type" htmlFor="solar-roof-type" hint="Affects mounting labor cost.">
                       <select
@@ -280,112 +327,35 @@ export function SolarSavingsTool() {
                         ))}
                       </select>
                     </Field>
-                  </div>
-                  <Field label="Roof orientation" hint="South-facing pitch produces the most power.">
-                    <Segmented
-                      ariaLabel="Roof orientation"
-                      value={orientation}
-                      onChange={setOrientation}
-                      options={(Object.keys(ORIENTATION_LABELS) as Orientation[]).map((v) => ({
-                        value: v,
-                        label: ORIENTATION_LABELS[v],
-                      }))}
-                    />
-                  </Field>
-                  <Field label="Shade level" hint="Shade is the biggest single drag on production.">
-                    <Segmented
-                      ariaLabel="Shade level"
-                      value={shade}
-                      onChange={setShade}
-                      options={(Object.keys(SHADE_LABELS) as Shade[]).map((v) => ({
-                        value: v,
-                        label: SHADE_LABELS[v],
-                      }))}
-                    />
-                  </Field>
-                </div>
-              ) : null}
-
-              {step === 2 ? (
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Do you have an EV?" hint="Adds home charging load to your usage.">
-                      <Segmented
-                        ariaLabel="Electric vehicle"
-                        value={hasEv ? "yes" : "no"}
-                        onChange={(v) => setHasEv(v === "yes")}
-                        options={[
-                          { value: "no", label: "No EV" },
-                          { value: "yes", label: "Yes, I charge at home" },
-                        ]}
-                      />
-                    </Field>
-                    <Field label="Considering a battery?" hint="Adds storage cost and backup capability.">
-                      <Segmented
-                        ariaLabel="Battery storage"
-                        value={wantsBattery ? "yes" : "no"}
-                        onChange={(v) => setWantsBattery(v === "yes")}
-                        options={[
-                          { value: "no", label: "Panels only" },
-                          { value: "yes", label: "Add a battery" },
-                        ]}
-                      />
-                    </Field>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field
-                      label="Years you expect to stay"
-                      htmlFor="solar-years"
-                      hint="Compared against payback to judge whether you recoup the cost."
-                    >
-                      <Input
-                        id="solar-years"
-                        inputMode="numeric"
-                        value={yearsInHome}
-                        onChange={(e) => setYearsInHome(e.target.value)}
-                      />
-                    </Field>
-                    <Field label="How would you pay?" hint="Ownership earns the tax credit; leases do not.">
-                      <Segmented
-                        ariaLabel="Payment method"
-                        value={payment}
-                        onChange={setPayment}
-                        options={(Object.keys(PAYMENT_LABELS) as Payment[]).map((v) => ({
-                          value: v,
-                          label: PAYMENT_LABELS[v],
-                        }))}
-                      />
+                    <Field label="Shade level" htmlFor="solar-shade" hint="Biggest drag on production.">
+                      <select
+                        id="solar-shade"
+                        className={selectClass}
+                        value={shade}
+                        onChange={(e) => setShade(e.target.value as Shade)}
+                      >
+                        {(Object.keys(SHADE_LABELS) as Shade[]).map((v) => (
+                          <option key={v} value={v} title={SHADE_LABELS[v]}>
+                            {SHADE_SHORT_LABELS[v]}
+                          </option>
+                        ))}
+                      </select>
                     </Field>
                   </div>
                 </div>
-              ) : null}
 
-              {/* Step nav */}
-              <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-                <button
-                  type="button"
-                  onClick={() => setStep((s) => Math.max(0, s - 1))}
-                  disabled={step === 0}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-                >
-                  Back
-                </button>
-                {step < STEPS.length - 1 ? (
+              <div className="mt-5 flex items-center justify-end border-t border-border pt-4">
+                {refined ? (
+                  <span className="text-sm text-muted-foreground">Results update as you edit</span>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      setRefined(true)
-                      setStep((s) => Math.min(STEPS.length - 1, s + 1))
-                    }}
+                    onClick={() => setRefined(true)}
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
                   >
-                    Refine estimate
+                    See my estimate
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </button>
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    All questions answered
-                  </span>
                 )}
               </div>
             </div>
@@ -393,46 +363,94 @@ export function SolarSavingsTool() {
         </div>
 
         {/* Live results */}
-        <div className={showResults ? "lg:col-span-4" : "lg:col-span-2 lg:self-stretch"}>
+        <div className={showResults ? "lg:col-span-4" : "lg:col-span-4 lg:self-stretch"}>
           <div className="flex h-full flex-col gap-4">
             {!showResults ? (
               <div className="h-full rounded-lg border border-dashed border-border bg-card p-6">
                 <h3 className="font-serif text-lg font-semibold">Your estimate appears here</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Enter a ZIP code and your average monthly bill, then select Refine estimate to see
+                  Enter a ZIP code and your average monthly bill, then select See my estimate to see
                   cost, payback, and savings over time.
                 </p>
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                  <Panel
-                    title="Cumulative savings over time"
-                    icon={<TrendingUp className="size-4 text-primary" aria-hidden="true" />}
+                  <section
+                    aria-labelledby="savings-over-time-heading"
+                    className="rounded-lg border border-border bg-card px-5 pt-3 pb-5"
                   >
-                    <Segmented<ChartMode>
-                      value={chartMode}
-                      onChange={setChartMode}
-                      ariaLabel="Show cumulative savings for"
-                      options={[
-                        { value: "cash", label: "Cash" },
-                        { value: "finance", label: "Loan" },
-                        { value: "lease", label: "Lease / PPA" },
-                      ]}
-                    />
-                    <dl className="mt-4 grid grid-cols-2 gap-4">
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          {chartSummary.label}
-                        </dt>
-                        <dd className="font-serif text-2xl tabular-nums">{chartSummary.value}</dd>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex flex-col gap-4">
+                        <div className="grid w-fit grid-cols-[auto_auto] items-end gap-x-2 gap-y-1.5">
+                          <h3
+                            id="savings-over-time-heading"
+                            className="flex items-center gap-2 font-serif text-lg font-semibold leading-tight"
+                          >
+                            <TrendingUp className="size-4 text-primary" aria-hidden="true" />
+                            Savings over time
+                          </h3>
+                          <div>
+                            <AddOnToggle
+                              id="solar-add-roof"
+                              checked={wantsNewRoof}
+                              onChange={setWantsNewRoof}
+                              icon={House}
+                              label="New roof"
+                              title={`+${money(ROOF_REPLACEMENT_COSTS[roofType])}, not eligible for the tax credit`}
+                            />
+                          </div>
+                          <Segmented<Payment>
+                            value={payment}
+                            onChange={setPayment}
+                            ariaLabel="Show cumulative savings for"
+                            options={[
+                              { value: "cash", label: "Cash" },
+                              { value: "finance", label: "Loan" },
+                              { value: "lease", label: "Lease / PPA" },
+                            ]}
+                          />
+                          <AddOnToggle
+                            id="solar-add-battery"
+                            checked={wantsBattery}
+                            onChange={setWantsBattery}
+                            icon={BatteryCharging}
+                            label="Battery"
+                            title={`+${money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after credit`}
+                          />
+                        </div>
+                        <dl className="grid grid-cols-2 gap-4">
+                          <div>
+                            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                              {chartSummary.label}
+                            </dt>
+                            <dd className="font-serif text-2xl tabular-nums">{chartSummary.value}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                              {assumptions.horizonYears}-yr net savings
+                            </dt>
+                            <dd className="font-serif text-2xl tabular-nums">{signedMoney(horizonValue)}</dd>
+                          </div>
+                        </dl>
                       </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          {assumptions.horizonYears}-yr net savings
-                        </dt>
-                        <dd className="font-serif text-2xl tabular-nums">{signedMoney(horizonValue)}</dd>
+                      <dl
+                        aria-label="Your estimate"
+                        className="grid grid-cols-3 gap-3 rounded-md border border-border bg-muted/40 px-3 py-2.5 sm:grid-cols-1 sm:gap-2 sm:text-right"
+                      >
+                      <div title={metrics.netCostNote}>
+                        <dt className="text-xs text-muted-foreground">Net cost</dt>
+                        <dd className="font-serif text-base font-semibold tabular-nums">{money(metrics.netCost)}</dd>
                       </div>
-                    </dl>
+                      <div title={metrics.monthlyNote}>
+                        <dt className="text-xs text-muted-foreground">Monthly savings</dt>
+                        <dd className="font-serif text-base font-semibold tabular-nums">{signedMoney(metrics.monthly)}</dd>
+                        </div>
+                        <div title={`Net gain of ${money(result.netLifetimeGain)} over ${assumptions.horizonYears} years`}>
+                          <dt className="text-xs text-muted-foreground">Estimated ROI</dt>
+                          <dd className="font-serif text-base font-semibold tabular-nums">{fmtNumber(result.roiPercent)}%</dd>
+                        </div>
+                      </dl>
+                    </div>
                     <div className="mt-4 flex h-52 gap-2">
                       {chartSeries.map(({ year, value }) => {
                         const positivePct = value > 0 && maxPositive > 0 ? (value / maxPositive) * 100 : 0
@@ -494,128 +512,20 @@ export function SolarSavingsTool() {
                           description:
                             "An installer owns the panels on your roof. You pay a monthly lease, or a set rate for the power they produce (a power purchase agreement). No upfront cost, but the installer keeps the tax credit, so your savings are smaller.",
                         },
-                      ].map(({ mode, term, description }) => (
+                      ]
+                        .filter(({ mode }) => mode === payment)
+                        .map(({ mode, term, description }) => (
                         <div
                           key={mode}
-                          className={cn(
-                            "rounded-md border px-3 py-2.5 transition-colors",
-                            chartMode === mode ? "border-primary/50 bg-primary/5" : "border-border",
-                          )}
+                          aria-live="polite"
+                          className="rounded-md border border-primary/50 bg-primary/5 px-3 py-2.5"
                         >
                           <dt className="font-medium text-foreground">{term}</dt>
                           <dd className="mt-0.5 text-muted-foreground">{description}</dd>
                         </div>
                       ))}
                     </dl>
-                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                      Assumes utility rates rise {(assumptions.rateEscalation * 100).toFixed(1)}% a year and
-                      panels lose {(assumptions.degradation * 100).toFixed(1)}% output annually.
-                    </p>
-
-                    <div className="mt-5 border-t border-border pt-4">
-                    <h4 className="text-sm font-medium">Cash vs. financing vs. lease</h4>
-                    <div className="mt-2 overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <caption className="sr-only">
-                          Comparison of paying cash, financing with a loan, and leasing
-                        </caption>
-                        <thead>
-                          <tr className="border-b border-border text-left">
-                            <th scope="col" className="py-2 pr-3 font-medium">Option</th>
-                            <th scope="col" className="py-2 pr-3 font-medium">Upfront</th>
-                            <th scope="col" className="py-2 font-medium">Monthly effect</th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-muted-foreground">
-                          <tr className="border-b border-border">
-                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Cash</th>
-                            <td className="py-2.5 pr-3 tabular-nums">{money(result.netCost)}</td>
-                            <td className="py-2.5 tabular-nums">+{money(result.monthlySavings)} saved</td>
-                          </tr>
-                          <tr className="border-b border-border">
-                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Loan</th>
-                            <td className="py-2.5 pr-3 tabular-nums">{money(0)}</td>
-                            <td className="py-2.5 tabular-nums">
-                              {result.loanMonthlyDelta >= 0 ? "+" : "−"}
-                              {money(Math.abs(result.loanMonthlyDelta))} net
-                            </td>
-                          </tr>
-                          <tr>
-                            <th scope="row" className="py-2.5 pr-3 text-left font-normal text-foreground">Lease / PPA</th>
-                            <td className="py-2.5 pr-3 tabular-nums">{money(0)}</td>
-                            <td className="py-2.5 tabular-nums">+{money(result.leaseMonthlySavings)} saved</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    </div>
-                  </Panel>
-
-                <div className="rounded-lg border border-border bg-card p-5">
-                  <h3 className="font-serif text-lg font-semibold">Your estimate</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {result.location.isFallback
-                      ? "Using national averages until a valid ZIP is entered."
-                      : `Based on ${result.location.stateName} sun hours (${result.location.sunHours} kWh/m²/day).`}
-                  </p>
-                  <div className="mt-4 flex flex-col gap-3">
-                    <Stat
-                      label="Net cost after incentives"
-                      value={money(result.netCost)}
-                      sub={`${money(result.grossCost + result.batteryGrossCost)} gross less ${money(result.itcAmount)} tax credit`}
-                      emphasis
-                    />
-                    <Stat
-                      label="Monthly savings, year 1"
-                      value={money(result.monthlySavings)}
-                      sub={`${money(result.year1Savings)} in the first year`}
-                    />
-                    <Stat
-                      label="Estimated ROI"
-                      value={`${fmtNumber(result.roiPercent)}%`}
-                      sub={`Net gain of ${money(result.netLifetimeGain)} over ${assumptions.horizonYears} years`}
-                    />
-                  </div>
-                </div>
-
-                {/* Battery */}
-                <Panel title="Should you add a battery?" icon={<BatteryCharging className="size-4 text-primary" aria-hidden="true" />}>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span
-                      className={cn(
-                        "rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide",
-                        result.batteryVerdict === "recommended"
-                          ? "bg-primary/15 text-foreground"
-                          : result.batteryVerdict === "optional"
-                            ? "bg-accent text-accent-foreground"
-                            : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {result.batteryVerdict === "recommended"
-                        ? "A battery likely makes sense"
-                        : result.batteryVerdict === "optional"
-                          ? "A battery is optional here"
-                          : "A battery is hard to justify financially"}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      Storage adds about {money(assumptions.batteryCost)} before the tax credit, or{" "}
-                      {money(assumptions.batteryCost * (1 - assumptions.itcPercent))} after.
-                    </span>
-                  </div>
-                  <ul className="mt-4 flex flex-col gap-2.5">
-                    {result.batteryReasons.map((r) => (
-                      <li key={r} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
-                        <BatteryCharging className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                        <span>{r}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                    On bill savings alone a battery typically takes{" "}
-                    {result.batteryPaybackYears ? `${result.batteryPaybackYears.toFixed(0)} years or more` : "many years"}{" "}
-                    to pay back, so most homeowners buy one for backup power and resilience rather than pure return.
-                  </p>
-                </Panel>
+                  </section>
               </div>
             )}
           </div>

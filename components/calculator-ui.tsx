@@ -39,14 +39,20 @@ export function Segmented<T extends string>({
   onChange,
   options,
   ariaLabel,
+  singleRow,
 }: {
   value: T
   onChange: (v: T) => void
-  options: Array<{ value: T; label: string }>
+  options: Array<{ value: T; label: string; title?: string }>
   ariaLabel: string
+  singleRow?: boolean
 }) {
   return (
-    <div role="group" aria-label={ariaLabel} className="flex flex-wrap gap-1.5">
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className={singleRow ? "flex gap-1.5" : "flex flex-wrap gap-1.5"}
+    >
       {options.map((opt) => {
         const active = opt.value === value
         return (
@@ -54,9 +60,12 @@ export function Segmented<T extends string>({
             key={opt.value}
             type="button"
             aria-pressed={active}
+            aria-label={opt.title}
+            title={opt.title}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "rounded-md border px-3 py-1.5 text-sm transition-colors",
+              "rounded-md border py-1.5 text-sm transition-colors",
+              singleRow ? "min-w-0 flex-1 truncate px-1.5 text-center" : "px-3",
               active
                 ? "border-primary bg-primary/15 font-medium text-foreground"
                 : "border-input bg-background text-muted-foreground hover:border-ring hover:text-foreground",

@@ -130,9 +130,6 @@ const SEASONAL_WEIGHTS = [
   0.105, 0.1, 0.09, 0.077, 0.055, 0.049,
 ]
 
-/** A typical US single-family home, kWh per year. */
-export const TYPICAL_HOME_ANNUAL_KWH = 10800
-
 // --- Helpers ---------------------------------------------------------------
 
 /** Physical dimensions and area of one module at a given wattage. */
@@ -357,12 +354,6 @@ export const PANEL_SCENARIOS: PanelScenario[] = [
     label: "2,000 kWh/mo",
     description: "A large or all-electric home",
     patch: { basis: "monthly-kwh", monthlyKwh: 2000 },
-  },
-  {
-    id: "typical",
-    label: "Typical home",
-    description: `About ${TYPICAL_HOME_ANNUAL_KWH.toLocaleString()} kWh per year`,
-    patch: { basis: "annual-kwh", annualKwh: TYPICAL_HOME_ANNUAL_KWH },
   },
 ]
 

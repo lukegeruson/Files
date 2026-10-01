@@ -1,18 +1,16 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Info, Ruler, Zap } from "lucide-react"
+import { Ruler, Zap } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Field, Panel, Segmented, Stat, selectClass } from "@/components/calculator-ui"
 import { cn } from "@/lib/utils"
 import { usePublishSolarScene } from "@/components/solar/solar-scene-context"
 import { snapshotFromPanels } from "@/lib/solar-scene"
 import {
-  ORIENTATION_LABELS,
   SHADE_LABELS,
   number as fmtNumber,
   money,
-  type Orientation,
   type Shade,
 } from "@/lib/solar"
 import {
@@ -20,9 +18,7 @@ import {
   DEFAULT_PANEL_INPUTS,
   PANEL_OPTIONS,
   PANEL_SCENARIOS,
-  PITCH_LABELS,
   computePanels,
-  type RoofPitch,
   type UsageBasis,
 } from "@/lib/solar-panels"
 
@@ -32,17 +28,10 @@ export function SolarPanelCalculator() {
   const [basis, setBasis] = useState<UsageBasis>("bill")
   const [monthlyBill, setMonthlyBill] = useState("180")
   const [monthlyKwh, setMonthlyKwh] = useState("1000")
-  const [annualKwh, setAnnualKwh] = useState("10800")
   const [offsetPercent, setOffsetPercent] = useState(100)
   const [panelWatts, setPanelWatts] = useState(400)
-  const [advanced, setAdvanced] = useState(false)
-
-  // Advanced-only inputs, pre-filled with the easy-mode assumptions.
-  const [orientation, setOrientation] = useState<Orientation>("south")
   const [shade, setShade] = useState<Shade>("none")
-  const [pitch, setPitch] = useState<RoofPitch>("typical")
   const [derate, setDerate] = useState(85)
-  const [roofWidthFt, setRoofWidthFt] = useState("30")
   const [started, setStarted] = useState(false)
   const markStarted = () => {
     if (!started) setStarted(true)
@@ -56,20 +45,15 @@ export function SolarPanelCalculator() {
         basis,
         monthlyBill: Number.parseFloat(monthlyBill) || 0,
         monthlyKwh: Number.parseFloat(monthlyKwh) || 0,
-        annualKwh: Number.parseFloat(annualKwh) || 0,
+        annualKwh: 0,
         offsetPercent,
         panelWatts,
-        // Easy mode keeps the optimistic-but-reasonable defaults.
-        orientation: advanced ? orientation : "south",
-        shade: advanced ? shade : "none",
-        pitch: advanced ? pitch : "typical",
-        derate: advanced ? derate / 100 : 0.85,
-        roofWidthFt: advanced ? Number.parseFloat(roofWidthFt) || 30 : 30,
+        orientation: "south",
+        shade,
+        pitch: "typical",
+        derate: derate / 100,
       }),
-    [
-      zip, basis, monthlyBill, monthlyKwh, annualKwh, offsetPercent, panelWatts,
-      advanced, orientation, shade, pitch, derate, roofWidthFt,
-    ],
+    [zip, basis, monthlyBill, monthlyKwh, offsetPercent, panelWatts, shade, derate],
   )
 
   // Feed the 3D explorer above the tabs. Publish only once the tool has enough
@@ -86,8 +70,49 @@ export function SolarPanelCalculator() {
     if (patch.basis) setBasis(patch.basis)
     if (patch.monthlyBill !== undefined) setMonthlyBill(String(patch.monthlyBill))
     if (patch.monthlyKwh !== undefined) setMonthlyKwh(String(patch.monthlyKwh))
-    if (patch.annualKwh !== undefined) setAnnualKwh(String(patch.annualKwh))
   }
+
+  const offsetField = (
+    <Field
+      label={`Solar share of power — ${offsetPercent}%`}
+      htmlFor="panel-offset"
+      hint={
+        offsetPercent < 100
+          ? `Your utility supplies the other ${100 - offsetPercent}%.`
+          : offsetPercent === 100
+            ? "Panels make all the power you use."
+            : `Panels make ${offsetPercent - 100}% more than you use.`
+      }
+    >
+      <input
+        id="panel-offset"
+        type="range"
+        min={10}
+        max={120}
+        step={5}
+        value={offsetPercent}
+        onChange={(e) => setOffsetPercent(Number(e.target.value))}
+        className="h-9 w-full accent-primary"
+      />
+    </Field>
+  )
+
+  const shadingField = (
+    <Field label="Shading" htmlFor="panel-shade">
+      <select
+        id="panel-shade"
+        className={selectClass}
+        value={shade}
+        onChange={(e) => setShade(e.target.value as Shade)}
+      >
+        {Object.entries(SHADE_LABELS).map(([v, label]) => (
+          <option key={v} value={v}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </Field>
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,19 +138,6 @@ export function SolarPanelCalculator() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Start with a common scenario
             </p>
-            <button
-              type="button"
-              onClick={() => setAdvanced((v) => !v)}
-              aria-pressed={advanced}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-sm transition-colors",
-                advanced
-                  ? "border-primary bg-primary/15 font-medium text-foreground"
-                  : "border-input bg-background text-muted-foreground hover:border-ring hover:text-foreground",
-              )}
-            >
-              {advanced ? "Advanced mode on" : "Advanced mode"}
-            </button>
           </div>
 
           <div className="flex flex-wrap gap-2 border-b border-border px-5 py-4">
@@ -144,24 +156,27 @@ export function SolarPanelCalculator() {
 
           <div className="flex flex-col gap-5 p-5">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="What do you know?">
-                <Segmented
-                  value={basis}
-                  onChange={setBasis}
-                  ariaLabel="Usage basis"
-                  options={(
-                    advanced
-                      ? (["bill", "monthly-kwh", "annual-kwh"] as UsageBasis[])
-                      : (["bill", "monthly-kwh"] as UsageBasis[])
-                  ).map((v) => ({ value: v, label: BASIS_LABELS[v] }))}
-                />
-              </Field>
+              <div className="sm:col-span-2">
+                <Field label="What do you know?">
+                  <Segmented
+                    value={basis}
+                    onChange={setBasis}
+                    ariaLabel="Usage basis"
+                    options={(["bill", "monthly-kwh"] as UsageBasis[]).map((v) => ({
+                      value: v,
+                      label: BASIS_LABELS[v],
+                    }))}
+                  />
+                </Field>
+              </div>
 
               {basis === "bill" ? (
                 <Field
                   label="Average monthly bill"
                   htmlFor="panel-bill"
-                  hint={`Converted at ${money(result.rate, 3)}/kWh for ${result.location.stateName}.`}
+                  hint={`At ${money(result.rate, 3)}/kWh (${
+                    result.location.stateName === "National average" ? "US avg." : result.location.stateName
+                  })`}
                 >
                   <Input
                     id="panel-bill"
@@ -171,7 +186,7 @@ export function SolarPanelCalculator() {
                     placeholder="180"
                   />
                 </Field>
-              ) : basis === "monthly-kwh" ? (
+              ) : (
                 <Field
                   label="Monthly usage (kWh)"
                   htmlFor="panel-kwh"
@@ -183,20 +198,6 @@ export function SolarPanelCalculator() {
                     value={monthlyKwh}
                     onChange={(e) => setMonthlyKwh(e.target.value)}
                     placeholder="1000"
-                  />
-                </Field>
-              ) : (
-                <Field
-                  label="Annual usage (kWh)"
-                  htmlFor="panel-annual"
-                  hint="Add up 12 months for the most accurate sizing."
-                >
-                  <Input
-                    id="panel-annual"
-                    inputMode="decimal"
-                    value={annualKwh}
-                    onChange={(e) => setAnnualKwh(e.target.value)}
-                    placeholder="10800"
                   />
                 </Field>
               )}
@@ -220,114 +221,43 @@ export function SolarPanelCalculator() {
                 />
               </Field>
 
+              <Field label="Panel wattage" htmlFor="panel-watts">
+                <select
+                  id="panel-watts"
+                  className={selectClass}
+                  value={panelWatts}
+                  onChange={(e) => setPanelWatts(Number(e.target.value))}
+                >
+                  {PANEL_OPTIONS.map((w) => (
+                    <option key={w} value={w}>
+                      {w} W
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              {shadingField}
+            </div>
+
+            <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+              {offsetField}
               <Field
-                label={`Target offset — ${offsetPercent}%`}
-                htmlFor="panel-offset"
-                hint="How much of your yearly electricity the array should cover."
+                label={`System losses — ${derate}% delivered`}
+                htmlFor="panel-derate"
+                hint="Power lost to heat, dust & wiring."
               >
                 <input
-                  id="panel-offset"
+                  id="panel-derate"
                   type="range"
-                  min={10}
-                  max={120}
-                  step={5}
-                  value={offsetPercent}
-                  onChange={(e) => setOffsetPercent(Number(e.target.value))}
+                  min={70}
+                  max={95}
+                  step={1}
+                  value={derate}
+                  onChange={(e) => setDerate(Number(e.target.value))}
                   className="h-9 w-full accent-primary"
                 />
               </Field>
             </div>
-
-            <Field label="Panel wattage" hint="Higher-wattage panels mean fewer panels and less roof space.">
-              <Segmented
-                value={String(panelWatts)}
-                onChange={(v) => setPanelWatts(Number(v))}
-                ariaLabel="Panel wattage"
-                options={PANEL_OPTIONS.map((w) => ({ value: String(w), label: `${w} W` }))}
-              />
-            </Field>
-
-            {advanced ? (
-              <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-                <Field label="Roof orientation" htmlFor="panel-orientation">
-                  <select
-                    id="panel-orientation"
-                    className={selectClass}
-                    value={orientation}
-                    onChange={(e) => setOrientation(e.target.value as Orientation)}
-                  >
-                    {Object.entries(ORIENTATION_LABELS).map(([v, label]) => (
-                      <option key={v} value={v}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Roof pitch" htmlFor="panel-pitch">
-                  <select
-                    id="panel-pitch"
-                    className={selectClass}
-                    value={pitch}
-                    onChange={(e) => setPitch(e.target.value as RoofPitch)}
-                  >
-                    {Object.entries(PITCH_LABELS).map(([v, label]) => (
-                      <option key={v} value={v}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Shading" htmlFor="panel-shade">
-                  <select
-                    id="panel-shade"
-                    className={selectClass}
-                    value={shade}
-                    onChange={(e) => setShade(e.target.value as Shade)}
-                  >
-                    {Object.entries(SHADE_LABELS).map(([v, label]) => (
-                      <option key={v} value={v}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field
-                  label={`System losses — ${derate}% delivered`}
-                  htmlFor="panel-derate"
-                  hint="Inverter, wiring, soiling and heat losses. 85% is typical."
-                >
-                  <input
-                    id="panel-derate"
-                    type="range"
-                    min={70}
-                    max={95}
-                    step={1}
-                    value={derate}
-                    onChange={(e) => setDerate(Number(e.target.value))}
-                    className="h-9 w-full accent-primary"
-                  />
-                </Field>
-                <Field
-                  label="Usable roof width (ft)"
-                  htmlFor="panel-width"
-                  hint="Used to approximate how the panels lay out in rows."
-                >
-                  <Input
-                    id="panel-width"
-                    inputMode="decimal"
-                    value={roofWidthFt}
-                    onChange={(e) => setRoofWidthFt(e.target.value)}
-                    placeholder="30"
-                  />
-                </Field>
-              </div>
-            ) : (
-              <p className="flex items-start gap-2 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-                <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                Easy mode assumes an unshaded, south-facing roof at a typical pitch with 85% system
-                efficiency. Turn on advanced mode to set orientation, pitch, shade and losses.
-              </p>
-            )}
           </div>
         </div>
 
