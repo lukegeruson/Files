@@ -352,13 +352,13 @@ export function RenovationExplorer() {
         </div>
 
         {/* Right column: the clay diagram. */}
-        <div className="flex flex-1 flex-col items-center gap-4">
+        <div className="flex flex-1 flex-col items-center gap-4 lg:items-start lg:pl-2">
           {/* Clay diorama stage — a square panel like the landscape/solar
               explorers. The renders are square images, so an aspect-square
               panel lets them fill edge-to-edge with no letterbox and therefore
               no side edge line, while object-contain still guarantees nothing
               is cropped. */}
-          <div className="relative w-full max-w-2xl lg:flex lg:h-full lg:items-center lg:justify-center">
+          <div className="relative w-full max-w-2xl lg:flex lg:h-full lg:items-center lg:justify-start">
             <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-[#e4d9c2] bg-[#f2e9d7] lg:h-full lg:w-auto">
               {/* Floating shadow */}
               <div
