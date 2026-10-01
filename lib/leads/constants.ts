@@ -18,18 +18,14 @@ export const SERVICES_BY_CATEGORY: Record<Category, string[]> = {
   solar: [
     "Solar panel installation",
     "Battery & energy storage",
-    "System design & consultation",
+    "Design, permits & energy audit",
     "Maintenance & repair",
-    "Energy audit",
-    "Inspection & permitting",
   ],
   landscaping: [
     "Lawn care & maintenance",
     "Landscape design",
     "Hardscaping & patios",
     "Irrigation & sprinklers",
-    "Tree & plant care",
-    "Drainage & retaining walls",
   ],
   renovation: [
     "Kitchen remodel",
