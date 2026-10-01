@@ -28,12 +28,10 @@ export const SERVICES_BY_CATEGORY: Record<Category, string[]> = {
     "Irrigation & sprinklers",
   ],
   renovation: [
-    "Kitchen remodel",
-    "Bathroom remodel",
+    "Kitchen & bathroom remodel",
     "Whole-home renovation",
-    "Additions & extensions",
-    "Electrical, plumbing & HVAC",
     "Roofing & exterior",
+    "Electrical, plumbing & HVAC",
   ],
   agriculture: [
     "Land preparation & clearing",
