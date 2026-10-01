@@ -98,21 +98,9 @@ export const PARTNERSHIP_OPTIONS = [
     fields: "none",
   },
   {
-    id: "content",
-    label: "Content or research collaboration",
-    description: "Partner on data, studies, or educational content.",
-    fields: "none",
-  },
-  {
     id: "sponsorship",
     label: "Sponsorship",
     description: "Sponsor tools, guides, or industry sections.",
-    fields: "none",
-  },
-  {
-    id: "other",
-    label: "Other partnership",
-    description: "Something else — tell us what you have in mind.",
     fields: "none",
   },
 ] as const

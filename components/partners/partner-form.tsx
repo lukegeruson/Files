@@ -119,9 +119,6 @@ export function PartnerForm() {
               <Field label="Services you offer" htmlFor="p-services" hint="One per line or comma-separated">
                 <Textarea id="p-services" name="services" rows={3} className="resize-y leading-relaxed" />
               </Field>
-              <Field label="Service areas" htmlFor="p-areas" hint="Cities or regions you cover">
-                <Textarea id="p-areas" name="serviceAreas" rows={2} className="resize-y leading-relaxed" />
-              </Field>
               <Field label="ZIP codes served" htmlFor="p-zips" hint="5-digit ZIPs, comma-separated">
                 <Textarea id="p-zips" name="zips" rows={2} className="resize-y leading-relaxed" />
               </Field>
