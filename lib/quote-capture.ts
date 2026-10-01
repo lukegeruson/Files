@@ -156,6 +156,7 @@ export type QuoteLead = {
     name: string
     email: string
     phone?: string
+    notes?: string
   }
   /** Raw context passed in from the Visual Explorer / calculators. */
   explorerContext: QuoteContext

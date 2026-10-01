@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   QUOTE_CATEGORIES,
   QUOTE_CATEGORY_ORDER,
@@ -75,6 +76,7 @@ export function QuoteCapture({
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
+  const [notes, setNotes] = useState("")
   const [triedContact, setTriedContact] = useState(false)
 
   const [additionalProjects, setAdditionalProjects] = useState<QuoteProject[]>([])
@@ -142,6 +144,7 @@ export function QuoteCapture({
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim() || undefined,
+        notes: notes.trim() || undefined,
       },
       explorerContext: context,
       sourceCategory: category,
@@ -163,6 +166,7 @@ export function QuoteCapture({
     setName("")
     setEmail("")
     setPhone("")
+    setNotes("")
     setTriedContact(false)
     setAdditionalProjects([])
   }
@@ -385,6 +389,20 @@ export function QuoteCapture({
                 projects={additionalProjects}
                 onChange={setAdditionalProjects}
               />
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="quote-notes">
+                  Notes <span className="font-normal text-muted-foreground">(optional)</span>
+                </Label>
+                <Textarea
+                  id="quote-notes"
+                  placeholder="Anything a professional should know — goals, questions, or best times to reach you."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  maxLength={1000}
+                  rows={3}
+                  className="min-h-20 resize-y"
+                />
+              </div>
             </div>
             {triedContact && !contactValid ? (
               <p className="text-xs text-destructive">
@@ -574,10 +592,31 @@ function AddAnotherProject({
 
   return (
     <div
-      className={`self-end rounded-2xl border border-dashed border-border/80 p-3 ${drafting ? "sm:col-span-2" : ""}`}
+      className={
+        drafting
+          ? "rounded-2xl border border-dashed border-border/80 p-3 sm:col-span-2"
+          : "flex flex-col gap-1.5"
+      }
     >
+      {!drafting ? (
+        <>
+          <p className="text-sm font-medium leading-none text-foreground">
+            Have another project?{" "}
+            <span className="font-normal text-muted-foreground">(optional)</span>
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => setDrafting(true)}
+            className="h-10 w-full justify-start gap-1.5 px-3 font-normal text-muted-foreground"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            Add another project
+          </Button>
+        </>
+      ) : null}
+
       {projects.length > 0 ? (
-        <ul className="mb-3 flex flex-wrap gap-2">
+        <ul className={`flex flex-wrap gap-2 ${drafting ? "mb-3" : ""}`}>
           {projects.map((p, i) => (
             <li
               key={`${p.category}-${i}`}
@@ -599,22 +638,7 @@ function AddAnotherProject({
         </ul>
       ) : null}
 
-      {!drafting ? (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">
-            Do you have another project you&apos;d like a quote for?
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDrafting(true)}
-            className="h-8 gap-1.5"
-          >
-            <Plus className="size-3.5" aria-hidden="true" />
-            Add Another Project
-          </Button>
-        </div>
-      ) : (
+      {!drafting ? null : (
         <div className="space-y-3">
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-muted-foreground">Category</p>
